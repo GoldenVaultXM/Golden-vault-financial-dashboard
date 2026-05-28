@@ -13,6 +13,24 @@ const NavButton = ({ icon: Icon, label, active, onClick }) => (
   </button>
 );
 
+const perfData = [3200, 4100, 3800, 4900, 4200, 5100, 4700, 5800, 5200, 6100].map((v, i) => ({ day: i + 1, value: v }));
+const holdings = [
+  { pair: "BTC/USDT", label: "Perpetual Futures", value: 45230.50, pct: 5.4 },
+  { pair: "ETH/USDT", label: "Spot Trading", value: 19600.00, pct: 8.2 }
+];
+
+const PortfolioChart = () => (
+  <Card>
+    <div style={{ fontWeight: 800, marginBottom: 12 }}>Portfolio Performance</div>
+    <ResponsiveContainer width="100%" height={150}>
+      <BarChart data={perfData}>
+        <XAxis dataKey="day" hide />
+        <Tooltip contentStyle={{ background: C.card2, border: "none" }} />
+        <Bar dataKey="value" fill={C.gold} radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  </Card>
+);
 // --- Main App ---
 export default function GoldenVaultXM() {
   const [activeTab, setActiveTab] = useState("Home");
