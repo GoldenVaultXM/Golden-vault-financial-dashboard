@@ -1,6 +1,10 @@
-"dependencies": {
-  "react": "^18.0.0",
-  "react-dom": "^18.0.0",
-  "recharts": "^2.10.0",
-  "lucide-react": "^0.300.0"
+{
+  "name": "golden-vault-dashboard",
+  "version": "1.0.0",
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "recharts": "^2.10.0",
+    "lucide-react": "^0.300.0"
+  }
 }
