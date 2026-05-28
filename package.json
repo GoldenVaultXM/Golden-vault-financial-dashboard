@@ -9,5 +9,8 @@
     "react-dom": "^18.0.0",
     "recharts": "^2.10.0",
     "lucide-react": "^0.300.0"
+  },
+  "devDependencies": {
+    "vite": "^4.0.0"
   }
 }
