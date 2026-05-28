@@ -41,15 +41,28 @@ export default function GoldenVaultXM() {
         
         {/* Home Tab */}
         {activeTab === "Home" && (
-          <div>
-            <h1 style={{ color: C.gold, fontSize: 24, fontWeight: 900 }}>GOLDEN VAULT XM</h1>
-            <p style={{ color: C.text3 }}>Precision Velocity Insight.</p>
-            <Card>
-              <div style={{ fontWeight: 800, marginBottom: 8 }}>Quick Start</div>
-              <button style={{ background: C.gold, color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 800 }}>Initialize Trading</button>
-            </Card>
-          </div>
-        )}
+  <div>
+    <h1 style={{ color: C.gold, fontSize: 24, fontWeight: 900 }}>GOLDEN VAULT XM</h1>
+    <p style={{ color: C.text3, marginBottom: 20 }}>Precision Velocity Insight.</p>
+    
+    <Card>
+      <div style={{ fontWeight: 800, marginBottom: 12 }}>Quick Start</div>
+      <button style={{ background: C.gold, color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 800, width: "100%" }}>Initialize Trading</button>
+    </Card>
+
+    <div style={{ fontWeight: 800, margin: "20px 0 10px 0" }}>Get Started in 4 Steps</div>
+    {["Register Account", "Verify Identity", "Fund Wallet", "Start Trading"].map((step, i) => (
+      <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, fontSize: 14 }}>
+        {i + 1}. {step}
+      </div>
+    ))}
+
+    <Card style={{ marginTop: 20 }}>
+      <div style={{ fontWeight: 800, marginBottom: 8 }}>Core Architecture</div>
+      <div style={{ fontSize: 12, color: C.text3 }}>Advanced Trading • Bank-Level Security • Lightning Execution • Global Access</div>
+    </Card>
+  </div>
+)}
         {/* Trade Tab */}
                 {activeTab === "Trade" && (
           <div>
