@@ -76,6 +76,12 @@ export default function GoldenVaultXM() {
           <div style={{ background: "#141414", padding: "10px", borderRadius: "8px", textAlign: "center" }}>ETH: $2,073</div>
         </div>
       </div>
+      <Card title="Market Updates">
+  <div style={{ fontSize: "13px", color: "#a3a3a3" }}>
+    <p style={{ marginBottom: "10px" }}>• BTC breaking resistance at $75,500.</p>
+    <p>• Institutional flow suggests bullish trend for Q3.</p>
+  </div>
+</Card>
     </div>
   );
                                 }
