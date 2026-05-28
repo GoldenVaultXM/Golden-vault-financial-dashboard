@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Home, BarChart2, TrendingUp, MoreHorizontal, Shield, LogOut, Activity, ChevronRight, ArrowUpFromLine, ArrowDownToLine } from "lucide-react";
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Home, BarChart2, TrendingUp, MoreHorizontal, Shield, LogOut, Activity, Settings } from "lucide-react";
 
 // --- Design Tokens ---
-const C = { bg: "#080808", card: "#0f0f0f", border: "#222222", gold: "#d97706", green: "#22c55e", red: "#ef4444", text: "#ffffff", text3: "#525252" };
+const C = { bg: "#080808", card: "#0f0f0f", card2: "#1a1a1a", border: "#222222", gold: "#d97706", green: "#22c55e", red: "#ef4444", text: "#ffffff", text3: "#525252" };
 
 // --- Reusable Components ---
-const Card = ({ children }) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, marginBottom: 16 }}>{children}</div>;
+const Card = ({ children, style }) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, marginBottom: 16, ...style }}>{children}</div>;
 const NavButton = ({ icon: Icon, label, active, onClick }) => (
   <button onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", color: active ? C.gold : C.text3, cursor: "pointer", flex: 1 }}>
     <Icon size={24} /> <span style={{ fontSize: 10 }}>{label}</span>
@@ -31,42 +31,42 @@ const PortfolioChart = () => (
     </ResponsiveContainer>
   </Card>
 );
+
 // --- Main App ---
 export default function GoldenVaultXM() {
   const [activeTab, setActiveTab] = useState("Home");
-return (
-  <div style={{ background: C.bg, minHeight: "100vh", color: C.text, paddingBottom: "80px" }}>
-    <div style={{ padding: "20px" }}>
-    </div>
-  </div>
-  );
-}
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.text, paddingBottom: "80px" }}>
+      <div style={{ padding: "20px" }}>
+        
         {/* Home Tab */}
         {activeTab === "Home" && (
-  <div>
-    <h1 style={{ color: C.gold, fontSize: 24, fontWeight: 900 }}>GOLDEN VAULT XM</h1>
-    <p style={{ color: C.text3, marginBottom: 20 }}>Precision Velocity Insight.</p>
-    
-    <Card>
-      <div style={{ fontWeight: 800, marginBottom: 12 }}>Quick Start</div>
-      <button style={{ background: C.gold, color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 800, width: "100%" }}>Initialize Trading</button>
-    </Card>
+          <div>
+            <h1 style={{ color: C.gold, fontSize: 24, fontWeight: 900 }}>GOLDEN VAULT XM</h1>
+            <p style={{ color: C.text3, marginBottom: 20 }}>Precision Velocity Insight.</p>
+            
+            <Card>
+              <div style={{ fontWeight: 800, marginBottom: 12 }}>Quick Start</div>
+              <button style={{ background: C.gold, color: "#000", border: "none", padding: "10px 20px", borderRadius: 8, fontWeight: 800, width: "100%" }}>Initialize Trading</button>
+            </Card>
 
-    <div style={{ fontWeight: 800, margin: "20px 0 10px 0" }}>Get Started in 4 Steps</div>
-    {["Register Account", "Verify Identity", "Fund Wallet", "Start Trading"].map((step, i) => (
-      <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, fontSize: 14 }}>
-        {i + 1}. {step}
-      </div>
-    ))}
+            <div style={{ fontWeight: 800, margin: "20px 0 10px 0" }}>Get Started in 4 Steps</div>
+            {["Register Account", "Verify Identity", "Fund Wallet", "Start Trading"].map((step, i) => (
+              <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, fontSize: 14 }}>
+                {i + 1}. {step}
+              </div>
+            ))}
 
-    <Card style={{ marginTop: 20 }}>
-      <div style={{ fontWeight: 800, marginBottom: 8 }}>Core Architecture</div>
-      <div style={{ fontSize: 12, color: C.text3 }}>Advanced Trading • Bank-Level Security • Lightning Execution • Global Access</div>
-    </Card>
-  </div>
-)}
+            <Card style={{ marginTop: 20 }}>
+              <div style={{ fontWeight: 800, marginBottom: 8 }}>Core Architecture</div>
+              <div style={{ fontSize: 12, color: C.text3 }}>Advanced Trading • Bank-Level Security • Lightning Execution • Global Access</div>
+            </Card>
+          </div>
+        )}
+
         {/* Trade Tab */}
-                {activeTab === "Trade" && (
+        {activeTab === "Trade" && (
           <div>
             <h2 style={{ marginBottom: 16 }}>Trading Terminal</h2>
             <PortfolioChart />
@@ -87,43 +87,43 @@ return (
             </Card>
           </div>
         )}
-        {activeTab === "Markets" && (
-  <div>
-    <h2 style={{ marginBottom: 16 }}>Global Markets</h2>
-        </div>
-      </div>
-    );
-  }
-    <Card>
-      <div style={{ fontWeight: 800 }}>USD/JPY</div>
-      <div style={{ fontSize: 14 }}>157.24</div>
-    </Card>
-  </div>
-)}
-        {/* More Tab */}
-  {activeTab === "More" && (
-    <div>
-      <h2 style={{ marginBottom: 20 }}>Account Settings</h2>
-      {[
-        { icon: Shield, label: "Security & KYC" },
-        { icon: Activity, label: "Transaction History" },
-        { icon: Settings, label: "Platform Preferences" },
-        { icon: LogOut, label: "Logout", color: C.red }
-      ].map((item, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0" }}>
-          <span style={{ color: item.color || C.text }}>{item.label}</span>
-        </div>
-      ))}
-    </div>
-  )}
 
-  {/* Navigation */}
-  <div style={{ position: "fixed", bottom: 0, width: "100%", background: C.card, display: "flex", padding: "10px 0" }}>
-    <NavButton icon={Home} label="Home" active={activeTab === "Home"} onClick={() => setActiveTab("Home")} />
-    <NavButton icon={BarChart2} label="Markets" active={activeTab === "Markets"} onClick={() => setActiveTab("Markets")} />
-    <NavButton icon={TrendingUp} label="Trade" active={activeTab === "Trade"} onClick={() => setActiveTab("Trade")} />
-    <NavButton icon={MoreHorizontal} label="More" active={activeTab === "More"} onClick={() => setActiveTab("More")} />
-  </div>
-</div>
-);
-    }
+        {/* Markets Tab */}
+        {activeTab === "Markets" && (
+          <div>
+            <h2 style={{ marginBottom: 16 }}>Global Markets</h2>
+            <Card>
+              <div style={{ fontWeight: 800 }}>USD/JPY</div>
+              <div style={{ fontSize: 14 }}>157.24</div>
+            </Card>
+          </div>
+        )}
+
+        {/* More Tab */}
+        {activeTab === "More" && (
+          <div>
+            <h2 style={{ marginBottom: 20 }}>Account Settings</h2>
+            {[
+              { icon: Shield, label: "Security & KYC" },
+              { icon: Activity, label: "Transaction History" },
+              { icon: Settings, label: "Platform Preferences" },
+              { icon: LogOut, label: "Logout", color: C.red }
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0" }}>
+                <span style={{ color: item.color || C.text }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div style={{ position: "fixed", bottom: 0, width: "100%", background: C.card, display: "flex", padding: "10px 0" }}>
+        <NavButton icon={Home} label="Home" active={activeTab === "Home"} onClick={() => setActiveTab("Home")} />
+        <NavButton icon={BarChart2} label="Markets" active={activeTab === "Markets"} onClick={() => setActiveTab("Markets")} />
+        <NavButton icon={TrendingUp} label="Trade" active={activeTab === "Trade"} onClick={() => setActiveTab("Trade")} />
+        <NavButton icon={MoreHorizontal} label="More" active={activeTab === "More"} onClick={() => setActiveTab("More")} />
+      </div>
+    </div>
+  );
+        }
