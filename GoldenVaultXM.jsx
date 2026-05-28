@@ -3,7 +3,17 @@ import { BarChart, Bar, ResponsiveContainer, Tooltip } from "recharts";
 import { Activity } from "lucide-react";
 
 const C = { bg: "#080808", card: "#0f0f0f", gold: "#d97706", red: "#ef4444", text: "#ffffff", text3: "#525252" };
-
+const Badge = ({ text, color }) => (
+  <span style={{ background: `${color}20`, color: color, padding: "4px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: "bold" }}>
+    {text}
+  </span>
+);
+const Card = ({ title, children }) => (
+  <div style={{ background: "#0f0f0f", padding: "20px", borderRadius: "14px", border: "1px solid #222", marginBottom: "20px" }}>
+    <h3 style={{ fontSize: "14px", color: "#525252", marginBottom: "15px" }}>{title}</h3>
+    {children}
+  </div>
+);
 export default function GoldenVaultXM() {
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: "100vh", padding: "20px", fontFamily: "sans-serif" }}>
