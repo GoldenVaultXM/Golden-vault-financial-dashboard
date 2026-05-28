@@ -34,10 +34,11 @@ const PortfolioChart = () => (
 // --- Main App ---
 export default function GoldenVaultXM() {
   const [activeTab, setActiveTab] = useState("Home");
-  
-  return (
-      </div> {/* Closes the padding div */}
-    </div> {/* Closes the main background div */}
+return (
+  <div style={{ background: C.bg, minHeight: "100vh", color: C.text, paddingBottom: "80px" }}>
+    <div style={{ padding: "20px" }}>
+    </div>
+  </div>
   );
 }
         {/* Home Tab */}
@@ -89,6 +90,10 @@ export default function GoldenVaultXM() {
         {activeTab === "Markets" && (
   <div>
     <h2 style={{ marginBottom: 16 }}>Global Markets</h2>
+        </div>
+      </div>
+    );
+  }
     <Card>
       <div style={{ fontWeight: 800 }}>USD/JPY</div>
       <div style={{ fontSize: 14 }}>157.24</div>
