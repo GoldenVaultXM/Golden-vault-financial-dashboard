@@ -27,11 +27,20 @@ const AssetRow = ({ asset, price, change }) => (
     </div>
   </div>
 );
+const StatItem = ({ label, value, color }) => (
+  <div style={{ background: "#0f0f0f", padding: "15px", borderRadius: "12px", border: "1px solid #222" }}>
+    <div style={{ fontSize: "11px", color: "#525252", marginBottom: "4px" }}>{label}</div>
+    <div style={{ fontSize: "18px", fontWeight: "bold", color: color || "#fff" }}>{value}</div>
+  </div>
+);
 export default function GoldenVaultXM() {
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: "100vh", padding: "20px", fontFamily: "sans-serif" }}>
       <header style={{ marginBottom: "20px" }}><h1 style={{ color: C.gold, margin: 0 }}>GOLDEN VAULT XM</h1></header>
-      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+  <StatItem label="Total Balance" value="$64,830" />
+  <StatItem label="24h Profit" value="+$842" color="#22c55e" />
+</div>
       {/* Overview */}
       <div style={{ display: "grid", gap: "20px", gridTemplateColumns: "1fr 1fr" }}>
         <div style={{ background: C.card, padding: "20px", borderRadius: "14px" }}>
