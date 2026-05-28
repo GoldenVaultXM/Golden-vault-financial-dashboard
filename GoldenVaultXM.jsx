@@ -14,6 +14,19 @@ const Card = ({ title, children }) => (
     {children}
   </div>
 );
+const AssetRow = ({ asset, price, change }) => (
+  <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #1a1a1a" }}>
+    <div>
+      <div style={{ fontWeight: "600" }}>{asset}</div>
+    </div>
+    <div style={{ textAlign: "right" }}>
+      <div>${price}</div>
+      <div style={{ fontSize: "11px", color: change >= 0 ? "#22c55e" : "#ef4444" }}>
+        {change >= 0 ? "+" : ""}{change}%
+      </div>
+    </div>
+  </div>
+);
 export default function GoldenVaultXM() {
   return (
     <div style={{ background: C.bg, color: C.text, minHeight: "100vh", padding: "20px", fontFamily: "sans-serif" }}>
@@ -43,8 +56,8 @@ export default function GoldenVaultXM() {
       {/* Holdings & Ticker */}
       <div style={{ marginTop: "20px", background: C.card, padding: "20px", borderRadius: "14px" }}>
         <h2 style={{ fontSize: "16px" }}>Holdings</h2>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #222" }}><span>BTC/USDT</span><span style={{ fontWeight: "bold" }}>$45,230</span></div>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}><span>ETH/USDT</span><span style={{ fontWeight: "bold" }}>$19,600</span></div>
+       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #222" }}><span>BTC/USDT</span><span style={{ fontWeight: "bold" }}>$45,230</span></div>
+       <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}><span>ETH/USDT</span><span style={{ fontWeight: "bold" }}>$19,600</span></div>
       </div>
       
       <div style={{ marginTop: "20px", background: C.card, padding: "20px", borderRadius: "14px" }}>
