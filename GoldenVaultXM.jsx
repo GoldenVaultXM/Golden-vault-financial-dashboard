@@ -108,7 +108,7 @@ export default function GoldenVaultXM() {
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderBottom: i < 3 ? "1px solid " + C.border : "none" }}>
                 <span style={{ color: item.color || C.text }}>{item.label}</span>
               </div>
-                ))
+        ))
       </div>
     )}
 
@@ -120,4 +120,4 @@ export default function GoldenVaultXM() {
     </div>
   </div>
 );
-        }
+}
