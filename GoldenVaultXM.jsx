@@ -34,7 +34,7 @@ const PortfolioChart = () => (
 // --- Main App ---
 export default function GoldenVaultXM() {
   const [activeTab, setActiveTab] = useState("Home");
-
+  
   return (
     <div style={{ background: C.bg, minHeight: "100vh", color: C.text, paddingBottom: "80px", fontFamily: "sans-serif" }}>
       <div style={{ padding: "20px" }}>
@@ -50,24 +50,28 @@ export default function GoldenVaultXM() {
             </Card>
           </div>
         )}
-
         {/* Trade Tab */}
-        {activeTab === "Trade" && (
+                {activeTab === "Trade" && (
           <div>
             <h2 style={{ marginBottom: 16 }}>Trading Terminal</h2>
+            <PortfolioChart />
             <Card>
-              <div style={{ fontSize: 12, color: C.text3 }}>Total Balance</div>
-              <div style={{ fontSize: 24, fontWeight: 900 }}>$129,683.10</div>
-            </Card>
-            <Card>
-              <div style={{ fontWeight: 800, marginBottom: 10 }}>Portfolio Holdings</div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>BTC/USDT</span> <span style={{ color: C.green }}>+5.4%</span>
-              </div>
+              <div style={{ fontWeight: 800, marginBottom: 12 }}>Portfolio Holdings</div>
+              {holdings.map((h, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0" }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{h.pair}</div>
+                    <div style={{ fontSize: 10, color: C.text3 }}>{h.label}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 700 }}>${h.value.toLocaleString()}</div>
+                    <div style={{ color: C.green }}>+{h.pct}%</div>
+                  </div>
+                </div>
+              ))}
             </Card>
           </div>
         )}
-
         {/* More Tab */}
         {activeTab === "More" && (
           <div>
