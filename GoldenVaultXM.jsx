@@ -109,10 +109,10 @@ export default function GoldenVaultXM() {
                 <span style={{ color: item.color || C.text }}>{item.label}</span>
               </div>
         ))
+        }
       </div>
     )}
 
-    {/* Persistent Navigation */}
     <div style={{ position: "fixed", bottom: 0, width: "100%", background: C.card, display: "flex", padding: "10px 0" }}>
       <NavButton icon={Home} label="Home" active={activeTab === "Home"} onClick={() => setActiveTab("Home")} />
       <NavButton icon={BarChart2} label="Markets" active={activeTab === "Markets"} onClick={() => setActiveTab("Markets")} />
