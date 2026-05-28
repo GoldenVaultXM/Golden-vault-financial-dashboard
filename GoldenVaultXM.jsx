@@ -36,11 +36,10 @@ export default function GoldenVaultXM() {
   const [activeTab, setActiveTab] = useState("Home");
   
   return (
-      </div> {/* Closes the content area */}
-    </div> {/* Closes the main background wrapper */}
+      </div> {/* Closes the padding div */}
+    </div> {/* Closes the main background div */}
   );
 }
-        
         {/* Home Tab */}
         {activeTab === "Home" && (
   <div>
