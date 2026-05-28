@@ -1,5 +1,12 @@
-import GoldenVaultXM from './GoldenVaultXM';
+import React from 'react';
+import GoldenVaultXM from './GoldenVaultXM'; // This imports your dashboard file
 
-export default function App() {
-  return <GoldenVaultXM />;
+function App() {
+  return (
+    <div className="App">
+      <GoldenVaultXM />
+    </div>
+  );
 }
+
+export default App;
