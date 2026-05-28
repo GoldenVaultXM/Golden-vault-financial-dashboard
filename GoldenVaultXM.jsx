@@ -104,7 +104,7 @@ export default function GoldenVaultXM() {
               { icon: Settings, label: "Platform Preferences" },
               { icon: LogOut, label: "Logout", color: C.red }
             ].map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderBottom: i < 3 ? `1px solid ${C.border}` : "none" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderBottom: i < 3 ? "1px solid " + C.border : "none" }}>
                 <item.icon size={20} color={item.color || C.gold} />
                 <span style={{ color: item.color || C.text }}>{item.label}</span>
               </div>
