@@ -95,22 +95,19 @@ export default function GoldenVaultXM() {
   </div>
 )}
         {/* More Tab */}
-        {activeTab === "More" && (
+                {activeTab === "More" && (
           <div>
             <h2 style={{ marginBottom: 20 }}>Account Settings</h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderBottom: `1px solid ${C.border}` }}><Shield size={20} color={C.gold} /> <span>Security & KYC</span></div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0" }}><LogOut size={20} color={C.red} /> <span>Logout</span></div>
+            {[
+              { icon: Shield, label: "Security & KYC" },
+              { icon: Activity, label: "Transaction History" },
+              { icon: Settings, label: "Platform Preferences" },
+              { icon: LogOut, label: "Logout", color: C.red }
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 0", borderBottom: i < 3 ? `1px solid ${C.border}` : "none" }}>
+                <item.icon size={20} color={item.color || C.gold} />
+                <span style={{ color: item.color || C.text }}>{item.label}</span>
+              </div>
+            ))}
           </div>
         )}
-      </div>
-
-      {/* Persistent Navigation */}
-      <div style={{ position: "fixed", bottom: 0, width: "100%", background: C.card, display: "flex", padding: "10px 0", borderTop: `1px solid ${C.border}` }}>
-        <NavButton icon={Home} label="Home" active={activeTab === "Home"} onClick={() => setActiveTab("Home")} />
-        <NavButton icon={BarChart2} label="Markets" active={activeTab === "Markets"} onClick={() => setActiveTab("Markets")} />
-        <NavButton icon={TrendingUp} label="Trade" active={activeTab === "Trade"} onClick={() => setActiveTab("Trade")} />
-        <NavButton icon={MoreHorizontal} label="More" active={activeTab === "More"} onClick={() => setActiveTab("More")} />
-      </div>
-    </div>
-  );
-}
