@@ -85,6 +85,15 @@ export default function GoldenVaultXM() {
             </Card>
           </div>
         )}
+        {activeTab === "Markets" && (
+  <div>
+    <h2 style={{ marginBottom: 16 }}>Global Markets</h2>
+    <Card>
+      <div style={{ fontWeight: 800 }}>USD/JPY</div>
+      <div style={{ fontSize: 14 }}>157.24</div>
+    </Card>
+  </div>
+)}
         {/* More Tab */}
         {activeTab === "More" && (
           <div>
