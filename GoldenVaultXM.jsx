@@ -10,6 +10,7 @@ import {
   Search, Lock, Award, BookOpen, Mail, Phone, MapPin,
   Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users,
 } from "lucide-react";
+import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
@@ -1257,6 +1258,9 @@ function AppShell() {
 }
 
 export default function GoldenVaultXM() {
+    useEffect(() => {
+    console.log("Supabase connected:", supabase);
+  }, []);
   return (
     <AuthProvider>
       <AppShell />
