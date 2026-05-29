@@ -1259,7 +1259,6 @@ function AppShell() {
 
 export default function GoldenVaultXM() {
   useEffect(() => {
-    alert("Supabase connected!");
     console.log("Supabase connected:", supabase);
   }, []);
   return (
