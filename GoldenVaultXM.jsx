@@ -389,6 +389,3 @@ function AuthProvider({ children }) {
 /* ─── Nav ────────────────────────────────────────────────────────────────── */
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
-  const NAV = [
-    { id:"home",     label:"Home",     icon:Home      },
-    
