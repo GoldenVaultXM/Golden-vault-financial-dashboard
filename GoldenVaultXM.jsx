@@ -423,3 +423,24 @@ function Nav({ page, setPage, open, setOpen }) {
     </nav>
   );
 }
+
+export default function GoldenVaultXM() {
+  const [page, setPage] = useState("home");
+  
+  return (
+    <AuthProvider>
+      <div style={{
+        minHeight: "100vh", background: C.bg, color: C.text,
+        display: "flex", flexDirection: "column", maxWidth: "600px",
+        margin: "0 auto", width: "100%"
+      }}>
+        <Nav page={page} setPage={setPage} />
+        <main style={{ flex: 1, padding: "20px 16px", paddingBottom: 80 }}>
+          {page === "home" && <div>Home Content</div>}
+          {page === "markets" && <div>Markets Content</div>}
+          {page === "trade" && <div>Trade Content</div>}
+        </main>
+      </div>
+    </AuthProvider>
+  );
+}
