@@ -322,3 +322,73 @@ function AuthModal({ onClose, initialMode="signup" }) {
               {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:12, padding:"10px 12px",
+            background:`${C.red}14`, border:`1px solid ${C.red}33`, borderRadius:8 }}>
+            <AlertCircle size={13} color={C.red} />
+            <span style={{ fontSize:12, color:C.red }}>{error}</span>
+          </div>
+        )}
+
+        <Btn variant="gold" onClick={handle} loading={loading} style={{ width:"100%", marginTop:18 }}>
+          {mode === "signup"
+            ? <><UserPlus size={15} /> Create Account</>
+            : <><LogIn size={15} /> Sign In</>}
+        </Btn>
+
+        {/* Trust badges */}
+        {mode === "signup" && (
+          <div style={{ display:"flex", justifyContent:"center", gap:16, marginTop:14 }}>
+            {[["🔒","Encrypted"],["✅","Regulated"],["🌐","24/7 Support"]].map(([em,lbl]) => (
+              <div key={lbl} style={{ textAlign:"center" }}>
+                <div style={{ fontSize:14 }}>{em}</div>
+                <div style={{ fontSize:9, color:C.text3, marginTop:2 }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Toggle mode */}
+        <div style={{ textAlign:"center", marginTop:18, fontSize:12, color:C.text3 }}>
+          {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
+          <button onClick={() => setMode(m => m === "signup" ? "login" : "signup")}
+            style={{ background:"none", border:"none", cursor:"pointer", color:C.gold,
+              fontWeight:800, fontSize:12 }}>
+            {mode === "signup" ? "Sign In" : "Create Account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Auth Provider ──────────────────────────────────────────────────────── */
+function AuthProvider({ children }) {
+  const [user, setUser]   = useState(null);
+  const [modal, setModal] = useState(null); // "signup" | "login" | null
+  const isAuthenticated   = !!user;
+
+  const login  = (u) => { setUser(u); setModal(null); };
+  const logout = ()  => setUser(null);
+
+  const requireAuth = (mode = "signup") => {
+    if (!isAuthenticated) { setModal(mode); return false; }
+    return true;
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
+      {children}
+      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
+    </AuthContext.Provider>
+  );
+}
+
+/* ─── Nav ────────────────────────────────────────────────────────────────── */
+function Nav({ page, setPage, open, setOpen }) {
+  const { isAuthenticated, user, logout, requireAuth } = useAuth();
+  const NAV = [
+    { id:"home",     label:"Home",     icon:Home      },
