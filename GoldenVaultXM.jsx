@@ -391,56 +391,5 @@ function AuthProvider({ children }) {
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
   const NAV = [
-    { id: "home",    label: "Home",    icon: Home },
-    { id: "markets", label: "Markets", icon: BarChart2 },
-    { id: "trade",   label: "Trade",   icon: Activity },
-    { id: "more",    label: "More",    icon: Settings }
-  ];
-
-  const handleNav = (id) => {
-    if (id === "trade" && !isAuthenticated) {
-      requireAuth("login");
-    } else {
-      setPage(id);
-    }
-  };
-
-  return (
-    <nav style={{
-      position: "fixed", bottom: 0, left: 0, right: 0, background: C.card,
-      borderTop: `1px solid ${C.border}`, padding: "10px 0", display: "flex",
-      justifyContent: "space-around", zIndex: 99
-    }}>
-      {NAV.map(item => (
-        <button key={item.id} onClick={() => handleNav(item.id)} style={{
-          background: "none", border: "none", display: "flex", flexDirection: "column",
-          alignItems: "center", gap: 4, cursor: "pointer", color: page === item.id ? C.gold : C.text3
-        }}>
-          <item.icon size={20} />
-          <span style={{ fontSize: 9, fontWeight: 700 }}>{item.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
-export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
-  
-  return (
-    <AuthProvider>
-      <div style={{
-        minHeight: "100vh", background: C.bg, color: C.text,
-        display: "flex", flexDirection: "column", maxWidth: "600px",
-        margin: "0 auto", width: "100%"
-      }}>
-        <Nav page={page} setPage={setPage} />
-        <main style={{ flex: 1, padding: "20px 16px", paddingBottom: 80 }}>
-          {page === "home" && <div>Home Content</div>}
-          {page === "markets" && <div>Markets Content</div>}
-          {page === "trade" && <div>Trade Content</div>}
-        </main>
-      </div>
-    </AuthProvider>
-  );
-}
+    { id:"home",     label:"Home",     icon:Home      },
+   
