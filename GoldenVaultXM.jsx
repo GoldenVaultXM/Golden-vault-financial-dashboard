@@ -385,7 +385,3 @@ function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
-/* ─── Nav ────────────────────────────────────────────────────────────────── */
-function Nav({ page, setPage, open, setOpen }) {
-  const { isAuthenticated, user, logout, requireAuth } = useAuth();
