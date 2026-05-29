@@ -391,8 +391,11 @@ function AuthProvider({ children }) {
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
   const NAV = [
-  { id:"home",     label:"Home",     icon:Home      },
-  { id:"markets",  label:"Markets",  icon:BarChart2 },
-  { id:"trade",    label:"Trade",    icon:TrendingUp},
-  { id:"settings", label:"Settings", icon:Settings  },
+  { id:"home", label:"Home", icon:Home },
+  { id:"markets", label:"Markets", icon:BarChart2 },
+  { id:"trade", label:"Trade", icon:TrendingUp },
+  { id:"settings", label:"Settings", icon:Settings },
 ];
+
+return null;
+}
