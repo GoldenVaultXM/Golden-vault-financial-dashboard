@@ -186,25 +186,28 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const handle = async () => {
     setError("");
     setLoading(true);
-const { data, error } = await supabase.auth.signUp({
-  email: form.email,
-  password: form.password
-});
     
-    if (error) { 
-      setError(error.message); 
-      setLoading(false); 
-      return; 
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        emailRedirectTo: 'https://goldenvaultxm.live/'
+      }
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
     }
-    
+
     login({ name: form.name || form.email.split("@")[0], email: form.email });
     setLoading(false);
     onClose();
-  };
+};
   
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
