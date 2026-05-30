@@ -3,8 +3,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaCh
 import { C } from './constants';
 import { Card, IconBox } from './components';
 import { supabase } from './supabaseClient';
+
 const LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const LOGO_SRC = LOGO_B64;
+
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
@@ -91,22 +93,6 @@ const INSTRUMENT_DEFS = [
 
 const CATS = ["All","Crypto","Forex","Stocks","Indices","Commodities","Futures","Bonds"];
 
-/* ─── Price simulator hook ───────────────────────────────────────────────── */
-function useLivePrices() {
-  const initPrices = () => {
-    const m = {};
-    INSTRUMENT_DEFS.forEach(d => {
-      m[d.pair] = {
-        price:   d.base,
-        pct24h:  (Math.random() - 0.45) * 4,
-        prevDay: d.base * (1 - (Math.random() - 0.45) * 0.04),
-        up:      Math.random() > 0.45,
-      };
-    });
-    return m;
-  };
-
-  const [prices, setPrices] = useState(initPrices);
   const [flash,  setFlash]  = useState({});
 
   useEffect(() => {
