@@ -1,3 +1,8 @@
+import React, { useState, useEffect } from 'react';
+import { Wallet, TrendingUp, Activity, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { C, INSTRUMENT_DEFS, fmtPrice, fmtPct } from './constants'; 
+import { Card, IconBox } from './components';
 import { useState, useEffect, useRef, useCallback, useContext, createContext } from "react";
 import { AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, Line } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Star } from "lucide-react";
@@ -844,13 +849,7 @@ function MarketsPage({ prices, flash }) {
 }
 
 /* ─── TRADE PAGE (protected) ─────────────────────────────────────────────── */
-import React, { useState } from 'react';
-import { Wallet, TrendingUp, Activity, Target } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { C, INSTRUMENT_DEFS, fmtPrice, fmtPct } from './constants'; 
-import { Card, IconBox } from './components';
-
-export default function TradePage({ prices = {} }) {
+export function TradePage({ prices = {} }) {
   const [range, setRange] = useState("30D");
 
   const perfData = Array.from({ length: 30 }, (_, i) => ({
