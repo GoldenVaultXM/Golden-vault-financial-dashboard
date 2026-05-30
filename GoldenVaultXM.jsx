@@ -2,28 +2,30 @@ python3 << 'EOF'
 with open('/tmp/logo_b64.txt') as f:
     LOGO_B64 = f.read().strip()
 
-FILE = f'''import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, Cell, ReferenceLine,
-} from "recharts";
-import {
+FILE = f'''import {{ useState, useEffect, useRef, useCallback, createContext, useContext }} from "react";
+import {{
+  AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis,
+  Tooltip, ResponsiveContainer, Cell, ReferenceLine, Line,
+}} from "recharts";
+import {{
   Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe,
-  ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2,
+  ArrowDownToLine, ArrowUpFromLine, FileBarChart,
   Menu, X, ChevronRight, Bell, Settings, LogOut, Home,
   Search, Lock, Award, BookOpen, Mail, Phone, MapPin,
-  Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users,
-} from "lucide-react";
-import { supabase } from './supabaseClient';
+  Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Star,
+}} from "lucide-react";
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
-const C = {
-  bg:      "#080808", card:   "#0f0f0f", card2:  "#141414", card3:  "#1a1a1a",
-  border:  "#222222", border2:"#2a2a2a",
-  gold:    "#d97706", gold2:  "#f59e0b", gold3:  "#fbbf24", goldDim:"#92400e",
-  green:   "#22c55e", red:    "#ef4444", purple: "#7c3aed", blue:   "#3b82f6",
-  text:    "#ffffff", text2:  "#a3a3a3", text3:  "#525252", text4:  "#303030",
-};
+const C = {{
+  bg:"#080808", card:"#0f0f0f", card2:"#141414", card3:"#1a1a1a",
+  border:"#222222", border2:"#2a2a2a",
+  gold:"#d97706", gold2:"#f59e0b", gold3:"#fbbf24", goldDim:"#92400e",
+  green:"#22c55e", red:"#ef4444", purple:"#7c3aed", blue:"#3b82f6",
+  text:"#ffffff", text2:"#a3a3a3", text3:"#525252", text4:"#303030",
+}};
+
+/* ─── Embedded Logo ──────────────────────────────────────────────────────── */
+const LOGO_SRC = "data:image/png;base64,{LOGO_B64}";
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
