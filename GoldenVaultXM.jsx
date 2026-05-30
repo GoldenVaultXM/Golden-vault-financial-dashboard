@@ -29,7 +29,6 @@ const C = {
 const LOGO_SRC = LOGO_B64;
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
-/* --- Auth Context --- */
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
 
@@ -1264,13 +1263,15 @@ function AppShell() {
     </div>
   );
 }
-
 export default function GoldenVaultXM() {
   const [data, setData] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Add this
 
   useEffect(() => {
     async function fetchData() {
       const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user); // Set true if user exists
+      
       if (!user) return;
 
       const { data: summary } = await supabase
@@ -1278,15 +1279,15 @@ export default function GoldenVaultXM() {
         .select('total_invested, current_value')
         .eq('user_id', user.id)
         .single();
-        
+
       setData(summary);
     }
     fetchData();
   }, []);
+
   return (
-<AuthContext.Provider value={{ isAuthenticated: true, requireAuth: () => {} }}>
+    <AuthContext.Provider value={{ isAuthenticated, requireAuth: () => {} }}>
       <AppShell data={data} />
     </AuthContext.Provider>
   );
 }
-
