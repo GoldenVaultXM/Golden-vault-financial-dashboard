@@ -173,27 +173,6 @@ const GoldLine = () => (
   <div style={{ height:1, background:`linear-gradient(90deg,transparent,${C.gold}33,transparent)` }} />
 );
 
-const Card = ({ children, style={} }) => (
-  <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"18px 16px", ...style }}>
-    {children}
-  </div>
-);
-
-const Badge = ({ children, color }) => (
-  <span style={{
-    fontSize:10, fontWeight:800, letterSpacing:"0.06em",
-    background:`${color}20`, color, borderRadius:4, padding:"2px 7px",
-    display:"inline-block", textTransform:"uppercase",
-  }}>{children}</span>
-);
-
-const IconBox = ({ icon:Icon, color=C.gold, size=16, boxSize=36 }) => (
-  <div style={{ width:boxSize, height:boxSize, borderRadius:9,
-    background:`${color}18`, display:"grid", placeItems:"center", flexShrink:0 }}>
-    <Icon size={size} color={color} />
-  </div>
-);
-
 /* ─── Hover-aware button ─────────────────────────────────────────────────── */
 function Btn({ children, onClick, variant="gold", loading=false, disabled=false, style={} }) {
   const [hov, setHov] = useState(false);
