@@ -844,67 +844,107 @@ function MarketsPage({ prices, flash }) {
 }
 
 /* ─── TRADE PAGE (protected) ─────────────────────────────────────────────── */
-function TradePage({ prices }) {
-  const [loadingDep, setLoadingDep] = useState(false);
-  const [loadingWd,  setLoadingWd]  = useState(false);
-  const [range,      setRange]      = useState("30D");
-  const [vote,       setVote]       = useState(null);
-  const [showVote,   setShowVote]   = useState(true);
+import React, { useState } from 'react';
+import { Wallet, TrendingUp, Activity, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { C, INSTRUMENT_DEFS, fmtPrice, fmtPct } from './constants'; 
+import { Card, IconBox } from './components';
 
-  const perfData = Array.from({ length:30 }, (_, i) => ({
+export default function TradePage({ prices = {} }) {
+  const [range, setRange] = useState("30D");
+
+  const perfData = Array.from({ length: 30 }, (_, i) => ({
     day: i + 1,
     value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400
   }));
 
-  const RANGES = ["7D","30D","3M","1Y"];
-  const data = range==="7D" ? perfData.slice(-7) : range==="3M" ? [...perfData,...perfData,...perfData].slice(0,60) : perfData;
+  const RANGES = ["7D", "30D", "3M", "1Y"];
+  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData].slice(0, 60) : perfData;
 
-  const HOLDINGS = [
-    { pair:"BTC/USDT", label:"Perpetual Futures", color:C.gold2, pct:+5.4, delta:+2310.5 },
-    { pair:"ETH/USDT", label:"Spot Trading",      color:C.blue,  pct:+8.2, delta:+1486.7 },
-    { pair:"EUR/USD",  label:"Forex Pairs",       color:C.red,   pct:-2.1, delta:-689.2  },
-    { pair:"XAU/USD",  label:"Gold Futures",      color:C.gold3, pct:+3.8, delta:+1045.3 },
-  ];
-
-  const topMarkets = ["BTC/USDT","ETH/USDT","EUR/USD","SPX"];
+  const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Welcome */}
-      <div style={{ padding:"20px 0 4px" }}>
-        <div style={{ fontSize:11, color:C.text3, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:6 }}>
+      <div style={{ padding: "20px 0 4px" }}>
+        <div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
           Trading Overview
         </div>
-        <div style={{ fontSize:24, fontWeight:900, color:C.text, lineHeight:1.15 }}>Welcome Back,</div>
-        <div style={{ fontSize:24, fontWeight:900, color:C.gold, lineHeight:1.15 }}>goldenvaultxm</div>
-        <div style={{ fontSize:13, color:"#7c3aed", marginTop:8, fontStyle:"italic" }}>
-          Here's your trading overview for today
-        </div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div>
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {[
-          { icon:Wallet,     label:"Total Balance",    value:"$0.00", badge:"+5.2%",  color:C.green },
-          { icon:TrendingUp, label:"Total Profit",     value:"$0.00", badge:"+11.2%", color:C.green },
-          { icon:Activity,   label:"Active Positions", value:"0",     badge:"+3",     color:C.gold  },
-          { icon:Target,     label:"Win Rate",         value:"0.0%",  badge:"+2.3%",  color:C.gold  },
+          { icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green },
+          { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green },
+          { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold },
+          { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },
         ].map((s, i) => (
-          <Card key={i} style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <IconBox icon={s.icon} color={s.color} />
-              <span style={{ fontSize:11, fontWeight:800, color:s.color,
-                background:`${s.color}18`, borderRadius:20, padding:"3px 8px" }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}>
                 ↑ {s.badge}
               </span>
             </div>
             <div>
-              <div style={{ fontSize:11, color:C.text3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>{s.label}</div>
-              <div style={{ fontSize:26, fontWeight:900, color:C.text, letterSpacing:"-0.02em", lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: C.text }}>{s.value}</div>
             </div>
           </Card>
         ))}
       </div>
+
+      {/* Portfolio Chart */}
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div>
+          <div style={{ display: "flex", gap: 5 }}>
+            {RANGES.map(r => (
+              <button key={r} onClick={() => setRange(r)} style={{
+                fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer",
+                background: r === range ? C.gold : `${C.gold}14`,
+                color: r === range ? "#000" : C.text3,
+              }}>{r}</button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={148}>
+          <BarChart data={data} margin={{ left: -20, right: 0 }}>
+            <XAxis dataKey="day" hide />
+            <Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} />
+            <Bar dataKey="value" radius={[3, 3, 0, 0]}>
+              {data.map((e, i) => (
+                <Cell key={i} fill={e.value > 5500 ? C.gold : `${C.goldDim}cc`} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* Live Markets */}
+      <Card>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Live Markets</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {topMarkets.map(pair => {
+            const def = INSTRUMENT_DEFS?.find(d => d.pair === pair);
+            const pd = prices?.[pair];
+            if (!def || !pd) return null;
+            return (
+              <div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 13px" }}>
+                <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase" }}>{def.name}</div>
+                <div style={{ fontWeight: 900, fontSize: 12, color: C.text }}>{pair}</div>
+                <div style={{ fontWeight: 900, fontSize: 16, color: C.text }}>{fmtPrice(pd.price, def.cat)}</div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
 
       {/* Portfolio chart */}
       <Card>
