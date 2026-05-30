@@ -195,11 +195,18 @@ function AuthModal({ onClose, initialMode = "signup" }) {
       password: form.password,
       options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
     });
-    if (error) { setError(error.message); setLoading(false); return; }
+    
+    if (error) { 
+      setError(error.message); 
+      setLoading(false); 
+      return; 
+    }
+    
     login({ name: form.name || form.email.split("@")[0], email: form.email });
     setLoading(false);
     onClose();
   };
+
   // This line now only runs if there were no errors above
   login({ name: form.name || form.email.split("@")[0], email: form.email });
   setLoading(false);
