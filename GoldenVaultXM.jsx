@@ -147,12 +147,12 @@ function useLivePrices() {
 
 /* ─── Price formatting ───────────────────────────────────────────────────── */
 const fmtPrice = (price, cat) => {
-  if (!price) return "—";
+  if (!price) return "-";
   if (cat === "Crypto") {
     if (price < 0.00001) return price.toFixed(8);
-    if (price < 0.001)   return price.toFixed(6);
-    if (price < 1)       return price.toFixed(4);
-    if (price < 10)      return price.toFixed(3);
+    if (price < 0.001) return price.toFixed(6);
+    if (price < 1) return price.toFixed(4);
+    if (price < 10) return price.toFixed(3);
     return price.toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
   }
   if (cat === "Forex") return price > 50 ? price.toFixed(3) : price.toFixed(4);
@@ -161,56 +161,48 @@ const fmtPrice = (price, cat) => {
   return price.toFixed(2);
 };
 
-const fmtPct = p => p == null ? "—" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
+const fmtPct = (p) => p == null ? "-" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
 
-const catColor = cat => ({
-  Crypto:"#f59e0b", Forex:"#3b82f6", Stocks:"#22c55e",
-  Indices:"#a78bfa", Commodities:"#fbbf24", Futures:"#ef4444", Bonds:"#94a3b8"
+const catColor = (cat) => ({
+  Crypto: "#f59e0b", Forex: "#3b82f6", Stocks: "#22c55e",
+  Indices: "#a78bfa", Commodities: "#fbbf24", Futures: "#ef4444", Bonds: "#94a3b8"
 }[cat] || C.text3);
 
-/* ─── Shared UI Primitives ───────────────────────────────────────────────── */
+/* --- Shared UI Primitives --- */
 const GoldLine = () => (
-  <div style={{ height:1, background:`linear-gradient(90deg,transparent,${C.gold}33,transparent)` }} />
+  <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.gold}33,transparent)` }} />
 );
 
-/* ─── Hover-aware button ─────────────────────────────────────────────────── */
+/* --- Hover-aware button --- */
 function Btn({ children, onClick, variant="gold", loading=false, disabled=false, style={} }) {
   const [hov, setHov] = useState(false);
   const base = {
-    border:"none", borderRadius:10, padding:"13px 16px", fontWeight:900,
-    fontSize:13, cursor: disabled||loading ? "not-allowed" : "pointer",
-    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-    transition:"all .18s", letterSpacing:"0.04em", outline:"none",
+    border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900,
+    fontSize: 13, cursor: disabled || loading ? "not-allowed" : "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    transition: "all .18s", letterSpacing: "0.04em", outline: "none"
   };
   const variants = {
-    gold:    { background: disabled ? C.goldDim : hov ? C.gold2 : C.gold, color:"#000", transform: hov&&!disabled?"scale(1.01)":"scale(1)" },
-    outline: { background:"transparent", color: hov ? C.gold2 : C.gold, border:`1.5px solid ${hov ? C.gold2 : C.gold}`, transform:hov?"scale(1.01)":"scale(1)" },
-    ghost:   { background: hov ? C.card3 : C.card2, color:C.text3, border:`1px solid ${C.border}` },
-    danger:  { background: hov ? "#b91c1c" : C.card, color:C.red, border:`1px solid ${C.border}` },
-    purple:  { background: hov ? "#6d28d9" : C.purple, color:"#fff", transform:hov?"scale(1.01)":"scale(1)" },
-    white:   { background: hov ? "#e5e7eb" : C.text, color:"#000", transform:hov?"scale(1.01)":"scale(1)" },
+    gold: { background: disabled ? C.golddim : hov ? C.gold2 : C.gold, color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)" },
+    outline: { background: "transparent", color: hov ? C.gold2 : C.gold, border: "1.5px solid " + (hov ? C.gold2 : C.gold) },
+    ghost: { background: hov ? C.card3 : C.card2, color: C.text3, border: "1px solid " + C.border },
+    danger: { background: hov ? "#b91c1c" : C.card, color: "red", border: "1px solid " + C.border },
+    purple: { background: hov ? "#6d28d9" : C.purple, color: "#fff", transform: hov ? "scale(1.01)" : "scale(1)" },
+    white: { background: hov ? "#e5e7eb" : C.text, color: "#000", transform: hov ? "scale(1.01)" : "scale(1)" }
   };
   return (
     <button
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       onClick={!disabled && !loading ? onClick : undefined}
-      style={{ ...base, ...variants[variant], opacity: loading||disabled ? 0.7 : 1, ...style }}
+      style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }}
     >
-      {loading ? <><RefreshCw size={14} style={{ animation:"spin 1s linear infinite" }} /> Processing…</> : children}
+      {loading ? "Processing..." : children}
     </button>
   );
 }
 
-/* ─── Sign Up / Login Modal ──────────────────────────────────────────────── */
+/* --- Sign Up / Login Modal --- */
 function AuthModal({ onClose, initialMode="signup" }) {
-  const { login } = useAuth();
-  const [mode, setMode]       = useState(initialMode);
-  const [showPw, setShowPw]   = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const [form, setForm]       = useState({ name:"", email:"", password:"" });
-
-  const handle = async () => {
     setError("");
     if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
     if (mode === "signup" && !form.name) { setError("Please enter your name."); return; }
