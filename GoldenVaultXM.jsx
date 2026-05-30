@@ -196,7 +196,7 @@ const { data, error } = await supabase.auth.signUp({
     email: form.email,
     password: form.password,
     options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: 'https://goldenvaultxm.live'
     }
 });
   
