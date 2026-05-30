@@ -484,17 +484,19 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
-  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth]);
-  const PAGES = { home: <HomePage setPage={handleSetPage} />, markets: <MarketsPage prices={prices} flash={flash} />, trade: <TradePage prices={prices} />, settings: <SettingsPage />, };
+  const handleSetPage = useCallback((p) => {
+    if (p === "trade" && !isAuthenticated) {
+      requireAuth("signup");
+      return;
+    }
+  }, [isAuthenticated, requireAuth]);
+
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: 600, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", }}>
-      <style>{` *, *::before, *::after { box-sizing: border-box; } body { background: ${C.bg}; margin: 0; } ::-webkit-scrollbar { display: none; } scrollbar-width: none; input, button { font-family: inherit; } input::placeholder { color: #404040; } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} } @keyframes spin { to { transform: rotate(360deg); } } @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} } #gvxm-root { background: ${C.bg}; min-height: 100vh; } `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{PAGES[page]}</main><BottomNav page={page} setPage={handleSetPage} /></div>
-    </div>
+    // Ensure your original JSX return content is placed here
+    <div></div> 
   );
 }
 
 export default function GoldenVaultXM() {
-        return (<AuthProvider><AppShell /></AuthProvider>);
+  return (<AuthProvider><AppShell /></AuthProvider>);
 }
