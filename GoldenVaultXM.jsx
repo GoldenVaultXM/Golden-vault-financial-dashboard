@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useContext, createContext } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ReferenceLine } from 'recharts';
-​import { C } from './constants';
+import { C } from './constants';
 import { Card, IconBox } from './components';
 import { supabase } from './supabaseClient';
 const LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
