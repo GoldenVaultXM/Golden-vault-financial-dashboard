@@ -484,6 +484,7 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
+
   const handleSetPage = useCallback((p) => {
     if (p === "trade" && !isAuthenticated) {
       requireAuth("signup");
@@ -491,12 +492,22 @@ function AppShell() {
     }
   }, [isAuthenticated, requireAuth]);
 
+  const PAGES = {
+    home: <Homepage setPage={handleSetPage} />,
+    markets: <MarketsPage prices={prices} flash={flash} />
+  };
+
   return (
-    // Ensure your original JSX return content is placed here
-    <div></div> 
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif" }}>
+      <style>{` *, *:before, *:after { box-sizing: border-box; } body { background: ${C.bg}; margin: 0; } `}</style>
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400 }}>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} />
+        </div>
+      </div>
+    </div>
   );
 }
-
 export default function GoldenVaultXM() {
   return (<AuthProvider><AppShell /></AuthProvider>);
 }
