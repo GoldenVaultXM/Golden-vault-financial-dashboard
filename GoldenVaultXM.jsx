@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaCh
 import { C } from './constants';
 import { Card, IconBox } from './components';
 import { supabase } from './supabaseClient';
+import { Zap, Home, BarChart2, TrendingUp, Settings, Bell, X, Menu, Lock, LogOut, UserPlus, Eye, EyeOff, AlertCircle, LogIn, Shield, Globe, Users, ArrowUpFromLine, RefreshCw } from 'lucide-react';
 
 const LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 const LOGO_SRC = LOGO_B64;
