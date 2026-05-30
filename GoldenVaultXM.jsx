@@ -181,29 +181,33 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
 
 /* ─── Auth Context / Modals / Nav / ... (Remained same) ──────────────────── */
 function AuthModal({ onClose, initialMode = "signup" }) {
-  const { login } = useAuth();
-  const [mode, setMode] = useState(initialMode);
-  const [showPw, setShowPw] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-const handle = async () => {
+    const { login } = useAuth();
+    // ADD THIS LINE BELOW TO FIX THE CRASH
+    const [form, setForm] = useState({ name: "", email: "", password: "" }); 
+    const [mode, setMode] = useState(initialMode);
+    const [showPw, setShowPw] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+  const handle = async () => {
     setLoading(true);
     setError("");
 
     const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
+        options: {
+            emailRedirectTo: 'https://goldenvaultxm.live/'
+        }
     });
 
     if (error) {
         setError(error.message);
-        setLoading(false);
     } else {
-        setLoading(false);
-        // Add your success logic here (e.g., alert("Success!"))
+        login({ name: form.name, email: form.email });
+        onClose();
     }
+    setLoading(false);
 };
-
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
