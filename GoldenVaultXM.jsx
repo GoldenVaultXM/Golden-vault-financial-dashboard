@@ -1210,7 +1210,7 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
-
+  
   // Intercept trade tab
   const handleSetPage = useCallback((p) => {
     if (p === "trade" && !isAuthenticated) {
