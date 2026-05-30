@@ -128,8 +128,7 @@ const CATS = ["All","Crypto","Forex","Stocks","Indices","Commodities","Futures",
     }, 2000);
     return () => clearInterval(interval);
   }, []);
-
-  return { prices, flash };
+return { prices, flash };
 }
 
 /* ─── Price formatting ───────────────────────────────────────────────────── */
