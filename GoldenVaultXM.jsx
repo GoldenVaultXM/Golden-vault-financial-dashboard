@@ -1206,19 +1206,18 @@ function SettingsPage() {
 }
 /* ─── Root App ───────────────────────────────────────────────────────────── */
 function AppShell({ data }) {
-  const [page,     setPage]     = useState("home");
+  const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
+  const { isAuthenticated, handleGoogleLogin } = useAuth();
   const { prices, flash } = useLivePrices();
-  
-  // Intercept trade tab
-  const handleSetPage = useCallback((p) => {
+
+  const handleSetPage = (p) => {
     if (p === "trade" && !isAuthenticated) {
-      requireAuth("signup");
+      handleGoogleLogin();
       return;
     }
     setPage(p);
-  }, [isAuthenticated, requireAuth]);
+  };
 
   const PAGES = {
     home:     <HomePage setPage={handleSetPage} />,
@@ -1239,19 +1238,8 @@ function AppShell({ data }) {
         body { background: ${C.bg}; margin: 0; scrollbar-width: none; }
         ::-webkit-scrollbar { display: none; }
         input, button { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin   { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-        /* Full bleed background behind the max-width container */
         #gvxm-root { background: ${C.bg}; min-height: 100vh; }
       `}</style>
-
-      {/* Ambient glow */}
-      <div style={{ position:"fixed", top:0, left:"50%", transform:"translateX(-50%)",
-        width:400, height:400, background:`radial-gradient(${C.gold}07 0%,transparent 70%)`,
-        pointerEvents:"none", zIndex:0 }} />
-
       <div style={{ position:"relative", zIndex:1 }}>
         <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} />
         <main style={{ padding:"0 16px", paddingBottom:100 }}>
@@ -1268,33 +1256,18 @@ export default function GoldenVaultXM() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin }
     });
-    if (error) console.error("Google Login Error:", error.message);
   };
 
   useEffect(() => {
-    async function fetchData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
-      
-      if (!user) return;
-
-      const { data: summary } = await supabase
-        .from('account_summary')
-        .select('total_invested, current_value')
-        .eq('user_id', user.id)
-        .single();
-
-      setData(summary);
-    }
-    fetchData();
+    supabase.auth.getUser().then(({ data: { user } }) => setIsAuthenticated(!!user));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, requireAuth: () => {}, handleGoogleLogin }}>
+    <AuthContext.Provider value={{ isAuthenticated, handleGoogleLogin }}>
       <AppShell data={data} />
     </AuthContext.Provider>
   );
