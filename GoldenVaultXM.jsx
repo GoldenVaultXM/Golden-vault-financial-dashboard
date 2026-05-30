@@ -191,22 +191,14 @@ function AuthModal({ onClose, initialMode = "signup" }) {
 const handle = async () => {
     setLoading(true);
     setError("");
-
-    // Removed the options block entirely
-    const { data, error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-    });
-
-    if (error) {
-        setError(error.message);
-    } else {
-        login({ name: form.name, email: form.email });
-        onClose();
-        alert("Check your email to confirm your account!");
+  
+const { data, error } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+    options: {
+        emailRedirectTo: window.location.origin
     }
-    setLoading(false);
-};
+});
   
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
