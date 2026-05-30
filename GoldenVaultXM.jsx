@@ -29,7 +29,7 @@ const C = {
 const LOGO_SRC = LOGO_B64;
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
-const AuthContext = createContext(null);
+<AuthContext.Provider value={{ isAuthenticated: false, requireAuth: () => {} }}>
 const useAuth = () => useContext(AuthContext);
 
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
