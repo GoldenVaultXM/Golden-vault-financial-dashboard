@@ -188,26 +188,26 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     const [showPw, setShowPw] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-  const handle = async () => {
+const handle = async () => {
     setLoading(true);
     setError("");
 
-const { data, error } = await supabase.auth.signUp({
-    email: form.email,
-    password: form.password,
-    options: {
-        emailRedirectTo: 'https://goldenvaultxm.live/'
-    }
-});
+    // Removed the options block entirely
+    const { data, error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+    });
 
     if (error) {
         setError(error.message);
     } else {
         login({ name: form.name, email: form.email });
         onClose();
+        alert("Check your email to confirm your account!");
     }
     setLoading(false);
 };
+  
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
