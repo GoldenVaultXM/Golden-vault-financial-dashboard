@@ -1286,8 +1286,11 @@ export default function GoldenVaultXM() {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, requireAuth: () => {} }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated: !!data, 
+      requireAuth: () => {}, 
+      handleGoogleLogin 
+    }}>
       <AppShell data={data} />
     </AuthContext.Provider>
   );
-}
