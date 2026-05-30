@@ -206,12 +206,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(false);
     onClose();
   };
-
-  // This line now only runs if there were no errors above
-  login({ name: form.name || form.email.split("@")[0], email: form.email });
-  setLoading(false);
-  onClose();
-};
+  
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
