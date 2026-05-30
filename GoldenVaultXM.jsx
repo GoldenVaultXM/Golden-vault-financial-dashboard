@@ -188,35 +188,18 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const handle = async () => {
-  setError("");
-  if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
-  
-  setLoading(true);
-
-  if (mode === "signup") {
+    setError("");
+    setLoading(true);
     const { data, error } = await supabase.auth.signUp({ 
       email: form.email, 
-      password: form.password 
+      password: form.password,
+      options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
     });
-    if (error) { 
-      setError(error.message); 
-      setLoading(false); 
-      return; 
-    }
-    // Only proceed if signup was successful
-  } else {
-    const { data, error } = await supabase.auth.signInWithPassword({ 
-      email: form.email, 
-      password: form.password 
-    });
-    if (error) { 
-      setError(error.message); 
-      setLoading(false); 
-      return; 
-    }
-    // Only proceed if signin was successful
-  }
-
+    if (error) { setError(error.message); setLoading(false); return; }
+    login({ name: form.name || form.email.split("@")[0], email: form.email });
+    setLoading(false);
+    onClose();
+  };
   // This line now only runs if there were no errors above
   login({ name: form.name || form.email.split("@")[0], email: form.email });
   setLoading(false);
