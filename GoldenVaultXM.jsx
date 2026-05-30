@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useContext, createContext } from 'react';
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Star } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, ReferenceLine, Line } from 'recharts';
-import { C, INSTRUMENT_DEFS, fmtPrice, fmtPct } from './constants';
-import { Card, IconBox } from './components';
+import { } from './constants';
+import { } from './components';
 import { supabase } from './supabaseClient';
 const LOGO_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-const C = {
-  bg: "#080808",
-  card: "#0f0f0f",
-  card2: "#141414",
-  card3: "#1a1a1a",
-  border: "#222222",
   border2: "#2a2a2a",
   gold: "#d97706",
   gold2: "#f59e0b",
