@@ -14,6 +14,7 @@ import {{
   Search, Lock, Award, BookOpen, Mail, Phone, MapPin,
   Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Star,
 }} from "lucide-react";
+import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {{
@@ -1264,12 +1265,32 @@ function AppShell() {
 }
 
 export default function GoldenVaultXM() {
+  // 1. Hooks
   useEffect(() => {
     console.log("Supabase connected:", supabase);
   }, []);
+
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: summary } = await supabase
+        .from('account_summary')
+        .select('total_invested, current_value')
+        .eq('user_id', user.id)
+        .single();
+        
+      setData(summary);
+    }
+    fetchData();
+  }, []);
+
+  // 2. Return statement (must be last)
   return (
     <AuthProvider>
-      <AppShell />
+      <AppShell data={data} />
     </AuthProvider>
   );
-}
