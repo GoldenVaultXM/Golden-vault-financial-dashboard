@@ -29,7 +29,8 @@ const C = {
 const LOGO_SRC = LOGO_B64;
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
-<AuthContext.Provider value={{ isAuthenticated: false, requireAuth: () => {} }}>
+/* --- Auth Context --- */
+const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
 
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
@@ -1282,10 +1283,10 @@ export default function GoldenVaultXM() {
     }
     fetchData();
   }, []);
-
   return (
-    <AuthContext.Provider value={null}>
+    <AuthContext.Provider value={{ isAuthenticated: false, requireAuth: () => {} }}>
       <AppShell data={data} />
     </AuthContext.Provider>
   );
 }
+
