@@ -190,10 +190,13 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const handle = async () => {
     setError("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ 
-      email: form.email, 
-      password: form.password
-    });
+const { data, error } = await supabase.auth.signUp({
+  email: form.email,
+  password: form.password,
+  options: {
+    emailRedirectTo: 'https://goldenvaultxm.live/'
+  }
+});
     
     if (error) { 
       setError(error.message); 
