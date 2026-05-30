@@ -1205,7 +1205,7 @@ function SettingsPage() {
   );
 }
 /* ─── Root App ───────────────────────────────────────────────────────────── */
-function AppShell() {
+function AppShell({ data }) {
   const [page,     setPage]     = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
@@ -1236,9 +1236,8 @@ function AppShell() {
     }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
-        body { background: ${C.bg}; margin: 0; }
+        body { background: ${C.bg}; margin: 0; scrollbar-width: none; }
         ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
         input, button { font-family: inherit; }
         input::placeholder { color: #404040; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
@@ -1263,6 +1262,7 @@ function AppShell() {
     </div>
   );
 }
+
 export default function GoldenVaultXM() {
   const [data, setData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
