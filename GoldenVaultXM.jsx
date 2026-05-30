@@ -28,9 +28,6 @@ const C = {
 
 const LOGO_SRC = LOGO_B64;
 
-const AuthContext = createContext(null);
-const useAuth = () => useContext(AuthContext);
-
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
