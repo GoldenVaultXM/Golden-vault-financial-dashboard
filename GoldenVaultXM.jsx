@@ -1265,12 +1265,20 @@ function AppShell() {
 }
 export default function GoldenVaultXM() {
   const [data, setData] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Add this
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) console.error("Google Login Error:", error.message);
+  };
 
   useEffect(() => {
     async function fetchData() {
       const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user); // Set true if user exists
+      setIsAuthenticated(!!user);
       
       if (!user) return;
 
@@ -1286,11 +1294,8 @@ export default function GoldenVaultXM() {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated: !!data, 
-      requireAuth: () => {}, 
-      handleGoogleLogin 
-    }}>
+    <AuthContext.Provider value={{ isAuthenticated, requireAuth: () => {}, handleGoogleLogin }}>
       <AppShell data={data} />
     </AuthContext.Provider>
   );
+}
