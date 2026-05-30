@@ -192,10 +192,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(true);
 const { data, error } = await supabase.auth.signUp({
   email: form.email,
-  password: form.password,
-  options: {
-    emailRedirectTo: 'https://goldenvaultxm.live/'
-  }
+  password: form.password
 });
     
     if (error) { 
