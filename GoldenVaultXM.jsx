@@ -1,4 +1,8 @@
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+python3 << 'EOF'
+with open('/tmp/logo_b64.txt') as f:
+    LOGO_B64 = f.read().strip()
+
+FILE = f'''import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Cell, ReferenceLine,
