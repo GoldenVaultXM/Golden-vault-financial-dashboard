@@ -188,26 +188,40 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const handle = async () => {
-    setError("");
-    if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
-    if (mode === "signup" && !form.name) { setError("Please enter your name."); return; }
-    if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    
-    setLoading(true);
-
-    if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password });
-      if (error) { setError(error.message); setLoading(false); return; }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
-      if (error) { setError(error.message); setLoading(false); return; }
-    }
-
-    login({ name: form.name || form.email.split("@")[0], email: form.email });
-    setLoading(false);
-    onClose();
-  };
+  setError("");
+  if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
   
+  setLoading(true);
+
+  if (mode === "signup") {
+    const { data, error } = await supabase.auth.signUp({ 
+      email: form.email, 
+      password: form.password 
+    });
+    if (error) { 
+      setError(error.message); 
+      setLoading(false); 
+      return; 
+    }
+    // Only proceed if signup was successful
+  } else {
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email: form.email, 
+      password: form.password 
+    });
+    if (error) { 
+      setError(error.message); 
+      setLoading(false); 
+      return; 
+    }
+    // Only proceed if signin was successful
+  }
+
+  // This line now only runs if there were no errors above
+  login({ name: form.name || form.email.split("@")[0], email: form.email });
+  setLoading(false);
+  onClose();
+};
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
