@@ -294,9 +294,8 @@ function AuthModal({ onClose, initialMode = "signup" }) {
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}> {mode === "signup" ? "Already have an account? " : "Don't have an account? "} <button onClick={() => setMode(m => m === "signup" ? "login" : "signup")} style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}> {mode === "signup" ? "Sign In" : "Create Account"} </button> </div>
       </div>
     </div>
-  );
+    );
 }
-
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
