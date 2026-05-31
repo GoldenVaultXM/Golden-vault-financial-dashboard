@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check } from "lucide-react";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check, Maximize2 } from "lucide-react";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -476,7 +476,10 @@ function MarketsPage({ prices, flash }) {
       <Card style={{ padding: "14px 14px 0 14px", overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Advanced Real-Time Chart</div><div style={{ fontSize: 11, color: C.text3 }}>Powered by TradingView</div></div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div>
+            <a href="https://www.tradingview.com/chart/" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, background: `${C.gold}14`, border: `1px solid ${C.gold}33`, borderRadius: 7, padding: "5px 9px", color: C.gold, fontSize: 10, fontWeight: 800, textDecoration: "none", letterSpacing: "0.04em", transition: "all .18s" }} onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}28`; e.currentTarget.style.borderColor = `${C.gold}66`; }} onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}14`; e.currentTarget.style.borderColor = `${C.gold}33`; }}><Maximize2 size={11} />EXPAND</a>
+          </div>
         </div>
         <div
           id="tv_market_chart"
