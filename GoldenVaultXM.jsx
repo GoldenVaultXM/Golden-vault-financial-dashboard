@@ -650,4 +650,3 @@ function AppShell() {
 export default function GoldenVaultXM() {
   return (<AuthProvider><AppShell /></AuthProvider>);
 }
-
