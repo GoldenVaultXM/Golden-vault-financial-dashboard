@@ -244,12 +244,15 @@ function AuthModal({ onClose, initialMode = "signup" }) {
         <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4 }}> {mode === "signup" ? "Create Account" : "Welcome Back"} </div>
         <div style={{ fontSize: 13, color: C.text3, marginBottom: 22 }}> {mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."} </div>
 
-        {/* Google Button */}
-        <button
-          onClick={handleGoogle}
-          disabled={googleLoading}
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "12px 16px", background: "#fff", border: "none", borderRadius: 10, cursor: googleLoading ? "not-allowed" : "pointer", marginBottom: 14, fontWeight: 800, fontSize: 13, color: "#1a1a1a", transition: "all .18s", opacity: googleLoading ? 0.7 : 1, }}
-        >
+        /* Google Button */
+<Btn 
+  variant="outline" 
+  onClick={handleGoogle} 
+  style={{ width: "100%", marginTop: 10 }}
+>
+  Sign in with Google
+</Btn>
+
           {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : (
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.16 2.85l6.08-6.08C34.37 3.07 29.46 1 24 1 14.82 1 7.07 6.48 3.73 14.22l7.1 5.52C12.55 13.62 17.82 9.5 24 9.5z"/>
