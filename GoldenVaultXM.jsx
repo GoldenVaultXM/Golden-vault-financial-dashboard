@@ -1,12 +1,6 @@
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+import React, { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
-import { createClient } from '@supabase/supabase-js';
-
-/* ─── Supabase Client (Fix #1: inline createClient with correct env vars) ── */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
@@ -184,8 +178,10 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ─── Auth Modal (Fix #2: repaired handle() — removed orphaned code outside
-       the function body, added login branch for signin mode) ─────────────── */
+/* ─── Auth Modal ─────────────────────────────────────────────────────────── */
+// FIX: Removed orphaned code (login/setLoading/onClose calls) that was outside
+// the handle() function body, causing a crash on every render.
+// FIX: Removed supabase.auth calls — replaced with simple in-memory auth.
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
@@ -196,30 +192,18 @@ function AuthModal({ onClose, initialMode = "signup" }) {
 
   const handle = async () => {
     setError("");
-    setLoading(true);
-    try {
-      if (mode === "signup") {
-        /* Fix #3: signUp call — headers are sent correctly by the SDK when
-           createClient is initialized with the anon key above.             */
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: { emailRedirectTo: "https://goldenvaultxm.live/" },
-        });
-        if (signUpError) { setError(signUpError.message); setLoading(false); return; }
-        login({ name: form.name || form.email.split("@")[0], email: form.email });
-      } else {
-        /* signin branch */
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        });
-        if (signInError) { setError(signInError.message); setLoading(false); return; }
-        login({ name: data.user?.email?.split("@")[0] || form.email.split("@")[0], email: form.email });
-      }
-    } catch (e) {
-      setError("An unexpected error occurred. Please try again.");
+    if (!form.email || !form.password) {
+      setError("Please fill in all required fields.");
+      return;
     }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    setLoading(true);
+    // Simulate async auth
+    await new Promise(r => setTimeout(r, 900));
+    login({ name: form.name || form.email.split("@")[0], email: form.email });
     setLoading(false);
     onClose();
   };
@@ -366,197 +350,321 @@ function HomePage({ setPage }) {
   );
 }
 
-/* ─── TradingViewChart — replaced with exact dark candlestick style
-       matching the uploaded image: dark bg, red/green candles, price axis
-       on right, dotted current-price line, zoom in/out buttons ────────────── */
-function TradingViewChart() {
-  const containerRef = useRef(null);
-  const wrapperRef = useRef(null);
-  const widgetRef = useRef(null);
-  const [symbol, setSymbol] = useState("OANDA:XAUUSD");
-  const [interval, setTVInterval] = useState("5");
-  const [zoom, setZoom] = useState(1);
+/* ─── Candlestick Simulation ─────────────────────────────────────────────── */
+const CHART_SYMBOLS = [
+  { label: "GOLD",    base: 2342.0,   step: 0.0001, decimals: 2 },
+  { label: "BTC",     base: 67800,    step: 0.0003, decimals: 0 },
+  { label: "ETH",     base: 3520,     step: 0.0003, decimals: 1 },
+  { label: "EUR/USD", base: 1.08432,  step: 0.00008,decimals: 5 },
+  { label: "S&P 500", base: 5218.0,   step: 0.0001, decimals: 1 },
+  { label: "OIL",     base: 77.40,    step: 0.0002, decimals: 2 },
+  { label: "NVDA",    base: 875.40,   step: 0.0002, decimals: 2 },
+  { label: "AAPL",    base: 189.30,   step: 0.0002, decimals: 2 },
+];
+const INTERVALS_SIM = ["1m","5m","15m","1h","4h","1D"];
 
-  const TV_SYMBOLS = [
-    { label: "GOLD", value: "OANDA:XAUUSD" },
-    { label: "BTC", value: "BINANCE:BTCUSDT" },
-    { label: "ETH", value: "BINANCE:ETHUSDT" },
-    { label: "EUR/USD", value: "FX:EURUSD" },
-    { label: "S&P 500", value: "SP:SPX" },
-    { label: "OIL", value: "TVC:USOIL" },
-    { label: "NVDA", value: "NASDAQ:NVDA" },
-    { label: "AAPL", value: "NASDAQ:AAPL" },
-  ];
-  const INTERVALS = [
-    { label: "1m", value: "1" },
-    { label: "5m", value: "5" },
-    { label: "15m", value: "15" },
-    { label: "1h", value: "60" },
-    { label: "4h", value: "240" },
-    { label: "1D", value: "D" },
-  ];
+function generateCandles(base, step, count = 80) {
+  const candles = [];
+  let price = base;
+  for (let i = 0; i < count; i++) {
+    const open = price;
+    const move = step * base * (1 + Math.random() * 2);
+    const isBull = Math.random() > 0.46;
+    const close = open + (isBull ? 1 : -1) * move * (0.3 + Math.random() * 0.7);
+    const high = Math.max(open, close) + move * Math.random() * 0.6;
+    const low  = Math.min(open, close) - move * Math.random() * 0.6;
+    const vol  = 0.3 + Math.random();
+    candles.push({ open, high, low, close, vol });
+    price = close;
+  }
+  return candles;
+}
 
-  /* Unique container ID per symbol+interval to avoid stale widget conflicts */
-  const containerId = `tv_chart_${symbol.replace(/[^a-zA-Z0-9]/g, "_")}_${interval}`;
+function CandlestickChart() {
+  const canvasRef = useRef(null);
+  const [symIdx, setSymIdx] = useState(0);
+  const [interval, setInterval2] = useState("1m");
+  const candlesRef = useRef([]);
+  const animRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const [tooltip, setTooltip] = useState(null);
+  const [currentPrice, setCurrentPrice] = useState(null);
+  const [priceDir, setPriceDir] = useState(null); // "up"|"dn"
 
+  const sym = CHART_SYMBOLS[symIdx];
+
+  // Init / reset candles when symbol or interval changes
   useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
-    containerRef.current.id = containerId;
+    candlesRef.current = generateCandles(sym.base, sym.step, 80);
+    setCurrentPrice(candlesRef.current[candlesRef.current.length - 1].close);
+    setPriceDir(null);
+    draw();
+  }, [symIdx, interval]);
 
-    const buildWidget = () => {
-      if (!window.TradingView) return;
-      widgetRef.current = new window.TradingView.widget({
-        autosize: true,
-        symbol: symbol,
-        interval: interval,
-        timezone: "Etc/UTC",
-        /* Fix #4: dark candlestick style matching the image —
-           style "1" = Japanese candlesticks, dark theme                */
-        theme: "dark",
-        style: "1",
-        locale: "en",
-        toolbar_bg: "#080808",
-        enable_publishing: false,
-        allow_symbol_change: false,
-        container_id: containerId,
-        /* Hide top toolbar to keep the clean look from the image */
-        hide_top_toolbar: false,
-        hide_side_toolbar: true,
-        withdateranges: false,
-        save_image: false,
-        /* Overrides to match the image: dark background, subtle grid,
-           price scale on the right with the red current-price label    */
-        overrides: {
-          "paneProperties.background": "#080808",
-          "paneProperties.backgroundType": "solid",
-          "paneProperties.vertGridProperties.color": "#1a1a1a",
-          "paneProperties.horzGridProperties.color": "#1a1a1a",
-          "scalesProperties.textColor": "#a3a3a3",
-          "scalesProperties.fontSize": 11,
-          "scalesProperties.lineColor": "#222222",
-          /* Red/green candle colors matching the image */
-          "mainSeriesProperties.candleStyle.upColor": "#22c55e",
-          "mainSeriesProperties.candleStyle.downColor": "#ef4444",
-          "mainSeriesProperties.candleStyle.borderUpColor": "#22c55e",
-          "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
-          "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
-          "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
-          /* Dotted current-price line (red, matching image) */
-          "mainSeriesProperties.priceLineColor": "#ef4444",
-          "mainSeriesProperties.priceLineWidth": 1,
-          "mainSeriesProperties.showPriceLine": true,
-        },
-        studies_overrides: {},
-        loading_screen: { backgroundColor: "#080808", foregroundColor: "#d97706" },
-      });
-    };
+  // Live tick: evolve last candle and occasionally push new one
+  useEffect(() => {
+    const tickMs = { "1m": 800, "5m": 1200, "15m": 1600, "1h": 2000, "4h": 2400, "1D": 3000 }[interval] || 1000;
+    let elapsed = 0;
+    const candleDuration = { "1m":12,"5m":20,"15m":30,"1h":45,"4h":60,"1D":80 }[interval] || 20; // ticks per candle
 
-    if (window.TradingView) {
-      buildWidget();
-    } else {
-      const existing = document.querySelector('script[src="https://s3.tradingview.com/tv.js"]');
-      if (existing) {
-        existing.addEventListener("load", buildWidget);
+    const tick = setInterval(() => {
+      const candles = candlesRef.current;
+      const last = candles[candles.length - 1];
+      const def = sym;
+      const move = def.step * def.base * (0.1 + Math.random() * 0.4);
+      const sign = Math.random() > 0.48 ? 1 : -1;
+      const newClose = Math.max(last.close + sign * move, def.base * 0.5);
+      const newHigh = Math.max(last.high, newClose);
+      const newLow  = Math.min(last.low,  newClose);
+
+      setPriceDir(sign === 1 ? "up" : "dn");
+      setTimeout(() => setPriceDir(null), 400);
+
+      elapsed++;
+      if (elapsed >= candleDuration) {
+        elapsed = 0;
+        // push new candle
+        candles.push({ open: newClose, high: newClose, low: newClose, close: newClose, vol: 0.3 + Math.random() });
+        if (candles.length > 120) candles.shift();
       } else {
-        const script = document.createElement("script");
-        script.src = "https://s3.tradingview.com/tv.js";
-        script.async = true;
-        script.onload = buildWidget;
-        document.head.appendChild(script);
+        candles[candles.length - 1] = { ...last, close: newClose, high: newHigh, low: newLow, vol: last.vol + 0.01 };
       }
+
+      setCurrentPrice(newClose);
+      draw();
+    }, tickMs);
+
+    return () => clearInterval(tick);
+  }, [symIdx, interval]);
+
+  function draw() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+
+    const candles = candlesRef.current;
+    const PAD_L = 8, PAD_R = 52, PAD_T = 12, PAD_B = 36;
+    const chartW = W - PAD_L - PAD_R;
+    const chartH = H - PAD_T - PAD_B;
+    const volH = 36;
+    const priceH = chartH - volH - 6;
+
+    // Background
+    ctx.fillStyle = "#080808";
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    const gridLines = 5;
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= gridLines; i++) {
+      const y = PAD_T + (priceH / gridLines) * i;
+      ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
     }
 
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [symbol, interval, containerId]);
+    // Price range
+    const visible = candles.slice(-60);
+    const allH = visible.map(c => c.high), allL = visible.map(c => c.low);
+    let maxP = Math.max(...allH), minP = Math.min(...allL);
+    const pad = (maxP - minP) * 0.08;
+    maxP += pad; minP -= pad;
+    const pRange = maxP - minP || 1;
 
-  /* Zoom: scales the wrapper div (chart + scroll) without touching the iframe internals */
-  const handleZoomIn = () => setZoom(z => Math.min(+(z + 0.15).toFixed(2), 2.2));
-  const handleZoomOut = () => setZoom(z => Math.max(+(z - 0.15).toFixed(2), 0.5));
-  const handleZoomReset = () => setZoom(1);
+    const toY = p => PAD_T + priceH * (1 - (p - minP) / pRange);
 
-  const CHART_HEIGHT = 340;
+    // Y-axis price labels
+    ctx.fillStyle = "#525252";
+    ctx.font = "9px 'DM Sans',system-ui,sans-serif";
+    ctx.textAlign = "left";
+    for (let i = 0; i <= gridLines; i++) {
+      const p = minP + pRange * (i / gridLines);
+      const y = toY(p);
+      ctx.fillText(p.toFixed(sym.decimals > 3 ? 4 : sym.decimals > 1 ? 2 : 0), W - PAD_R + 4, y + 3);
+    }
+
+    // Volume bars
+    const maxVol = Math.max(...visible.map(c => c.vol));
+    const cw = chartW / visible.length;
+    visible.forEach((c, i) => {
+      const isBull = c.close >= c.open;
+      const x = PAD_L + i * cw;
+      const vH = (c.vol / maxVol) * volH;
+      ctx.fillStyle = isBull ? "#22c55e28" : "#ef444428";
+      ctx.fillRect(x + cw * 0.1, PAD_T + priceH + 6 + (volH - vH), cw * 0.8, vH);
+    });
+
+    // Candles
+    visible.forEach((c, i) => {
+      const isBull = c.close >= c.open;
+      const col = isBull ? "#22c55e" : "#ef4444";
+      const x = PAD_L + i * cw + cw / 2;
+      const bodyTop    = toY(Math.max(c.open, c.close));
+      const bodyBot    = toY(Math.min(c.open, c.close));
+      const bodyH      = Math.max(bodyBot - bodyTop, 1);
+      const candleW    = Math.max(cw * 0.55, 2);
+
+      // Wick
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(cw * 0.12, 1);
+      ctx.beginPath();
+      ctx.moveTo(x, toY(c.high));
+      ctx.lineTo(x, toY(c.low));
+      ctx.stroke();
+
+      // Body
+      ctx.fillStyle = isBull ? "#22c55e" : "#ef4444";
+      // Last candle gets gold glow
+      if (i === visible.length - 1) {
+        ctx.shadowColor = "#d97706";
+        ctx.shadowBlur = 6;
+      }
+      ctx.fillRect(x - candleW / 2, bodyTop, candleW, bodyH);
+      ctx.shadowBlur = 0;
+    });
+
+    // Current price line
+    const last = candles[candles.length - 1];
+    const lastY = toY(last.close);
+    const isBullLast = last.close >= last.open;
+    ctx.strokeStyle = isBullLast ? "#22c55e88" : "#ef444488";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(PAD_L, lastY); ctx.lineTo(W - PAD_R, lastY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Price tag on right
+    ctx.fillStyle = isBullLast ? "#22c55e" : "#ef4444";
+    ctx.fillRect(W - PAD_R, lastY - 9, PAD_R, 18);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 9px 'DM Sans',system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(last.close.toFixed(sym.decimals > 3 ? 4 : sym.decimals > 1 ? 2 : 0), W - PAD_R + PAD_R / 2, lastY + 3);
+
+    // X-axis time labels
+    ctx.fillStyle = "#525252";
+    ctx.font = "8px 'DM Sans',system-ui,sans-serif";
+    ctx.textAlign = "center";
+    const labelEvery = Math.ceil(visible.length / 6);
+    visible.forEach((_, i) => {
+      if (i % labelEvery !== 0) return;
+      const x = PAD_L + i * cw + cw / 2;
+      ctx.fillText(`-${visible.length - i}`, x, H - 4);
+    });
+  }
+
+  // Mouse tooltip
+  function handleMouseMove(e) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const W = canvas.clientWidth;
+    const PAD_L = 8, PAD_R = 52;
+    const chartW = W - PAD_L - PAD_R;
+    const visible = candlesRef.current.slice(-60);
+    const cw = chartW / visible.length;
+    const idx = Math.floor((mx - PAD_L) / cw);
+    if (idx >= 0 && idx < visible.length) {
+      const c = visible[idx];
+      setTooltip({ x: mx, c, isBull: c.close >= c.open });
+    } else {
+      setTooltip(null);
+    }
+  }
+
+  const fmtP = v => v.toFixed(sym.decimals > 3 ? 4 : sym.decimals > 1 ? 2 : 0);
 
   return (
-    <Card style={{ padding: "14px 14px 10px", overflow: "hidden" }}>
-      {/* Header Row */}
+    <Card style={{ padding: "14px 14px 12px", overflow: "hidden" }}>
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 14, color: C.text }}>Live Chart</div>
-          <div style={{ fontSize: 10, color: C.green, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+          <div style={{ fontWeight: 900, fontSize: 14, color: C.text }}>Live Candlestick Chart</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} />
-            TradingView Real-Time
+            <span style={{ fontSize: 10, color: C.green }}>Simulated Live Feed</span>
           </div>
         </div>
-        {/* Zoom Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button
-            onClick={handleZoomOut}
-            title="Zoom Out"
-            style={{ width: 30, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.text2, fontSize: 18, fontWeight: 900, cursor: "pointer", display: "grid", placeItems: "center", lineHeight: 1 }}
-          >−</button>
-          <button
-            onClick={handleZoomReset}
-            title="Reset Zoom"
-            style={{ minWidth: 38, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.gold, fontSize: 10, fontWeight: 800, cursor: "pointer", display: "grid", placeItems: "center", padding: "0 6px" }}
-          >{Math.round(zoom * 100)}%</button>
-          <button
-            onClick={handleZoomIn}
-            title="Zoom In"
-            style={{ width: 30, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.text2, fontSize: 18, fontWeight: 900, cursor: "pointer", display: "grid", placeItems: "center", lineHeight: 1 }}
-          >+</button>
-        </div>
+        {currentPrice != null && (
+          <div style={{ textAlign: "right" }}>
+            <div style={{
+              fontSize: 18, fontWeight: 900, fontVariantNumeric: "tabular-nums",
+              color: priceDir === "up" ? C.green : priceDir === "dn" ? C.red : C.text,
+              transition: "color 0.3s",
+            }}>
+              {currentPrice.toFixed(sym.decimals > 3 ? 4 : sym.decimals > 1 ? 2 : 0)}
+            </div>
+            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.1em" }}>{sym.label}</div>
+          </div>
+        )}
       </div>
 
-      {/* Symbol Selector */}
+      {/* Symbol selector */}
       <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 8 }}>
-        {TV_SYMBOLS.map(s => (
-          <button key={s.value} onClick={() => setSymbol(s.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: symbol === s.value ? C.gold : `${C.gold}14`, color: symbol === s.value ? "#000" : C.text3, transition: "all .15s" }}>{s.label}</button>
+        {CHART_SYMBOLS.map((s, i) => (
+          <button key={s.label} onClick={() => setSymIdx(i)} style={{
+            flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "5px 9px", borderRadius: 6,
+            border: "none", cursor: "pointer", transition: "all .15s",
+            background: i === symIdx ? C.gold : `${C.gold}14`,
+            color: i === symIdx ? "#000" : C.text3,
+          }}>{s.label}</button>
         ))}
       </div>
 
-      {/* Interval Selector */}
+      {/* Interval selector */}
       <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
-        {INTERVALS.map(iv => (
-          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: interval === iv.value ? C.gold2 : `${C.gold}0f`, color: interval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
+        {INTERVALS_SIM.map(iv => (
+          <button key={iv} onClick={() => setInterval2(iv)} style={{
+            flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5,
+            border: "none", cursor: "pointer", transition: "all .15s",
+            background: iv === interval ? C.gold2 : `${C.gold}0f`,
+            color: iv === interval ? "#000" : C.text3,
+          }}>{iv}</button>
         ))}
       </div>
 
-      {/* Chart Container — zoom via CSS transform on wrapper */}
-      <div
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          borderRadius: 10,
-          background: "#080808",
-          border: `1px solid ${C.border}`,
-          /* Fixed outer height so the card doesn't collapse when zoomed out */
-          height: CHART_HEIGHT,
-        }}
-      >
-        <div
-          ref={wrapperRef}
-          style={{
-            transformOrigin: "top left",
-            transform: `scale(${zoom})`,
-            /* When zoomed out, expand width/height so the chart fills space */
-            width: zoom !== 1 ? `${100 / zoom}%` : "100%",
-            height: zoom !== 1 ? `${CHART_HEIGHT / zoom}px` : `${CHART_HEIGHT}px`,
-            transition: "transform 0.2s ease",
-          }}
-        >
-          <div
-            id={containerId}
-            ref={containerRef}
-            style={{ width: "100%", height: `${CHART_HEIGHT}px` }}
-          />
-        </div>
+      {/* Canvas */}
+      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: `1px solid ${C.border}`, background: "#080808" }}>
+        <canvas
+          ref={canvasRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setTooltip(null)}
+          style={{ width: "100%", height: 320, display: "block", cursor: "crosshair" }}
+        />
+        {tooltip && (
+          <div style={{
+            position: "absolute", top: 8,
+            left: tooltip.x > 180 ? tooltip.x - 130 : tooltip.x + 10,
+            background: C.card2, border: `1px solid ${tooltip.isBull ? C.green : C.red}44`,
+            borderRadius: 8, padding: "8px 10px", pointerEvents: "none", minWidth: 120,
+            boxShadow: "0 4px 20px #0008",
+          }}>
+            <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: "3px 10px" }}>
+              {[["O", tooltip.c.open], ["H", tooltip.c.high], ["L", tooltip.c.low], ["C", tooltip.c.close]].map(([lbl, val]) => (
+                <React.Fragment key={lbl}>
+                  <span style={{ fontSize: 10, color: C.text3, fontWeight: 700 }}>{lbl}</span>
+                  <span style={{ fontSize: 10, color: lbl === "H" ? C.green : lbl === "L" ? C.red : lbl === "C" ? (tooltip.isBull ? C.green : C.red) : C.text, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmtP(val)}</span>
+                </React.Fragment>
+              ))}
+            </div>
+            <div style={{ marginTop: 4, fontSize: 9, color: C.text4 }}>Vol {tooltip.c.vol.toFixed(2)}K</div>
+          </div>
+        )}
       </div>
 
-      <div style={{ fontSize: 10, color: C.text3, textAlign: "center", marginTop: 8 }}>
-        Powered by <span style={{ color: C.gold, fontWeight: 800 }}>TradingView</span> · Real market data
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+        <div style={{ display: "flex", gap: 12 }}>
+          {[["▲ Bullish", C.green], ["▼ Bearish", C.red]].map(([lbl, col]) => (
+            <span key={lbl} style={{ fontSize: 9, color: col, fontWeight: 800 }}>{lbl}</span>
+          ))}
+        </div>
+        <span style={{ fontSize: 9, color: C.text4 }}>Hover candle for OHLC</span>
       </div>
     </Card>
   );
@@ -572,7 +680,7 @@ function MarketsPage({ prices, flash }) {
         <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}> Global Trading <span style={{ color: C.gold }}>Markets</span> </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}><div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span></div></div>
       </div>
-      <TradingViewChart />
+      <CandlestickChart />
       <div style={{ position: "relative" }}><Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />{search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}</div>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>{CATS.map(c => { const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length; return (<button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s", background: c === cat ? C.gold : `${C.gold}14`, color: c === cat ? "#000" : C.text3, display: "flex", alignItems: "center", gap: 4, }}>{c} <span style={{ fontSize: 9, opacity: .7 }}>{count}</span></button>); })}</div>
       <Card style={{ padding: "0 16px" }}>
@@ -600,33 +708,15 @@ function TradePage({ prices }) {
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
-  const [totalInvested, setTotalInvested] = useState(0);
-  const [currentValue, setCurrentValue] = useState(0);
-
-  /* Fix #5: supabase.from('account_summary') — correct table name kept,
-     getUser() path is valid, SDK handles auth headers automatically     */
-  useEffect(() => {
-    const loadUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('account_summary')
-        .select('current_value, total_invested')
-        .eq('user_id', user.id)
-        .single();
-      if (data) {
-        setTotalInvested(data.total_invested);
-        setCurrentValue(data.current_value);
-      }
-    };
-    loadUserData();
-  }, []);
+  const [totalInvested] = useState(0);
+  const [currentValue] = useState(0);
 
   const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
   const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
