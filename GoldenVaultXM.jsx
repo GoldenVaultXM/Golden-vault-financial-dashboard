@@ -1,4 +1,4 @@
-imp/**
+/**
  * GoldenVaultXM — Audited & Production-Ready
  *
  * FIXES APPLIED (see audit report):
