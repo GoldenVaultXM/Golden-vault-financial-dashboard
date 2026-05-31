@@ -1,194 +1,183 @@
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║          GOLDEN VAULT XM — PRINCIPAL STAFF ENGINEER BUILD               ║
-// ║  Swiss-minimalist luxury trading dashboard · Deep Onyx / Champagne Gold ║
-// ║  Single-file React · Zero orphan braces · Compiles on first attempt     ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users } from "lucide-react";
+import { supabase } from './supabaseClient';
 
-import {
-  useState, useEffect, useRef, useCallback, createContext, useContext,
-} from "react";
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Cell, ReferenceLine,
-} from "recharts";
-import {
-  Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap,
-  Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, Menu, X,
-  ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award,
-  BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn,
-  AlertCircle, RefreshCw, Users, Maximize2, Minimize2,
-} from "lucide-react";
+/* ─── Asset URLs ──────────────────────────────────────────────────────────── */
+// Replace with your actual hosted asset paths or import them directly
+const LOGO_URL = "/assets/logo-gv.png";          // GV lightning logo (78649.png)
+const BG_URL   = "/assets/bg-tech-green.jpg";    // Tech green background (83617.jpg)
 
-// ─── [BLOCK START: Supabase shim — replace with real import in production] ──
-// import { supabase } from './supabaseClient';
-const supabase = {
-  auth: {
-    signUp: async ({ email, password }) => {
-      // Mock: treat any input as success
-      if (!email || !password) return { data: null, error: { message: "Email and password required." } };
-      return { data: { user: { id: "mock-uid-001", email } }, error: null };
-    },
-    getUser: async () => ({ data: { user: { id: "mock-uid-001" } } }),
-  },
-  from: () => ({
-    select: () => ({
-      eq: () => ({
-        single: async () => ({ data: null, error: null }),
-      }),
-    }),
-  }),
-};
-// ─── [BLOCK END: Supabase shim] ─────────────────────────────────────────────
-
-// ─── [BLOCK START: Design Tokens] ───────────────────────────────────────────
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
-  bg:      "#080808",
-  card:    "#0f0f0f",
-  card2:   "#141414",
-  card3:   "#1a1a1a",
-  border:  "#222222",
-  border2: "#2a2a2a",
-  gold:    "#d97706",
-  gold2:   "#f59e0b",
-  gold3:   "#fbbf24",
+  bg: "#020d08",
+  card: "#050f0a",
+  card2: "#091409",
+  card3: "#0d1a0d",
+  border: "#0e2a14",
+  border2: "#153a1c",
+  gold: "#d97706",
+  gold2: "#f59e0b",
+  gold3: "#fbbf24",
   goldDim: "#92400e",
-  green:   "#22c55e",
-  red:     "#ef4444",
-  purple:  "#7c3aed",
-  blue:    "#3b82f6",
-  text:    "#ffffff",
-  text2:   "#a3a3a3",
-  text3:   "#525252",
-  text4:   "#303030",
+  green: "#22c55e",
+  greenNeon: "#00ff88",
+  greenDim: "#14532d",
+  red: "#ef4444",
+  purple: "#7c3aed",
+  blue: "#3b82f6",
+  text: "#e8fdf0",
+  text2: "#9dc9ab",
+  text3: "#4a7a58",
+  text4: "#1f3d28",
 };
-// ─── [BLOCK END: Design Tokens] ─────────────────────────────────────────────
 
-// ─── [BLOCK START: Decoupled CONFIG — no hardcoded wallet strings inline] ───
-const CONFIG = {
-  depositAddresses: {
-    BTC:  "bc1q_REPLACE_WITH_SECURE_REMOTE_CONFIG",
-    ETH:  "0x_REPLACE_WITH_SECURE_REMOTE_CONFIG",
-    USDT: "T_REPLACE_WITH_SECURE_REMOTE_CONFIG",
-  },
-  supportEmail: "support@goldenvaultxm.com",
-  supportPhone: "24/7 Trading Desk",
-  supportLocation: "Global Trading Hub",
-  platformName: "GOLDEN VAULT XM",
-  platformSub:  "ELITE TRADING",
-};
-// ─── [BLOCK END: Decoupled CONFIG] ──────────────────────────────────────────
+/* ─── Global Animations CSS ──────────────────────────────────────────────── */
+const GLOBAL_CSS = `
+  *, *::before, *::after { box-sizing: border-box; }
+  body { background: ${C.bg}; margin: 0; overflow-x: hidden; }
+  ::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
+  input, button { font-family: inherit; }
+  input::placeholder { color: #1f3d28; }
 
-// ─── [BLOCK START: Auth Context] ────────────────────────────────────────────
+  @keyframes pulse        { 0%,100%{opacity:1} 50%{opacity:.35} }
+  @keyframes spin         { to { transform: rotate(360deg); } }
+  @keyframes spinSlow     { to { transform: rotate(360deg); } }
+  @keyframes spinReverse  { to { transform: rotate(-360deg); } }
+  @keyframes shimmer      { 0%,100%{opacity:.25} 50%{opacity:.75} }
+  @keyframes glow         { 0%,100%{opacity:.4;filter:brightness(1)} 50%{opacity:1;filter:brightness(1.6)} }
+  @keyframes bgPulse      { 0%,100%{opacity:.18} 50%{opacity:.34} }
+  @keyframes fadeSlideUp  { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes borderGlow   { 0%,100%{box-shadow:0 0 8px #00ff8822} 50%{box-shadow:0 0 28px #00ff8866} }
+
+  .gear-outer {
+    animation: spinSlow 28s linear infinite;
+    transform-origin: center;
+  }
+  .gear-inner {
+    animation: spinReverse 18s linear infinite;
+    transform-origin: center;
+  }
+  .gear-core {
+    animation: spinSlow 12s linear infinite;
+    transform-origin: center;
+  }
+  .neon-glow {
+    animation: glow 3.4s ease-in-out infinite;
+  }
+  .neon-glow-slow {
+    animation: glow 5s ease-in-out infinite;
+  }
+  .bg-pulse {
+    animation: bgPulse 4s ease-in-out infinite;
+  }
+  .page-enter {
+    animation: fadeSlideUp .35s ease forwards;
+  }
+`;
+
+/* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
-// ─── [BLOCK END: Auth Context] ──────────────────────────────────────────────
 
-// ─── [BLOCK START: Market Instrument Definitions] ───────────────────────────
+/* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
-  { pair: "BTC/USDT",  name: "Bitcoin",                      cat: "Crypto",      base: 67800,    step: 0.0003 },
-  { pair: "ETH/USDT",  name: "Ethereum",                     cat: "Crypto",      base: 3520,     step: 0.0003 },
-  { pair: "SOL/USDT",  name: "Solana",                       cat: "Crypto",      base: 178,      step: 0.0004 },
-  { pair: "XRP/USDT",  name: "XRP",                          cat: "Crypto",      base: 0.5821,   step: 0.0005 },
-  { pair: "BNB/USDT",  name: "BNB",                          cat: "Crypto",      base: 612,      step: 0.0003 },
-  { pair: "ADA/USDT",  name: "Cardano",                      cat: "Crypto",      base: 0.4412,   step: 0.0004 },
-  { pair: "AVAX/USDT", name: "Avalanche",                    cat: "Crypto",      base: 38.5,     step: 0.0004 },
-  { pair: "DOGE/USDT", name: "Dogecoin",                     cat: "Crypto",      base: 0.1634,   step: 0.0005 },
-  { pair: "MATIC/USDT",name: "Polygon",                      cat: "Crypto",      base: 0.8821,   step: 0.0004 },
-  { pair: "LINK/USDT", name: "Chainlink",                    cat: "Crypto",      base: 18.42,    step: 0.0004 },
-  { pair: "UNI/USDT",  name: "Uniswap",                      cat: "Crypto",      base: 10.34,    step: 0.0004 },
-  { pair: "LTC/USDT",  name: "Litecoin",                     cat: "Crypto",      base: 86.5,     step: 0.0003 },
-  { pair: "DOT/USDT",  name: "Polkadot",                     cat: "Crypto",      base: 7.82,     step: 0.0004 },
-  { pair: "SHIB/USDT", name: "Shiba Inu",                    cat: "Crypto",      base: 0.0000248,step: 0.0005 },
-  { pair: "ATOM/USDT", name: "Cosmos",                       cat: "Crypto",      base: 9.41,     step: 0.0004 },
-  { pair: "EUR/USD",   name: "Euro / US Dollar",             cat: "Forex",       base: 1.08432,  step: 0.00008 },
-  { pair: "GBP/USD",   name: "British Pound / USD",          cat: "Forex",       base: 1.27180,  step: 0.00008 },
-  { pair: "USD/JPY",   name: "US Dollar / Japanese Yen",     cat: "Forex",       base: 156.84,   step: 0.00006 },
-  { pair: "AUD/USD",   name: "Australian Dollar / USD",      cat: "Forex",       base: 0.65820,  step: 0.00007 },
-  { pair: "USD/CHF",   name: "US Dollar / Swiss Franc",      cat: "Forex",       base: 0.91240,  step: 0.00007 },
-  { pair: "USD/CAD",   name: "US Dollar / Canadian Dollar",  cat: "Forex",       base: 1.36420,  step: 0.00007 },
-  { pair: "NZD/USD",   name: "New Zealand Dollar / USD",     cat: "Forex",       base: 0.60150,  step: 0.00008 },
-  { pair: "EUR/GBP",   name: "Euro / British Pound",         cat: "Forex",       base: 0.85210,  step: 0.00006 },
-  { pair: "EUR/JPY",   name: "Euro / Japanese Yen",          cat: "Forex",       base: 169.82,   step: 0.00006 },
-  { pair: "GBP/JPY",   name: "British Pound / Yen",          cat: "Forex",       base: 199.41,   step: 0.00006 },
-  { pair: "EUR/CHF",   name: "Euro / Swiss Franc",           cat: "Forex",       base: 0.98740,  step: 0.00007 },
-  { pair: "AUD/JPY",   name: "Australian Dollar / Yen",      cat: "Forex",       base: 103.21,   step: 0.00006 },
-  { pair: "USD/MXN",   name: "US Dollar / Mexican Peso",     cat: "Forex",       base: 17.2410,  step: 0.00007 },
-  { pair: "USD/SGD",   name: "US Dollar / Singapore Dollar", cat: "Forex",       base: 1.3562,   step: 0.00007 },
-  { pair: "USD/ZAR",   name: "US Dollar / South African Rand",cat:"Forex",       base: 18.621,   step: 0.00007 },
-  { pair: "AAPL",      name: "Apple Inc.",                    cat: "Stocks",      base: 189.30,   step: 0.0002 },
-  { pair: "NVDA",      name: "NVIDIA Corporation",            cat: "Stocks",      base: 875.40,   step: 0.0002 },
-  { pair: "TSLA",      name: "Tesla Inc.",                    cat: "Stocks",      base: 248.60,   step: 0.0003 },
-  { pair: "AMZN",      name: "Amazon.com Inc.",               cat: "Stocks",      base: 186.80,   step: 0.0002 },
-  { pair: "MSFT",      name: "Microsoft Corporation",         cat: "Stocks",      base: 420.50,   step: 0.0002 },
-  { pair: "GOOGL",     name: "Alphabet Inc.",                 cat: "Stocks",      base: 175.20,   step: 0.0002 },
-  { pair: "META",      name: "Meta Platforms Inc.",           cat: "Stocks",      base: 508.40,   step: 0.0002 },
-  { pair: "JPM",       name: "JPMorgan Chase",                cat: "Stocks",      base: 199.60,   step: 0.0002 },
-  { pair: "V",         name: "Visa Inc.",                     cat: "Stocks",      base: 278.30,   step: 0.0002 },
-  { pair: "WMT",       name: "Walmart Inc.",                  cat: "Stocks",      base: 67.82,    step: 0.0002 },
-  { pair: "NFLX",      name: "Netflix Inc.",                  cat: "Stocks",      base: 627.40,   step: 0.0003 },
-  { pair: "AMD",       name: "Advanced Micro Devices",        cat: "Stocks",      base: 162.80,   step: 0.0003 },
-  { pair: "COIN",      name: "Coinbase Global",               cat: "Stocks",      base: 214.30,   step: 0.0003 },
-  { pair: "PLTR",      name: "Palantir Technologies",         cat: "Stocks",      base: 22.40,    step: 0.0003 },
-  { pair: "SPX",       name: "S&P 500 Index",                 cat: "Indices",     base: 5218.0,   step: 0.0001 },
-  { pair: "NDX",       name: "NASDAQ 100",                    cat: "Indices",     base: 18320.0,  step: 0.0001 },
-  { pair: "DJIA",      name: "Dow Jones Industrial",          cat: "Indices",     base: 39200.0,  step: 0.0001 },
-  { pair: "RUT",       name: "Russell 2000",                  cat: "Indices",     base: 2082.0,   step: 0.0001 },
-  { pair: "VIX",       name: "CBOE Volatility Index",         cat: "Indices",     base: 14.82,    step: 0.0002 },
-  { pair: "FTSE",      name: "FTSE 100",                      cat: "Indices",     base: 8180.0,   step: 0.0001 },
-  { pair: "DAX",       name: "DAX 40",                        cat: "Indices",     base: 18640.0,  step: 0.0001 },
-  { pair: "N225",      name: "Nikkei 225",                    cat: "Indices",     base: 38820.0,  step: 0.0001 },
-  { pair: "XAU/USD",   name: "Gold Spot",                     cat: "Commodities", base: 2342.0,   step: 0.0001 },
-  { pair: "XAG/USD",   name: "Silver Spot",                   cat: "Commodities", base: 29.82,    step: 0.0002 },
-  { pair: "XTI/USD",   name: "Crude Oil WTI",                 cat: "Commodities", base: 77.40,    step: 0.0002 },
-  { pair: "BRENT",     name: "Crude Oil Brent",               cat: "Commodities", base: 81.60,    step: 0.0002 },
-  { pair: "NATGAS",    name: "Natural Gas",                   cat: "Commodities", base: 2.418,    step: 0.0003 },
-  { pair: "COPPER",    name: "Copper",                        cat: "Commodities", base: 4.612,    step: 0.0002 },
-  { pair: "ES",        name: "S&P 500 E-mini Futures",        cat: "Futures",     base: 5220.0,   step: 0.0001 },
-  { pair: "NQ",        name: "NASDAQ 100 Futures",            cat: "Futures",     base: 18340.0,  step: 0.0001 },
-  { pair: "YM",        name: "Dow Jones Futures",             cat: "Futures",     base: 39180.0,  step: 0.0001 },
-  { pair: "GC",        name: "Gold Futures",                  cat: "Futures",     base: 2350.0,   step: 0.0001 },
-  { pair: "CL",        name: "Crude Oil Futures",             cat: "Futures",     base: 77.60,    step: 0.0002 },
-  { pair: "ZN",        name: "10-Year T-Note Futures",        cat: "Futures",     base: 109.12,   step: 0.0001 },
-  { pair: "US02Y",     name: "US 2-Year Treasury",            cat: "Bonds",       base: 4.921,    step: 0.0001 },
-  { pair: "US05Y",     name: "US 5-Year Treasury",            cat: "Bonds",       base: 4.412,    step: 0.0001 },
-  { pair: "US10Y",     name: "US 10-Year Treasury",           cat: "Bonds",       base: 4.281,    step: 0.0001 },
-  { pair: "US30Y",     name: "US 30-Year Treasury",           cat: "Bonds",       base: 4.480,    step: 0.0001 },
-  { pair: "TLT",       name: "20+ Year T-Bond ETF",           cat: "Bonds",       base: 91.42,    step: 0.0001 },
+  { pair: "BTC/USDT", name: "Bitcoin", cat: "Crypto", base: 67800, step: 0.0003 },
+  { pair: "ETH/USDT", name: "Ethereum", cat: "Crypto", base: 3520, step: 0.0003 },
+  { pair: "SOL/USDT", name: "Solana", cat: "Crypto", base: 178, step: 0.0004 },
+  { pair: "XRP/USDT", name: "XRP", cat: "Crypto", base: 0.5821, step: 0.0005 },
+  { pair: "BNB/USDT", name: "BNB", cat: "Crypto", base: 612, step: 0.0003 },
+  { pair: "ADA/USDT", name: "Cardano", cat: "Crypto", base: 0.4412, step: 0.0004 },
+  { pair: "AVAX/USDT", name: "Avalanche", cat: "Crypto", base: 38.5, step: 0.0004 },
+  { pair: "DOGE/USDT", name: "Dogecoin", cat: "Crypto", base: 0.1634, step: 0.0005 },
+  { pair: "MATIC/USDT", name: "Polygon", cat: "Crypto", base: 0.8821, step: 0.0004 },
+  { pair: "LINK/USDT", name: "Chainlink", cat: "Crypto", base: 18.42, step: 0.0004 },
+  { pair: "UNI/USDT", name: "Uniswap", cat: "Crypto", base: 10.34, step: 0.0004 },
+  { pair: "LTC/USDT", name: "Litecoin", cat: "Crypto", base: 86.5, step: 0.0003 },
+  { pair: "DOT/USDT", name: "Polkadot", cat: "Crypto", base: 7.82, step: 0.0004 },
+  { pair: "SHIB/USDT", name: "Shiba Inu", cat: "Crypto", base: 0.0000248, step: 0.0005 },
+  { pair: "ATOM/USDT", name: "Cosmos", cat: "Crypto", base: 9.41, step: 0.0004 },
+  { pair: "EUR/USD", name: "Euro / US Dollar", cat: "Forex", base: 1.08432, step: 0.00008 },
+  { pair: "GBP/USD", name: "British Pound / USD", cat: "Forex", base: 1.27180, step: 0.00008 },
+  { pair: "USD/JPY", name: "US Dollar / Japanese Yen", cat: "Forex", base: 156.84, step: 0.00006 },
+  { pair: "AUD/USD", name: "Australian Dollar / USD", cat: "Forex", base: 0.65820, step: 0.00007 },
+  { pair: "USD/CHF", name: "US Dollar / Swiss Franc", cat: "Forex", base: 0.91240, step: 0.00007 },
+  { pair: "USD/CAD", name: "US Dollar / Canadian Dollar", cat: "Forex", base: 1.36420, step: 0.00007 },
+  { pair: "NZD/USD", name: "New Zealand Dollar / USD", cat: "Forex", base: 0.60150, step: 0.00008 },
+  { pair: "EUR/GBP", name: "Euro / British Pound", cat: "Forex", base: 0.85210, step: 0.00006 },
+  { pair: "EUR/JPY", name: "Euro / Japanese Yen", cat: "Forex", base: 169.82, step: 0.00006 },
+  { pair: "GBP/JPY", name: "British Pound / Yen", cat: "Forex", base: 199.41, step: 0.00006 },
+  { pair: "EUR/CHF", name: "Euro / Swiss Franc", cat: "Forex", base: 0.98740, step: 0.00007 },
+  { pair: "AUD/JPY", name: "Australian Dollar / Yen", cat: "Forex", base: 103.21, step: 0.00006 },
+  { pair: "USD/MXN", name: "US Dollar / Mexican Peso", cat: "Forex", base: 17.2410, step: 0.00007 },
+  { pair: "USD/SGD", name: "US Dollar / Singapore Dollar", cat: "Forex", base: 1.3562, step: 0.00007 },
+  { pair: "USD/ZAR", name: "US Dollar / South African Rand", cat: "Forex", base: 18.621, step: 0.00007 },
+  { pair: "AAPL", name: "Apple Inc.", cat: "Stocks", base: 189.30, step: 0.0002 },
+  { pair: "NVDA", name: "NVIDIA Corporation", cat: "Stocks", base: 875.40, step: 0.0002 },
+  { pair: "TSLA", name: "Tesla Inc.", cat: "Stocks", base: 248.60, step: 0.0003 },
+  { pair: "AMZN", name: "Amazon.com Inc.", cat: "Stocks", base: 186.80, step: 0.0002 },
+  { pair: "MSFT", name: "Microsoft Corporation", cat: "Stocks", base: 420.50, step: 0.0002 },
+  { pair: "GOOGL", name: "Alphabet Inc.", cat: "Stocks", base: 175.20, step: 0.0002 },
+  { pair: "META", name: "Meta Platforms Inc.", cat: "Stocks", base: 508.40, step: 0.0002 },
+  { pair: "JPM", name: "JPMorgan Chase", cat: "Stocks", base: 199.60, step: 0.0002 },
+  { pair: "V", name: "Visa Inc.", cat: "Stocks", base: 278.30, step: 0.0002 },
+  { pair: "WMT", name: "Walmart Inc.", cat: "Stocks", base: 67.82, step: 0.0002 },
+  { pair: "NFLX", name: "Netflix Inc.", cat: "Stocks", base: 627.40, step: 0.0003 },
+  { pair: "AMD", name: "Advanced Micro Devices", cat: "Stocks", base: 162.80, step: 0.0003 },
+  { pair: "COIN", name: "Coinbase Global", cat: "Stocks", base: 214.30, step: 0.0003 },
+  { pair: "PLTR", name: "Palantir Technologies", cat: "Stocks", base: 22.40, step: 0.0003 },
+  { pair: "SPX", name: "S&P 500 Index", cat: "Indices", base: 5218.0, step: 0.0001 },
+  { pair: "NDX", name: "NASDAQ 100", cat: "Indices", base: 18320.0, step: 0.0001 },
+  { pair: "DJIA", name: "Dow Jones Industrial", cat: "Indices", base: 39200.0, step: 0.0001 },
+  { pair: "RUT", name: "Russell 2000", cat: "Indices", base: 2082.0, step: 0.0001 },
+  { pair: "VIX", name: "CBOE Volatility Index", cat: "Indices", base: 14.82, step: 0.0002 },
+  { pair: "FTSE", name: "FTSE 100", cat: "Indices", base: 8180.0, step: 0.0001 },
+  { pair: "DAX", name: "DAX 40", cat: "Indices", base: 18640.0, step: 0.0001 },
+  { pair: "N225", name: "Nikkei 225", cat: "Indices", base: 38820.0, step: 0.0001 },
+  { pair: "XAU/USD", name: "Gold Spot", cat: "Commodities", base: 2342.0, step: 0.0001 },
+  { pair: "XAG/USD", name: "Silver Spot", cat: "Commodities", base: 29.82, step: 0.0002 },
+  { pair: "XTI/USD", name: "Crude Oil WTI", cat: "Commodities", base: 77.40, step: 0.0002 },
+  { pair: "BRENT", name: "Crude Oil Brent", cat: "Commodities", base: 81.60, step: 0.0002 },
+  { pair: "NATGAS", name: "Natural Gas", cat: "Commodities", base: 2.418, step: 0.0003 },
+  { pair: "COPPER", name: "Copper", cat: "Commodities", base: 4.612, step: 0.0002 },
+  { pair: "ES", name: "S&P 500 E-mini Futures", cat: "Futures", base: 5220.0, step: 0.0001 },
+  { pair: "NQ", name: "NASDAQ 100 Futures", cat: "Futures", base: 18340.0, step: 0.0001 },
+  { pair: "YM", name: "Dow Jones Futures", cat: "Futures", base: 39180.0, step: 0.0001 },
+  { pair: "GC", name: "Gold Futures", cat: "Futures", base: 2350.0, step: 0.0001 },
+  { pair: "CL", name: "Crude Oil Futures", cat: "Futures", base: 77.60, step: 0.0002 },
+  { pair: "ZN", name: "10-Year T-Note Futures", cat: "Futures", base: 109.12, step: 0.0001 },
+  { pair: "US02Y", name: "US 2-Year Treasury", cat: "Bonds", base: 4.921, step: 0.0001 },
+  { pair: "US05Y", name: "US 5-Year Treasury", cat: "Bonds", base: 4.412, step: 0.0001 },
+  { pair: "US10Y", name: "US 10-Year Treasury", cat: "Bonds", base: 4.281, step: 0.0001 },
+  { pair: "US30Y", name: "US 30-Year Treasury", cat: "Bonds", base: 4.480, step: 0.0001 },
+  { pair: "TLT", name: "20+ Year T-Bond ETF", cat: "Bonds", base: 91.42, step: 0.0001 },
 ];
 const CATS = ["All", "Crypto", "Forex", "Stocks", "Indices", "Commodities", "Futures", "Bonds"];
-// ─── [BLOCK END: Market Instrument Definitions] ──────────────────────────────
 
-// ─── [BLOCK START: useLivePrices hook] ──────────────────────────────────────
+/* ─── Price simulator ────────────────────────────────────────────────────── */
 function useLivePrices() {
   const initPrices = () => {
     const m = {};
     INSTRUMENT_DEFS.forEach(d => {
-      m[d.pair] = {
-        price:   d.base,
-        pct24h:  (Math.random() - 0.45) * 4,
-        prevDay: d.base * (1 - (Math.random() - 0.45) * 0.04),
-        up:      Math.random() > 0.45,
-      };
+      m[d.pair] = { price: d.base, pct24h: (Math.random() - 0.45) * 4, prevDay: d.base * (1 - (Math.random() - 0.45) * 0.04), up: Math.random() > 0.45 };
     });
     return m;
   };
   const [prices, setPrices] = useState(initPrices);
-  const [flash,  setFlash]  = useState({});
-
+  const [flash, setFlash] = useState({});
   useEffect(() => {
     const interval = setInterval(() => {
       setPrices(prev => {
-        const next      = { ...prev };
+        const next = { ...prev };
         const flashNext = {};
-        const toUpdate  = INSTRUMENT_DEFS.filter(() => Math.random() < 0.30).map(d => d.pair);
-        toUpdate.forEach(pair => {
-          const def      = INSTRUMENT_DEFS.find(d => d.pair === pair);
-          const cur      = prev[pair];
-          const sign     = Math.random() > 0.5 ? 1 : -1;
-          const mag      = def.step * (0.5 + Math.random()) * def.base;
+        INSTRUMENT_DEFS.filter(() => Math.random() < 0.30).map(d => d.pair).forEach(pair => {
+          const def = INSTRUMENT_DEFS.find(d => d.pair === pair);
+          const cur = prev[pair];
+          const sign = Math.random() > 0.5 ? 1 : -1;
+          const mag = def.step * (0.5 + Math.random()) * def.base;
           const newPrice = Math.max(cur.price + sign * mag, def.base * 0.7);
-          const newPct24h = ((newPrice - cur.prevDay) / cur.prevDay) * 100;
-          next[pair]      = { price: newPrice, pct24h: newPct24h, prevDay: cur.prevDay, up: sign === 1 };
+          next[pair] = { price: newPrice, pct24h: ((newPrice - cur.prevDay) / cur.prevDay) * 100, prevDay: cur.prevDay, up: sign === 1 };
           flashNext[pair] = sign === 1 ? "up" : "dn";
         });
         setFlash(flashNext);
@@ -198,65 +187,295 @@ function useLivePrices() {
     }, 2000);
     return () => clearInterval(interval);
   }, []);
-
   return { prices, flash };
 }
-// ─── [BLOCK END: useLivePrices hook] ────────────────────────────────────────
 
-// ─── [BLOCK START: Price Formatters] ────────────────────────────────────────
+/* ─── Formatting ─────────────────────────────────────────────────────────── */
 const fmtPrice = (price, cat) => {
   if (!price) return "—";
   if (cat === "Crypto") {
     if (price < 0.00001) return price.toFixed(8);
-    if (price < 0.001)   return price.toFixed(6);
-    if (price < 1)       return price.toFixed(4);
-    if (price < 10)      return price.toFixed(3);
+    if (price < 0.001) return price.toFixed(6);
+    if (price < 1) return price.toFixed(4);
+    if (price < 10) return price.toFixed(3);
     return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   if (cat === "Forex") return price > 50 ? price.toFixed(3) : price.toFixed(4);
   if (cat === "Bonds") return price.toFixed(3) + "%";
-  if (price > 10000)   return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (price > 10000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return price.toFixed(2);
 };
-const fmtPct  = p => p == null ? "—" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
-const catColor = cat => ({
-  Crypto: "#f59e0b", Forex: "#3b82f6", Stocks: "#22c55e",
-  Indices: "#a78bfa", Commodities: "#fbbf24", Futures: "#ef4444", Bonds: "#94a3b8",
-}[cat] || C.text3);
-// ─── [BLOCK END: Price Formatters] ──────────────────────────────────────────
+const fmtPct = p => p == null ? "—" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
+const catColor = cat => ({ Crypto: "#f59e0b", Forex: "#3b82f6", Stocks: "#22c55e", Indices: "#a78bfa", Commodities: "#fbbf24", Futures: "#ef4444", Bonds: "#94a3b8" }[cat] || C.text3);
 
-// ─── [BLOCK START: Shared UI Primitives] ────────────────────────────────────
+/* ─── Shared UI Primitives ───────────────────────────────────────────────── */
 const GoldLine = () => (
-  <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.gold}33,transparent)` }} />
+  <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.greenNeon}33,transparent)` }} />
 );
 
 const Card = ({ children, style = {} }) => (
-  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 16px", ...style }}>
+  <div style={{
+    background: `linear-gradient(145deg, ${C.card} 0%, ${C.card2} 100%)`,
+    border: `1px solid ${C.border2}`,
+    borderRadius: 14,
+    padding: "18px 16px",
+    backdropFilter: "blur(12px)",
+    boxShadow: `0 4px 24px #00000066, inset 0 1px 0 ${C.greenNeon}0a`,
+    ...style
+  }}>
     {children}
   </div>
 );
 
 const Badge = ({ children, color }) => (
-  <span style={{
-    fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
-    background: `${color}20`, color, borderRadius: 4, padding: "2px 7px",
-    display: "inline-block", textTransform: "uppercase",
-  }}>
+  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", background: `${color}20`, color, borderRadius: 4, padding: "2px 7px", display: "inline-block", textTransform: "uppercase" }}>
     {children}
   </span>
 );
 
-const IconBox = ({ icon: Icon, color = C.gold, size = 16, boxSize = 36 }) => (
-  <div style={{
-    width: boxSize, height: boxSize, borderRadius: 9,
-    background: `${color}18`, display: "grid", placeItems: "center", flexShrink: 0,
-  }}>
+const IconBox = ({ icon: Icon, color = C.greenNeon, size = 16, boxSize = 36 }) => (
+  <div style={{ width: boxSize, height: boxSize, borderRadius: 9, background: `${color}14`, display: "grid", placeItems: "center", flexShrink: 0, border: `1px solid ${color}22` }}>
     <Icon size={size} color={color} />
   </div>
 );
-// ─── [BLOCK END: Shared UI Primitives] ──────────────────────────────────────
 
-// ─── [BLOCK START: Btn component] ───────────────────────────────────────────
+/* ─── Brand Logo Component ────────────────────────────────────────────────── */
+function BrandLogo({ size = 36, showText = true, textSize = 12 }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <img
+        src={LOGO_URL}
+        alt="Golden Vault XM"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size * 0.22,
+          objectFit: "cover",
+          flexShrink: 0,
+          filter: "drop-shadow(0 0 8px #d9770644)",
+        }}
+        onError={e => {
+          e.target.style.display = "none";
+          e.target.nextSibling && (e.target.nextSibling.style.display = "flex");
+        }}
+      />
+      {/* Fallback if image fails */}
+      <div style={{ width: size, height: size, borderRadius: size * 0.22, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "none", placeItems: "center", flexShrink: 0 }}>
+        <Zap size={size * 0.47} color="#000" fill="#000" />
+      </div>
+      {showText && (
+        <div>
+          <div style={{ fontWeight: 900, fontSize: textSize, color: C.gold, letterSpacing: "0.1em", lineHeight: 1.2 }}>GOLDEN VAULT XM</div>
+          <div style={{ fontSize: textSize * 0.75, color: C.text3, letterSpacing: "0.2em", marginTop: 1 }}>ELITE TRADING</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Living Animated Background ─────────────────────────────────────────── */
+function LivingBackground() {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
+      {/* Base tech-green image */}
+      <div style={{
+        position: "absolute", inset: 0,
+        backgroundImage: `url(${BG_URL})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        opacity: 0.22,
+      }} />
+
+      {/* Dark overlay to ensure readability */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}aa 100%)`,
+      }} />
+
+      {/* Animated SVG gear rings */}
+      <div style={{ position: "absolute", top: "-10%", right: "-8%", width: 340, height: 340 }}>
+        <svg viewBox="0 0 340 340" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+          {/* Outer ring */}
+          <g className="gear-outer neon-glow-slow">
+            <circle cx="170" cy="170" r="158" stroke="#00ff88" strokeWidth="1.5" strokeOpacity="0.35" strokeDasharray="14 6" />
+            <circle cx="170" cy="170" r="148" stroke="#00ff88" strokeWidth="0.8" strokeOpacity="0.2" />
+            {Array.from({length: 24}).map((_, i) => {
+              const angle = (i / 24) * Math.PI * 2;
+              const x1 = 170 + Math.cos(angle) * 148;
+              const y1 = 170 + Math.sin(angle) * 148;
+              const x2 = 170 + Math.cos(angle) * 158;
+              const y2 = 170 + Math.sin(angle) * 158;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#00ff88" strokeWidth="2" strokeOpacity="0.5" />;
+            })}
+          </g>
+          {/* Middle ring */}
+          <g className="gear-inner">
+            <circle cx="170" cy="170" r="118" stroke="#00cc66" strokeWidth="1.2" strokeOpacity="0.3" strokeDasharray="8 8" />
+            <circle cx="170" cy="170" r="105" stroke="#00ff88" strokeWidth="0.6" strokeOpacity="0.2" strokeDasharray="3 12" />
+            {Array.from({length: 16}).map((_, i) => {
+              const angle = (i / 16) * Math.PI * 2;
+              const rx = 6, ry = 10;
+              const cx_ = 170 + Math.cos(angle) * 118;
+              const cy_ = 170 + Math.sin(angle) * 118;
+              return (
+                <rect
+                  key={i}
+                  x={cx_ - rx} y={cy_ - ry}
+                  width={rx * 2} height={ry * 2}
+                  rx="2"
+                  fill="#00ff88"
+                  fillOpacity="0.18"
+                  transform={`rotate(${(i / 16) * 360},${cx_},${cy_})`}
+                />
+              );
+            })}
+          </g>
+          {/* Inner ring */}
+          <g className="gear-core">
+            <circle cx="170" cy="170" r="72" stroke="#00ff88" strokeWidth="1.8" strokeOpacity="0.4" strokeDasharray="5 5" />
+            <circle cx="170" cy="170" r="58" stroke="#00cc66" strokeWidth="0.8" strokeOpacity="0.25" />
+            <circle cx="170" cy="170" r="40" fill="#00ff88" fillOpacity="0.04" />
+            <circle cx="170" cy="170" r="18" fill="#00ff88" fillOpacity="0.08" className="neon-glow" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Bottom-left gear */}
+      <div style={{ position: "absolute", bottom: "8%", left: "-6%", width: 280, height: 280 }}>
+        <svg viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+          <g className="gear-inner neon-glow-slow">
+            <circle cx="140" cy="140" r="128" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.2" strokeDasharray="10 6" />
+            <circle cx="140" cy="140" r="115" stroke="#00cc66" strokeWidth="1.5" strokeOpacity="0.3" strokeDasharray="6 8" />
+            {Array.from({length: 20}).map((_, i) => {
+              const angle = (i / 20) * Math.PI * 2;
+              const x1 = 140 + Math.cos(angle) * 115;
+              const y1 = 140 + Math.sin(angle) * 115;
+              const x2 = 140 + Math.cos(angle) * 128;
+              const y2 = 140 + Math.sin(angle) * 128;
+              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#00ff88" strokeWidth="1.5" strokeOpacity="0.4" />;
+            })}
+            <circle cx="140" cy="140" r="55" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.25" strokeDasharray="4 6" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Horizontal scan line */}
+      <div style={{
+        position: "absolute", left: 0, right: 0, top: "38%",
+        height: 1, background: `linear-gradient(90deg,transparent,${C.greenNeon}22,${C.greenNeon}55,${C.greenNeon}22,transparent)`,
+        animation: "shimmer 4s ease-in-out infinite",
+      }} />
+
+      {/* Corner data lines (top-left) */}
+      <div style={{ position: "absolute", top: 80, left: 0, width: 200 }}>
+        <svg viewBox="0 0 200 80" fill="none" style={{ width: "100%", height: "80px" }}>
+          {[0,14,28,42].map((y, i) => (
+            <line key={i} x1={0} y1={y} x2={80 + i * 20} y2={y} stroke="#00ff88" strokeWidth="0.8" strokeOpacity={0.15 + i * 0.06} strokeDasharray={`${20 + i * 8} ${8 + i * 4}`} />
+          ))}
+          {[0,1,2,3].map((i) => (
+            <rect key={i} x={82 + i * 20} y={-3 + i * 14} width="10" height="10" rx="2" fill="#00ff88" fillOpacity={0.06 + i * 0.04} />
+          ))}
+        </svg>
+      </div>
+
+      {/* Gradient vignette */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(ellipse at 50% 50%, transparent 40%, #020d0888 80%, #020d08cc 100%)",
+      }} />
+    </div>
+  );
+}
+
+/* ─── TradingView Advanced Chart ─────────────────────────────────────────── */
+function TradingViewChart({ symbol = "BINANCE:BTCUSDT", height = 480 }) {
+  const containerRef = useRef(null);
+  const widgetRef = useRef(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
+
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: symbol,
+      interval: "60",
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "rgba(2, 13, 8, 0.97)",
+      gridColor: "rgba(0, 255, 136, 0.04)",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      allow_symbol_change: true,
+      save_image: false,
+      withdateranges: true,
+      hide_side_toolbar: false,
+      details: true,
+      hotlist: false,
+      calendar: false,
+      support_host: "https://www.tradingview.com",
+      overrides: {
+        "mainSeriesProperties.candleStyle.upColor": "#00ff88",
+        "mainSeriesProperties.candleStyle.downColor": "#ef4444",
+        "mainSeriesProperties.candleStyle.borderUpColor": "#00ff88",
+        "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
+        "mainSeriesProperties.candleStyle.wickUpColor": "#00cc66",
+        "mainSeriesProperties.candleStyle.wickDownColor": "#cc3333",
+        "paneProperties.background": "rgba(2,13,8,0.97)",
+        "paneProperties.backgroundType": "solid",
+        "paneProperties.vertGridProperties.color": "rgba(0,255,136,0.04)",
+        "paneProperties.horzGridProperties.color": "rgba(0,255,136,0.04)",
+        "scalesProperties.textColor": "#4a7a58",
+        "scalesProperties.backgroundColor": "rgba(2,13,8,0.97)",
+      },
+    });
+
+    const container = document.createElement("div");
+    container.className = "tradingview-widget-container__widget";
+    container.style.height = "100%";
+    container.style.width = "100%";
+
+    containerRef.current.appendChild(container);
+    containerRef.current.appendChild(script);
+    widgetRef.current = script;
+
+    return () => {
+      if (containerRef.current) containerRef.current.innerHTML = "";
+    };
+  }, [symbol]);
+
+  return (
+    <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border2}`, boxShadow: `0 0 30px #00ff8811, 0 8px 32px #00000066` }}>
+      {/* Header bar */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "10px 14px",
+        background: `linear-gradient(90deg, ${C.card} 0%, ${C.card2} 100%)`,
+        borderBottom: `1px solid ${C.border2}`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.greenNeon, animation: "pulse 1.5s infinite", boxShadow: `0 0 8px ${C.greenNeon}` }} />
+          <span style={{ fontSize: 11, fontWeight: 800, color: C.greenNeon, letterSpacing: "0.1em" }}>LIVE CHART</span>
+          <span style={{ fontSize: 10, color: C.text3, marginLeft: 4 }}>TradingView Advanced</span>
+        </div>
+        <div style={{ fontSize: 10, color: C.text3 }}>Real-Time • All Timeframes</div>
+      </div>
+      <div
+        ref={containerRef}
+        className="tradingview-widget-container"
+        style={{ width: "100%", height }}
+      />
+    </div>
+  );
+}
+
+/* ─── Button component ────────────────────────────────────────────────────── */
 function Btn({ children, onClick, variant = "gold", loading = false, disabled = false, style = {} }) {
   const [hov, setHov] = useState(false);
   const base = {
@@ -266,12 +485,20 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
     transition: "all .18s", letterSpacing: "0.04em", outline: "none",
   };
   const variants = {
-    gold:    { background: disabled ? C.goldDim : hov ? C.gold2 : C.gold, color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)" },
-    outline: { background: "transparent", color: hov ? C.gold2 : C.gold, border: `1.5px solid ${hov ? C.gold2 : C.gold}`, transform: hov ? "scale(1.01)" : "scale(1)" },
-    ghost:   { background: hov ? C.card3 : C.card2, color: C.text3, border: `1px solid ${C.border}` },
-    danger:  { background: hov ? "#b91c1c" : C.card, color: C.red, border: `1px solid ${C.border}` },
-    purple:  { background: hov ? "#6d28d9" : C.purple, color: "#fff", transform: hov ? "scale(1.01)" : "scale(1)" },
-    white:   { background: hov ? "#e5e7eb" : C.text, color: "#000", transform: hov ? "scale(1.01)" : "scale(1)" },
+    gold: { background: disabled ? C.goldDim : hov ? C.gold2 : C.gold, color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)", boxShadow: hov ? `0 4px 20px ${C.gold}55` : "none" },
+    green: { background: hov ? "#00cc66" : "#009944", color: "#000", transform: hov ? "scale(1.01)" : "scale(1)", boxShadow: hov ? `0 4px 20px #00ff8844` : "none" },
+    outline: { background: "transparent", color: hov ? C.greenNeon : C.text2, border: `1.5px solid ${hov ? C.greenNeon : C.border2}`, boxShadow: hov ? `0 0 12px ${C.greenNeon}22` : "none" },
+    ghost: { background: hov ? C.card3 : C.card2, color: C.text3, border: `1px solid ${C.border}` },
+    danger: { background: hov ? "#b91c1c" : C.card, color: C.red, border: `1px solid ${C.border}` },
+    purple: { background: hov ? "#6d28d9" : C.purple, color: "#fff", transform: hov ? "scale(1.01)" : "scale(1)" },
+    white: { background: hov ? "#e5e7eb" : C.text, color: "#000", transform: hov ? "scale(1.01)" : "scale(1)" },
+    google: {
+      background: hov ? "#1a1a2e" : "#12121e",
+      color: "#fff",
+      border: `1.5px solid ${hov ? "#4285f4" : "#2a2a4a"}`,
+      transform: hov ? "scale(1.01)" : "scale(1)",
+      boxShadow: hov ? "0 4px 20px #4285f422" : "none",
+    },
   };
   return (
     <button
@@ -280,363 +507,143 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
       onClick={!disabled && !loading ? onClick : undefined}
       style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }}
     >
-      {loading
-        ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</>
-        : children}
+      {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children}
     </button>
   );
 }
-// ─── [BLOCK END: Btn component] ─────────────────────────────────────────────
 
-// ─── [BLOCK START: OHLCV candle generator — seeds from instrument base price] ─
-function generateCandles(base, step, count = 120) {
-  const candles = [];
-  let price = base;
-  // Walk back in time, then reverse so newest is last
-  const now    = Math.floor(Date.now() / 1000);
-  const period = 300; // 5-minute bars
-  for (let i = count; i >= 0; i--) {
-    const time  = now - i * period;
-    const vol   = step * base * (0.5 + Math.random() * 2.5);
-    const open  = price;
-    const close = price + (Math.random() > 0.5 ? 1 : -1) * vol;
-    const high  = Math.max(open, close) + Math.random() * vol * 0.4;
-    const low   = Math.min(open, close) - Math.random() * vol * 0.4;
-    candles.push({ time, open, high, low, close });
-    price = close;
-  }
-  return candles;
-}
-// ─── [BLOCK END: OHLCV candle generator] ────────────────────────────────────
-
-// ─── [BLOCK START: TradingViewChartModule] ───────────────────────────────────
-// Renders a Lightweight Charts candlestick canvas.
-// Re-initialises whenever `instrument` prop changes (full state decoupling).
-function TradingViewChartModule({ instrument, height = 280, onExpand }) {
-  const containerRef = useRef(null);
-  const chartRef     = useRef(null);
-  const seriesRef    = useRef(null);
-  const liveRef      = useRef(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    // Destroy previous chart instance cleanly
-    if (chartRef.current) {
-      chartRef.current.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
-    }
-
-    // Dynamically load Lightweight Charts from CDN
-    const scriptId = "lw-charts-script";
-    const existingScript = document.getElementById(scriptId);
-
-    const initChart = () => {
-      if (!window.LightweightCharts || !containerRef.current) return;
-      const { createChart, CrosshairMode } = window.LightweightCharts;
-
-      const chart = createChart(containerRef.current, {
-        width:  containerRef.current.clientWidth,
-        height: height,
-        layout: { background: { color: C.card }, textColor: C.text3 },
-        grid:   {
-          vertLines:   { color: `${C.border}88` },
-          horzLines:   { color: `${C.border}88` },
-        },
-        crosshair: { mode: CrosshairMode.Normal },
-        rightPriceScale: { borderColor: C.border2, textColor: C.text3 },
-        timeScale:       { borderColor: C.border2, textColor: C.text3, timeVisible: true },
-        handleScroll:    true,
-        handleScale:     true,
-      });
-
-      const series = chart.addCandlestickSeries({
-        upColor:        C.green,
-        downColor:      C.red,
-        borderUpColor:  C.green,
-        borderDownColor:C.red,
-        wickUpColor:    C.green,
-        wickDownColor:  C.red,
-      });
-
-      const candles = generateCandles(instrument.base, instrument.step, 120);
-      series.setData(candles);
-      chart.timeScale().fitContent();
-
-      chartRef.current  = chart;
-      seriesRef.current = series;
-
-      // Simulate live tick every 2 s
-      let lastCandle = { ...candles[candles.length - 1] };
-      liveRef.current = setInterval(() => {
-        if (!seriesRef.current) return;
-        const vol   = instrument.step * instrument.base * (0.3 + Math.random() * 1.5);
-        const sign  = Math.random() > 0.48 ? 1 : -1;
-        lastCandle.close = Math.max(lastCandle.close + sign * vol, instrument.base * 0.5);
-        lastCandle.high  = Math.max(lastCandle.high, lastCandle.close);
-        lastCandle.low   = Math.min(lastCandle.low,  lastCandle.close);
-        seriesRef.current.update({ ...lastCandle });
-      }, 2000);
-
-      // Resize observer
-      const ro = new ResizeObserver(() => {
-        if (containerRef.current && chartRef.current) {
-          chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
-        }
-      });
-      ro.observe(containerRef.current);
-      chartRef.current._ro = ro;
-    };
-
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.id  = scriptId;
-      script.src = "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js";
-      script.onload = initChart;
-      document.head.appendChild(script);
-    } else if (window.LightweightCharts) {
-      initChart();
-    } else {
-      existingScript.addEventListener("load", initChart);
-    }
-
-    return () => {
-      clearInterval(liveRef.current);
-      if (chartRef.current) {
-        if (chartRef.current._ro) chartRef.current._ro.disconnect();
-        chartRef.current.remove();
-        chartRef.current = null;
-        seriesRef.current = null;
-      }
-    };
-  }, [instrument, height]); // ← dependency: full re-render on instrument change
-
-  const catCol = catColor(instrument.cat);
-  return (
-    <div style={{ position: "relative" }}>
-      {/* Chart header */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        marginBottom: 10,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: 8,
-            background: `${catCol}18`, display: "grid", placeItems: "center", flexShrink: 0,
-          }}>
-            <span style={{ fontSize: 8, fontWeight: 900, color: catCol, textAlign: "center", lineHeight: 1.1 }}>
-              {instrument.pair.length > 6 ? instrument.pair.slice(0, 5) : instrument.pair}
-            </span>
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 14, color: C.text }}>{instrument.pair}</div>
-            <div style={{ fontSize: 10, color: C.text3 }}>{instrument.name} · 5m Live Sim</div>
-          </div>
-        </div>
-        {/* Expand / Zoom button */}
-        <button
-          onClick={onExpand}
-          title="Expand chart"
-          style={{
-            background: `${C.gold}18`, border: `1px solid ${C.gold}44`, borderRadius: 8,
-            padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-            color: C.gold, fontSize: 11, fontWeight: 800,
-          }}
-        >
-          <Maximize2 size={13} color={C.gold} /> Expand
-        </button>
-      </div>
-      {/* Canvas mount point */}
-      <div
-        ref={containerRef}
-        style={{
-          width: "100%", height, borderRadius: 10, overflow: "hidden",
-          border: `1px solid ${C.border}`,
-        }}
-      />
-    </div>
-  );
-}
-// ─── [BLOCK END: TradingViewChartModule] ─────────────────────────────────────
-
-// ─── [BLOCK START: ChartZoomModal] ──────────────────────────────────────────
-// Full-screen technical analysis overlay
-function ChartZoomModal({ instrument, onClose }) {
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 900,
-      background: "#000000f0", backdropFilter: "blur(18px)",
-      display: "flex", flexDirection: "column",
-    }}>
-      {/* Modal header */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 20px", borderBottom: `1px solid ${C.border}`,
-        background: C.card,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 8,
-            background: `linear-gradient(135deg,${C.gold},${C.goldDim})`,
-            display: "grid", placeItems: "center",
-          }}>
-            <Zap size={16} color="#000" fill="#000" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: C.text }}>{instrument.pair} — Technical Analysis</div>
-            <div style={{ fontSize: 10, color: C.text3 }}>{instrument.name} · Full-screen · 5m Sim</div>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: `${C.red}18`, border: `1px solid ${C.red}33`,
-            borderRadius: 8, padding: "7px 12px", cursor: "pointer",
-            display: "flex", alignItems: "center", gap: 6, color: C.red, fontSize: 11, fontWeight: 800,
-          }}
-        >
-          <Minimize2 size={13} color={C.red} /> Close
-        </button>
-      </div>
-      {/* Full-height chart */}
-      <div style={{ flex: 1, padding: "16px 20px 20px", display: "flex", flexDirection: "column" }}>
-        <TradingViewChartModule instrument={instrument} height={window.innerHeight - 160} />
-      </div>
-    </div>
-  );
-}
-// ─── [BLOCK END: ChartZoomModal] ─────────────────────────────────────────────
-
-// ─── [BLOCK START: AuthModal — FIXED orphan statements removed] ──────────────
+/* ─── Premium Auth Modal ──────────────────────────────────────────────────── */
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
-  const [mode,   setMode]   = useState(initialMode);
+  const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
-  const [loading,setLoading]= useState(false);
-  const [error,  setError]  = useState("");
-  const [form,   setForm]   = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  const handle = async () => {
+  const handleEmailAuth = async () => {
     setError("");
     setLoading(true);
-    if (mode === "signup") {
-      const { data, error: sbErr } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: { emailRedirectTo: "https://goldenvaultxm.live/" },
-      });
-      if (sbErr) { setError(sbErr.message); setLoading(false); return; }
+    try {
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: { emailRedirectTo: "https://goldenvaultxm.live/" },
+        });
+        if (error) { setError(error.message); setLoading(false); return; }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (error) { setError(error.message); setLoading(false); return; }
+      }
+      login({ name: form.name || form.email.split("@")[0], email: form.email });
+    } catch (e) {
+      setError("An unexpected error occurred.");
     }
-    // On success (signup or login), log the user in locally
-    login({ name: form.name || form.email.split("@")[0], email: form.email });
     setLoading(false);
     onClose();
   };
 
+  const handleGoogle = async () => {
+    setGoogleLoading(true);
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "https://goldenvaultxm.live/" },
+    });
+    setGoogleLoading(false);
+  };
+
   const inp = {
-    width: "100%", background: C.card2, border: `1px solid ${C.border2}`,
-    borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13,
-    outline: "none", boxSizing: "border-box",
+    width: "100%", background: "rgba(0,20,10,0.85)", border: `1px solid ${C.border2}`,
+    borderRadius: 10, padding: "13px 14px", color: C.text, fontSize: 13,
+    outline: "none", boxSizing: "border-box", transition: "border-color .2s",
   };
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: "#000000cc",
-      backdropFilter: "blur(12px)", zIndex: 1000,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      position: "fixed", inset: 0,
+      background: "rgba(0,0,0,0.85)",
+      backdropFilter: "blur(18px)",
+      zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
     }}>
       <div style={{
-        background: C.card, border: `1px solid ${C.border}`, borderRadius: 18,
-        padding: 28, width: "100%", maxWidth: 420, position: "relative",
-        boxShadow: "0 24px 80px #000a",
+        background: `linear-gradient(160deg, #071209 0%, #030a04 100%)`,
+        border: `1px solid ${C.border2}`,
+        borderRadius: 22, padding: "32px 28px",
+        width: "100%", maxWidth: 420,
+        position: "relative",
+        boxShadow: `0 32px 96px #000c, 0 0 0 1px #00ff8808, inset 0 1px 0 ${C.greenNeon}0a`,
+        animation: "fadeSlideUp .3s ease forwards",
       }}>
-        <button onClick={onClose} style={{
-          position: "absolute", top: 16, right: 16,
-          background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4,
-        }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}>
           <X size={18} />
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: `linear-gradient(135deg,${C.gold},${C.goldDim})`,
-            display: "grid", placeItems: "center",
-          }}>
-            <Zap size={18} color="#000" fill="#000" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: "0.1em" }}>
-              {CONFIG.platformName}
-            </div>
-            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.18em" }}>
-              {CONFIG.platformSub}
-            </div>
-          </div>
+        {/* Logo */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+          <BrandLogo size={52} textSize={13} />
         </div>
 
-        <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4 }}>
+        <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4, textAlign: "center" }}>
           {mode === "signup" ? "Create Account" : "Welcome Back"}
         </div>
-        <div style={{ fontSize: 13, color: C.text3, marginBottom: 22 }}>
-          {mode === "signup"
-            ? "Join thousands of institutional traders worldwide."
-            : "Sign in to access your trading dashboard."}
+        <div style={{ fontSize: 13, color: C.text3, marginBottom: 24, textAlign: "center" }}>
+          {mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."}
         </div>
 
+        {/* Google Button */}
+        <Btn variant="google" onClick={handleGoogle} loading={googleLoading} style={{ width: "100%", marginBottom: 16, fontSize: 14 }}>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </Btn>
+
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 0 16px" }}>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+          <span style={{ fontSize: 11, color: C.text3, fontWeight: 700, letterSpacing: "0.08em" }}>OR</span>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+        </div>
+
+        {/* Form */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {mode === "signup" && (
-            <input
-              placeholder="Full Name"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              style={inp}
-            />
+            <input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />
           )}
-          <input
-            placeholder="Email address"
-            type="email"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            style={inp}
-          />
+          <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
           <div style={{ position: "relative" }}>
             <input
               placeholder="Password"
               type={showPw ? "text" : "password"}
               value={form.password}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              onKeyDown={e => e.key === "Enter" && handle()}
+              onKeyDown={e => e.key === "Enter" && handleEmailAuth()}
               style={{ ...inp, paddingRight: 44 }}
             />
-            <button onClick={() => setShowPw(p => !p)} style={{
-              position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-              background: "none", border: "none", cursor: "pointer", color: C.text3,
-            }}>
+            <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}>
               {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </div>
 
         {error && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8, marginTop: 12,
-            padding: "10px 12px", background: `${C.red}14`,
-            border: `1px solid ${C.red}33`, borderRadius: 8,
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 8 }}>
             <AlertCircle size={13} color={C.red} />
             <span style={{ fontSize: 12, color: C.red }}>{error}</span>
           </div>
         )}
 
-        <Btn variant="gold" onClick={handle} loading={loading} style={{ width: "100%", marginTop: 18 }}>
-          {mode === "signup"
-            ? <><UserPlus size={15} /> Create Account</>
-            : <><LogIn size={15} /> Sign In</>}
+        <Btn variant="gold" onClick={handleEmailAuth} loading={loading} style={{ width: "100%", marginTop: 18 }}>
+          {mode === "signup" ? <><UserPlus size={15} /> Create Account</> : <><LogIn size={15} /> Sign In</>}
         </Btn>
 
         {mode === "signup" && (
-          <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 16 }}>
             {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (
               <div key={lbl} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 14 }}>{em}</div>
@@ -648,10 +655,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
 
         <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}>
           {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
-          <button
-            onClick={() => setMode(m => m === "signup" ? "login" : "signup")}
-            style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}
-          >
+          <button onClick={() => setMode(m => m === "signup" ? "login" : "signup")} style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}>
             {mode === "signup" ? "Sign In" : "Create Account"}
           </button>
         </div>
@@ -659,15 +663,14 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     </div>
   );
 }
-// ─── [BLOCK END: AuthModal] ──────────────────────────────────────────────────
 
-// ─── [BLOCK START: AuthProvider] ────────────────────────────────────────────
+/* ─── Auth Provider ───────────────────────────────────────────────────────── */
 function AuthProvider({ children }) {
-  const [user,  setUser]  = useState(null);
+  const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
   const isAuthenticated = !!user;
-  const login      = (u)              => { setUser(u); setModal(null); };
-  const logout     = ()               => setUser(null);
+  const login = (u) => { setUser(u); setModal(null); };
+  const logout = () => setUser(null);
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
@@ -676,111 +679,73 @@ function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-// ─── [BLOCK END: AuthProvider] ───────────────────────────────────────────────
 
-// ─── [BLOCK START: Nav] ──────────────────────────────────────────────────────
+/* ─── Navigation ──────────────────────────────────────────────────────────── */
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
   const NAV = [
-    { id: "home",     label: "Home",     icon: Home },
-    { id: "markets",  label: "Markets",  icon: BarChart2 },
-    { id: "trade",    label: "Trade",    icon: TrendingUp },
+    { id: "home", label: "Home", icon: Home },
+    { id: "markets", label: "Markets", icon: BarChart2 },
+    { id: "trade", label: "Trade", icon: TrendingUp },
     { id: "settings", label: "Settings", icon: Settings },
   ];
   return (
     <header style={{
-      position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`,
-      backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`,
-      padding: "0 16px", height: 58,
+      position: "sticky", top: 0, zIndex: 100,
+      background: `rgba(2,13,8,0.92)`,
+      backdropFilter: "blur(20px)",
+      borderBottom: `1px solid ${C.border2}`,
+      padding: "0 16px", height: 60,
       display: "flex", alignItems: "center", justifyContent: "space-between",
+      boxShadow: `0 1px 0 ${C.greenNeon}0a, 0 4px 24px #00000044`,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 9,
-          background: `linear-gradient(135deg,${C.gold},${C.goldDim})`,
-          display: "grid", placeItems: "center", flexShrink: 0,
-        }}>
-          <Zap size={17} color="#000" fill="#000" />
-        </div>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>
-            {CONFIG.platformName}
-          </div>
-          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>
-            {CONFIG.platformSub}
-          </div>
-        </div>
-      </div>
-
+      <BrandLogo size={38} textSize={11} />
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {isAuthenticated && (
-          <div style={{
-            fontSize: 11, color: C.text3, marginRight: 6,
-            display: "flex", alignItems: "center", gap: 5,
-          }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} />
+          <div style={{ fontSize: 11, color: C.text3, marginRight: 6, display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.greenNeon, boxShadow: `0 0 6px ${C.greenNeon}` }} />
             {user?.name}
           </div>
         )}
-        <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}>
-          <Bell size={17} />
-        </button>
+        <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
         <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
-
       {open && (
         <div style={{
-          position: "fixed", top: 58, left: 0, right: 0, bottom: 0,
-          background: `${C.bg}f8`, backdropFilter: "blur(20px)",
-          zIndex: 200, padding: "24px 20px 32px",
-          display: "flex", flexDirection: "column", gap: 2,
+          position: "fixed", top: 60, left: 0, right: 0, bottom: 0,
+          background: "rgba(2,13,8,0.97)", backdropFilter: "blur(24px)",
+          zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2,
         }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+            <BrandLogo size={56} textSize={14} />
+          </div>
           {NAV.map(n => (
             <button
               key={n.id}
-              onClick={() => {
-                if (n.id === "trade" && !requireAuth()) return;
-                setPage(n.id);
-                setOpen(false);
-              }}
+              onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 14, padding: "15px 14px",
-                background: page === n.id ? `${C.gold}12` : "none",
+                background: page === n.id ? `${C.greenNeon}0a` : "none",
                 border: "none", borderRadius: 12, cursor: "pointer",
-                borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent",
+                borderLeft: page === n.id ? `3px solid ${C.greenNeon}` : "3px solid transparent",
               }}
             >
-              <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
-              <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>
-                {n.label}
-              </span>
-              {n.id === "trade" && !isAuthenticated && (
-                <Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />
-              )}
+              <n.icon size={18} color={page === n.id ? C.greenNeon : C.text3} />
+              <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
+              {n.id === "trade" && !isAuthenticated && <Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />}
             </button>
           ))}
           <div style={{ marginTop: "auto" }}>
             <GoldLine />
             {isAuthenticated
-              ? (
-                <button onClick={() => { logout(); setOpen(false); }} style={{
-                  display: "flex", alignItems: "center", gap: 14, padding: "15px 14px",
-                  background: "none", border: "none", cursor: "pointer", width: "100%", color: C.red,
-                }}>
-                  <LogOut size={18} color={C.red} />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span>
+              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%", color: C.red }}>
+                  <LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span>
                 </button>
-              ) : (
-                <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{
-                  display: "flex", alignItems: "center", gap: 14, padding: "15px 14px",
-                  background: "none", border: "none", cursor: "pointer", width: "100%",
-                }}>
-                  <UserPlus size={18} color={C.gold} />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span>
+              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}>
+                  <UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span>
                 </button>
-              )
             }
           </div>
         </div>
@@ -788,23 +753,23 @@ function Nav({ page, setPage, open, setOpen }) {
     </header>
   );
 }
-// ─── [BLOCK END: Nav] ────────────────────────────────────────────────────────
 
-// ─── [BLOCK START: BottomNav] ────────────────────────────────────────────────
 function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const TABS = [
-    { id: "home",     icon: Home,     label: "Home" },
-    { id: "markets",  icon: BarChart2, label: "Markets" },
-    { id: "trade",    icon: Zap,       label: "Trade" },
-    { id: "settings", icon: Settings,  label: "More" },
+    { id: "home", icon: Home, label: "Home" },
+    { id: "markets", icon: BarChart2, label: "Markets" },
+    { id: "trade", icon: Zap, label: "Trade" },
+    { id: "settings", icon: Settings, label: "More" },
   ];
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
       width: "100%", maxWidth: 600,
-      background: `${C.bg}f2`, backdropFilter: "blur(16px)",
-      borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50,
+      background: "rgba(2,13,8,0.95)", backdropFilter: "blur(20px)",
+      borderTop: `1px solid ${C.border2}`,
+      display: "flex", padding: "8px 0 20px", zIndex: 50,
+      boxShadow: `0 -1px 0 ${C.greenNeon}0a`,
     }}>
       {TABS.map(t => {
         const active = page === t.id;
@@ -818,144 +783,92 @@ function BottomNav({ page, setPage }) {
             <div style={{
               width: active ? 36 : 28, height: active ? 36 : 28,
               borderRadius: active ? 10 : 8,
-              background: active ? `${C.gold}22` : "transparent",
-              display: "grid", placeItems: "center", transition: "all .2s", position: "relative",
+              background: active ? `${C.greenNeon}18` : "transparent",
+              display: "grid", placeItems: "center", transition: "all .2s",
+              position: "relative",
+              boxShadow: active ? `0 0 12px ${C.greenNeon}33` : "none",
             }}>
-              <t.icon size={18} color={active ? C.gold : C.text4} />
+              <t.icon size={18} color={active ? C.greenNeon : C.text4} />
               {locked && (
-                <div style={{
-                  position: "absolute", top: -2, right: -2, width: 10, height: 10,
-                  background: C.card, borderRadius: "50%", display: "grid", placeItems: "center",
-                }}>
+                <div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, background: C.card, borderRadius: "50%", display: "grid", placeItems: "center" }}>
                   <Lock size={6} color={C.text3} />
                 </div>
               )}
             </div>
-            <span style={{ fontSize: 10, fontWeight: 800, color: active ? C.gold : C.text4, letterSpacing: "0.04em" }}>
-              {t.label}
-            </span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: active ? C.greenNeon : C.text4, letterSpacing: "0.04em" }}>{t.label}</span>
           </button>
         );
       })}
     </nav>
   );
 }
-// ─── [BLOCK END: BottomNav] ──────────────────────────────────────────────────
 
-// ─── [BLOCK START: HomePage — FROZEN, no modifications to chart simulation] ──
+/* ─── Pages ───────────────────────────────────────────────────────────────── */
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
-  const [tab, setTab] = useState("1m");
-  const TABS = ["1m", "5m", "15m", "1h", "4h", "D"];
-  // Original lightweight AreaChart simulation — preserved exactly
-  const chartData = Array.from({ length: 40 }, (_, i) => {
-    const base = 4680 + Math.sin(i * 0.4) * 40 + i * 1.2;
-    const o    = base + (Math.random() - 0.5) * 10;
-    return { i, v: o + (Math.random() - 0.5) * 15 };
-  });
-  const STATS = [
-    { val: "$2.4B+", label: "Daily Volume" },
-    { val: "150K+",  label: "Active Traders" },
-    { val: "200+",   label: "Pairs" },
-    { val: "24/7",   label: "Support" },
-  ];
+  const STATS = [{ val: "$2.4B+", label: "Daily Volume" }, { val: "150K+", label: "Active Traders" }, { val: "200+", label: "Pairs" }, { val: "24/7", label: "Support" }];
   const INFRA = [
-    { icon: TrendingUp, title: "Advanced Trading",    desc: "Institutional-grade tools and real-time analytics" },
-    { icon: Shield,     title: "Bank-Level Security",  desc: "Multi-layer encryption and cold storage protection" },
-    { icon: Zap,        title: "Lightning Execution",  desc: "Sub-millisecond order routing across deep liquidity" },
-    { icon: Globe,      title: "Global Access",        desc: "Trade 24/7 across forex, crypto, and commodities" },
+    { icon: TrendingUp, title: "Advanced Trading", desc: "Institutional-grade tools and real-time analytics" },
+    { icon: Shield, title: "Bank-Level Security", desc: "Multi-layer encryption and cold storage protection" },
+    { icon: Zap, title: "Lightning Execution", desc: "Sub-millisecond order routing across deep liquidity" },
+    { icon: Globe, title: "Global Access", desc: "Trade 24/7 across forex, crypto, and commodities" },
   ];
   const STEPS = [
-    { n: "01", icon: Users,           title: "Register",      desc: "Create a secure account in minutes with identity verification." },
-    { n: "02", icon: TrendingUp,      title: "Deposit Funds", desc: "Fund via bank transfer, credit card, or cryptocurrency." },
-    { n: "03", icon: BarChart2,       title: "Start Trading", desc: "Access real-time data across all major asset classes." },
-    { n: "04", icon: ArrowUpFromLine, title: "Withdraw",      desc: "Fast withdrawals to your preferred payment method." },
+    { n: "01", icon: Users, title: "Register", desc: "Create a secure account in minutes with identity verification." },
+    { n: "02", icon: TrendingUp, title: "Deposit Funds", desc: "Fund via bank transfer, credit card, or cryptocurrency." },
+    { n: "03", icon: BarChart2, title: "Start Trading", desc: "Access real-time data across all major asset classes." },
+    { n: "04", icon: ArrowUpFromLine, title: "Withdraw", desc: "Fast withdrawals to your preferred payment method." },
   ];
   const handleCTA = () => { if (requireAuth("signup")) setPage("trade"); };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="page-enter">
       {/* Hero */}
       <div style={{
-        background: `linear-gradient(160deg,#1a0f00 0%,${C.bg} 65%)`,
-        borderRadius: 16, border: `1px solid ${C.gold}22`,
-        padding: "28px 20px", position: "relative", overflow: "hidden",
+        background: `linear-gradient(160deg, rgba(0,30,15,0.92) 0%, rgba(2,13,8,0.85) 65%)`,
+        borderRadius: 16, border: `1px solid ${C.greenNeon}18`, padding: "28px 20px",
+        position: "relative", overflow: "hidden",
+        boxShadow: `0 0 40px ${C.greenNeon}08, 0 8px 32px #00000066`,
       }}>
-        <div style={{
-          position: "absolute", top: -20, right: -20, width: 150, height: 150,
-          background: `radial-gradient(${C.gold}18,transparent 70%)`,
-          borderRadius: "50%", pointerEvents: "none",
-        }} />
-        <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} />
+        <div style={{ position: "absolute", top: -20, right: -20, width: 160, height: 160, background: `radial-gradient(${C.greenNeon}0c,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
+        <div style={{ fontSize: 11, color: C.greenNeon, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.greenNeon, display: "inline-block", animation: "pulse 1.5s infinite", boxShadow: `0 0 6px ${C.greenNeon}` }} />
           System Online // Live Data
         </div>
-        <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}>
+
+        {/* Logo in hero */}
+        <div style={{ marginBottom: 20 }}>
+          <BrandLogo size={54} textSize={15} />
+        </div>
+
+        <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}>
           <div style={{ color: C.text }}>PRECISION</div>
           <div style={{ color: C.gold }}>VELOCITY</div>
-          <div style={{ color: C.text }}>INSIGHT.</div>
+          <div style={{ color: C.greenNeon, textShadow: `0 0 30px ${C.greenNeon}44` }}>INSIGHT.</div>
         </div>
-        <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}>
-          Experience access to institutional-grade trading infrastructure engineered for precision,
-          performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems.
+        <div style={{ borderLeft: `3px solid ${C.greenNeon}66`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}>
+          Experience institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="white"  onClick={handleCTA} style={{ width: "100%" }}>INITIALIZE TRADING</Btn>
-          <Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}>
+          <Btn variant="gold" onClick={handleCTA} style={{ width: "100%" }}>INITIALIZE TRADING</Btn>
+          <Btn variant="green" onClick={handleCTA} style={{ width: "100%" }}>
             EXPLORE MARKETS
-            <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} />
+            <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #00000044", display: "grid", placeItems: "center" }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #000" }} />
             </div>
           </Btn>
         </div>
       </div>
 
-      {/* S&P 500 Live chart — PRESERVED EXACTLY */}
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>S&P 500 Live</div>
-            <div style={{ fontSize: 11, color: C.text3 }}>Simulated real-time feed</div>
-          </div>
-          <div style={{ display: "flex", gap: 5 }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5,
-                border: "none", cursor: "pointer",
-                background: t === tab ? C.gold : `${C.gold}14`,
-                color: t === tab ? "#000" : C.text3,
-              }}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={130}>
-          <AreaChart data={chartData} margin={{ left: -30, right: 0, top: 4, bottom: 0 }}>
-            <defs>
-              <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={C.gold} stopOpacity={0.22} />
-                <stop offset="100%" stopColor={C.gold} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="i" hide />
-            <YAxis domain={["dataMin - 20", "dataMax + 20"]} />
-            <Tooltip
-              contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 11 }}
-              formatter={v => [v.toFixed(2), "Price"]}
-              labelFormatter={() => ""}
-            />
-            <ReferenceLine y={4700} stroke={C.green} strokeDasharray="3 3" strokeWidth={1} />
-            <Area type="monotone" dataKey="v" stroke={C.gold} strokeWidth={2} fill="url(#ag)" dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </Card>
+      {/* TradingView Chart */}
+      <TradingViewChart symbol="BINANCE:BTCUSDT" height={500} />
 
-      {/* Stats band */}
+      {/* Stats */}
       <div style={{
-        background: `linear-gradient(135deg,#130c00,#0d0800)`,
-        border: `1px solid ${C.gold}28`, borderRadius: 14,
+        background: `linear-gradient(135deg, rgba(0,20,10,0.9), rgba(2,13,8,0.95))`,
+        border: `1px solid ${C.border2}`, borderRadius: 14,
         display: "grid", gridTemplateColumns: "repeat(4,1fr)", padding: "14px 8px",
+        boxShadow: `0 0 20px ${C.greenNeon}06`,
       }}>
         {STATS.map(s => (
           <div key={s.label} style={{ textAlign: "center" }}>
@@ -965,7 +878,7 @@ function HomePage({ setPage }) {
         ))}
       </div>
 
-      {/* Quick Start Steps */}
+      {/* Steps */}
       <Card>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${C.gold}44`, borderRadius: 6, padding: "5px 12px", marginBottom: 14 }}>
           <Zap size={11} color={C.gold} />
@@ -980,18 +893,15 @@ function HomePage({ setPage }) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {STEPS.map((s, i) => (
-            <div key={i} style={{
-              background: C.card2, border: `1px solid ${C.gold}22`,
-              borderRadius: 12, padding: "14px 12px", position: "relative", overflow: "hidden",
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: `${C.gold}20`, lineHeight: 1, marginBottom: 8 }}>{s.n}</div>
-              <IconBox icon={s.icon} color={C.gold} size={14} boxSize={30} />
+            <div key={i} style={{ background: C.card2, border: `1px solid ${C.greenNeon}14`, borderRadius: 12, padding: "14px 12px", position: "relative", overflow: "hidden" }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: `${C.greenNeon}18`, lineHeight: 1, marginBottom: 8 }}>{s.n}</div>
+              <IconBox icon={s.icon} color={C.greenNeon} size={14} boxSize={30} />
               <div style={{ fontSize: 12, fontWeight: 800, color: C.text, marginTop: 8, marginBottom: 4 }}>{s.title}</div>
               <div style={{ fontSize: 11, color: C.text3, lineHeight: 1.5 }}>{s.desc}</div>
             </div>
           ))}
         </div>
-        <Btn variant="purple" onClick={handleCTA} style={{ width: "100%", marginTop: 14 }}>
+        <Btn variant="gold" onClick={handleCTA} style={{ width: "100%", marginTop: 14 }}>
           START YOUR JOURNEY <ChevronRight size={16} />
         </Btn>
       </Card>
@@ -999,17 +909,14 @@ function HomePage({ setPage }) {
       {/* Infrastructure */}
       <Card>
         <div style={{ fontWeight: 900, fontSize: 18, color: C.text, marginBottom: 4 }}>
-          Enterprise-Grade <span style={{ color: C.gold }}>Infrastructure.</span>
+          Enterprise-Grade <span style={{ color: C.greenNeon }}>Infrastructure.</span>
         </div>
         <div style={{ fontSize: 12, color: C.text3, marginBottom: 16, lineHeight: 1.6 }}>
           Built on cutting-edge technology for unmatched performance, security, and reliability.
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {INFRA.map((ic, i) => (
-            <div key={i} style={{
-              background: C.card2, border: `1px solid ${C.border}`,
-              borderRadius: 12, padding: "14px", display: "flex", alignItems: "flex-start", gap: 12,
-            }}>
+            <div key={i} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px", display: "flex", alignItems: "flex-start", gap: 12 }}>
               <IconBox icon={ic.icon} color={C.gold} size={16} boxSize={38} />
               <div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 4 }}>{ic.title}</div>
@@ -1022,99 +929,44 @@ function HomePage({ setPage }) {
     </div>
   );
 }
-// ─── [BLOCK END: HomePage] ───────────────────────────────────────────────────
 
-// ─── [BLOCK START: MarketsPage — with instrument-click TradingView integration]
 function MarketsPage({ prices, flash }) {
-  const [cat,                setCat]                = useState("All");
-  const [search,             setSearch]             = useState("");
-  const [selectedInstrument, setSelectedInstrument] = useState(null);
-  const [zoomOpen,           setZoomOpen]           = useState(false);
-
+  const [cat, setCat] = useState("All");
+  const [search, setSearch] = useState("");
   const filtered = INSTRUMENT_DEFS.filter(d =>
     (cat === "All" || d.cat === cat) &&
-    (!search ||
-      d.pair.toLowerCase().includes(search.toLowerCase()) ||
-      d.name.toLowerCase().includes(search.toLowerCase()))
+    (!search || d.pair.toLowerCase().includes(search.toLowerCase()) || d.name.toLowerCase().includes(search.toLowerCase()))
   );
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Page header */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="page-enter">
       <div style={{ padding: "20px 0 4px" }}>
         <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
-          Global Trading <span style={{ color: C.gold }}>Markets</span>
+          Global Trading <span style={{ color: C.greenNeon }}>Markets</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
           <div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.greenNeon, boxShadow: `0 0 6px ${C.greenNeon}`, animation: "pulse 1.5s infinite" }} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: C.greenNeon, letterSpacing: "0.08em" }}>LIVE</span>
           </div>
         </div>
       </div>
-
-      {/* Active Chart Panel — renders when instrument selected */}
-      {selectedInstrument && (
-        <Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(160deg,#1a0f00,${C.card})` }}>
-          <TradingViewChartModule
-            instrument={selectedInstrument}
-            height={260}
-            onExpand={() => setZoomOpen(true)}
-          />
-          <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Badge color={catColor(selectedInstrument.cat)}>{selectedInstrument.cat}</Badge>
-              <span style={{ fontSize: 12, color: C.text3 }}>
-                {fmtPrice(prices[selectedInstrument.pair]?.price, selectedInstrument.cat)}
-              </span>
-            </div>
-            <button onClick={() => setSelectedInstrument(null)} style={{
-              background: "none", border: `1px solid ${C.border}`, borderRadius: 7,
-              padding: "4px 10px", cursor: "pointer", color: C.text3, fontSize: 11,
-            }}>
-              ✕ Close
-            </button>
-          </div>
-        </Card>
-      )}
-
-      {/* Zoom Modal */}
-      {zoomOpen && selectedInstrument && (
-        <ChartZoomModal instrument={selectedInstrument} onClose={() => setZoomOpen(false)} />
-      )}
-
-      {/* Search bar */}
       <div style={{ position: "relative" }}>
         <Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-        <input
-          placeholder="Search symbol or name…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{
-            width: "100%", background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13,
-            outline: "none", boxSizing: "border-box",
-          }}
-        />
+        <input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
         {search && (
-          <button onClick={() => setSearch("")} style={{
-            position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
-            background: "none", border: "none", cursor: "pointer", color: C.text3,
-          }}>
+          <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}>
             <X size={14} />
           </button>
         )}
       </div>
-
-      {/* Category filter pills */}
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
         {CATS.map(c => {
           const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length;
           return (
             <button key={c} onClick={() => setCat(c)} style={{
-              flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px",
-              borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s",
+              flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6,
+              border: "none", cursor: "pointer", transition: "all .15s",
               background: c === cat ? C.gold : `${C.gold}14`,
               color: c === cat ? "#000" : C.text3,
               display: "flex", alignItems: "center", gap: 4,
@@ -1124,96 +976,47 @@ function MarketsPage({ prices, flash }) {
           );
         })}
       </div>
-
-      {/* Instrument list — clicking triggers chart state change */}
       <Card style={{ padding: "0 16px" }}>
-        <div style={{
-          display: "flex", justifyContent: "space-between",
-          padding: "12px 0", borderBottom: `1px solid ${C.border}`,
-        }}>
-          <span style={{ fontSize: 10, color: C.text3, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            {filtered.length} INSTRUMENTS
-          </span>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 10, color: C.text3, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{filtered.length} INSTRUMENTS</span>
           <div style={{ display: "flex", gap: 16 }}>
             <span style={{ fontSize: 10, color: C.text3 }}>PRICE</span>
             <span style={{ fontSize: 10, color: C.text3 }}>24H</span>
           </div>
         </div>
-
         {filtered.map((inst, i) => {
-          const pd    = prices[inst.pair];
+          const pd = prices[inst.pair];
           const flDir = flash[inst.pair];
           const color = catColor(inst.cat);
-          const isSelected = selectedInstrument?.pair === inst.pair;
           return (
             <div key={inst.pair}>
-              <div
-                onClick={() => setSelectedInstrument(isSelected ? null : inst)}
-                style={{
-                  display: "flex", alignItems: "center", padding: "12px 0",
-                  transition: "background .3s", cursor: "pointer",
-                  background: isSelected
-                    ? `${C.gold}10`
-                    : flDir === "up"
-                    ? `${C.green}08`
-                    : flDir === "dn"
-                    ? `${C.red}08`
-                    : "transparent",
-                  borderRadius: 8,
-                  borderLeft: isSelected ? `3px solid ${C.gold}` : "3px solid transparent",
-                }}
-              >
-                <div style={{
-                  width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-                  background: `${color}18`, display: "grid", placeItems: "center", marginRight: 10,
-                }}>
-                  <span style={{ fontSize: 9, fontWeight: 900, color, textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
-                    {inst.pair.length > 6 ? inst.pair.slice(0, 5) : inst.pair}
-                  </span>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 0", transition: "background .3s", background: flDir === "up" ? `${C.green}08` : flDir === "dn" ? `${C.red}08` : "transparent", borderRadius: 8 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, background: `${color}18`, display: "grid", placeItems: "center", marginRight: 10 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, color, textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.02em" }}>{inst.pair.length > 6 ? inst.pair.slice(0, 5) : inst.pair}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: isSelected ? C.gold : C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {inst.pair}
-                  </div>
-                  <div style={{ fontSize: 11, color: C.text3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {inst.name}
-                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.pair}</div>
+                  <div style={{ fontSize: 11, color: C.text3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.name}</div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
-                  <div style={{
-                    fontWeight: 900, fontSize: 14,
-                    color: flDir === "up" ? C.green : flDir === "dn" ? C.red : C.text,
-                    fontVariantNumeric: "tabular-nums", transition: "color .4s",
-                  }}>
-                    {fmtPrice(pd?.price, inst.cat)}
-                  </div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: pd?.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>
-                    {pd?.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd?.pct24h)}
-                  </div>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: flDir === "up" ? C.green : flDir === "dn" ? C.red : C.text, fontVariantNumeric: "tabular-nums", transition: "color .4s" }}>{fmtPrice(pd?.price, inst.cat)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: pd?.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd?.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd?.pct24h)}</div>
                 </div>
               </div>
               {i < filtered.length - 1 && <GoldLine />}
             </div>
           );
         })}
-
         {filtered.length === 0 && (
-          <div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>
-            No instruments found for "{search}"
-          </div>
+          <div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>No instruments found for "{search}"</div>
         )}
       </Card>
-
-      {/* Category summary grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {CATS.slice(1).map(s => {
           const defs = INSTRUMENT_DEFS.filter(d => d.cat === s);
-          const col  = catColor(s);
+          const col = catColor(s);
           return (
-            <div key={s} onClick={() => setCat(s)} style={{
-              background: C.card, border: `1px solid ${C.border}`,
-              borderRadius: 12, padding: "12px 14px", cursor: "pointer",
-            }}>
+            <div key={s} onClick={() => setCat(s)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer" }}>
               <div style={{ fontWeight: 800, fontSize: 16, color: col }}>{defs.length}</div>
               <div style={{ fontWeight: 700, fontSize: 12, color: C.text, marginTop: 2 }}>{s}</div>
               <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Live Simulated Feed</div>
@@ -1224,85 +1027,60 @@ function MarketsPage({ prices, flash }) {
     </div>
   );
 }
-// ─── [BLOCK END: MarketsPage] ────────────────────────────────────────────────
 
-// ─── [BLOCK START: TradePage — zero-state defaults, Supabase fetch] ──────────
 function TradePage({ prices }) {
   const [loadingDep, setLoadingDep] = useState(false);
-  const [loadingWd,  setLoadingWd]  = useState(false);
-  const [range,      setRange]      = useState("30D");
-  const [vote,       setVote]       = useState(null);
-  const [showVote,   setShowVote]   = useState(true);
-
-  // Zero-state integrity — explicit 0 defaults per spec
+  const [loadingWd, setLoadingWd] = useState(false);
+  const [range, setRange] = useState("30D");
+  const [vote, setVote] = useState(null);
+  const [showVote, setShowVote] = useState(true);
   const [totalInvested, setTotalInvested] = useState(0);
-  const [currentValue,  setCurrentValue]  = useState(0);
-  const [depositBalance,setDepositBalance]= useState(0);
-  const [totalProfit,   setTotalProfit]   = useState(0);
-  const [activePos,     setActivePos]     = useState(0);
-  const [winRate,       setWinRate]       = useState(0);
+  const [currentValue, setCurrentValue] = useState(0);
 
-  // Supabase fetch — populates state if server data exists
   useEffect(() => {
     const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from("account_summary")
-        .select("current_value,total_invested,deposit_balance,total_profit,active_positions,win_rate")
-        .eq("user_id", user.id)
-        .single();
-      if (data) {
-        if (data.total_invested    != null) setTotalInvested(data.total_invested);
-        if (data.current_value     != null) setCurrentValue(data.current_value);
-        if (data.deposit_balance   != null) setDepositBalance(data.deposit_balance);
-        if (data.total_profit      != null) setTotalProfit(data.total_profit);
-        if (data.active_positions  != null) setActivePos(data.active_positions);
-        if (data.win_rate          != null) setWinRate(data.win_rate);
-      }
+      const { data } = await supabase.from("account_summary").select("current_value, total_invested").eq("user_id", user.id).single();
+      if (data) { setTotalInvested(data.total_invested); setCurrentValue(data.current_value); }
     };
     loadUserData();
   }, []);
 
-  const perfData = Array.from({ length: 30 }, (_, i) => ({
-    day: i + 1,
-    value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400,
-  }));
+  const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
-  const data   = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
-
+  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
   const HOLDINGS = [
-    { pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4,  delta: +2310.5 },
-    { pair: "ETH/USDT", label: "Spot Trading",      color: C.blue,  pct: +8.2,  delta: +1486.7 },
-    { pair: "EUR/USD",  label: "Forex Pairs",        color: C.red,   pct: -2.1,  delta: -689.2  },
-    { pair: "XAU/USD",  label: "Gold Futures",       color: C.gold3, pct: +3.8,  delta: +1045.3 },
+    { pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 },
+    { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 },
+    { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 },
+    { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },
   ];
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Page heading */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="page-enter">
       <div style={{ padding: "20px 0 4px" }}>
         <div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Trading Overview</div>
         <div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div>
         <div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div>
-        <div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}>Here's your trading overview for today</div>
+        <div style={{ fontSize: 13, color: C.greenNeon, marginTop: 8, fontStyle: "italic" }}>Here's your trading overview for today</div>
       </div>
 
-      {/* Metrics grid — zero-state defaulted */}
+      {/* TradingView Chart on Trade page */}
+      <TradingViewChart symbol="BINANCE:BTCUSDT" height={460} />
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {[
-          { icon: Wallet,    label: "Total Balance",     value: `$${depositBalance.toFixed(2)}`, badge: "+5.2%",  color: C.green },
-          { icon: TrendingUp,label: "Total Profit",      value: `$${totalProfit.toFixed(2)}`,    badge: "+11.2%", color: C.green },
-          { icon: Activity,  label: "Active Positions",  value: `${activePos}`,                  badge: "+3",     color: C.gold  },
-          { icon: Target,    label: "Win Rate",          value: `${winRate.toFixed(1)}%`,         badge: "+2.3%",  color: C.gold  },
+          { icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green },
+          { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green },
+          { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold },
+          { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },
         ].map((s, i) => (
           <Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <IconBox icon={s.icon} color={s.color} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}>
-                ↑ {s.badge}
-              </span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}>↑ {s.badge}</span>
             </div>
             <div>
               <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div>
@@ -1312,7 +1090,6 @@ function TradePage({ prices }) {
         ))}
       </div>
 
-      {/* Portfolio Performance */}
       <Card>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
           <div>
@@ -1321,14 +1098,7 @@ function TradePage({ prices }) {
           </div>
           <div style={{ display: "flex", gap: 5 }}>
             {RANGES.map(r => (
-              <button key={r} onClick={() => setRange(r)} style={{
-                fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5,
-                border: "none", cursor: "pointer",
-                background: r === range ? C.gold : `${C.gold}14`,
-                color: r === range ? "#000" : C.text3,
-              }}>
-                {r}
-              </button>
+              <button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3 }}>{r}</button>
             ))}
           </div>
         </div>
@@ -1336,11 +1106,7 @@ function TradePage({ prices }) {
           <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}>
             <XAxis dataKey="day" hide />
             <YAxis hide domain={["dataMin - 500", "dataMax + 200"]} />
-            <Tooltip
-              contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }}
-              formatter={v => [`$${v.toFixed(0)}`, "Value"]}
-              cursor={{ fill: `${C.gold}08` }}
-            />
+            <Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} />
             <Bar dataKey="value" radius={[3, 3, 0, 0]}>
               {data.map((e, i) => (
                 <Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />
@@ -1351,73 +1117,52 @@ function TradePage({ prices }) {
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
           <div>
             <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>
-              ${totalInvested.toLocaleString()}
-            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div>
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>
-              ${currentValue.toLocaleString()}
-            </div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div>
           </div>
         </div>
       </Card>
 
-      {/* Live Markets mini-grid */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Live Markets</div>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.greenNeon, animation: "pulse 1.5s infinite", boxShadow: `0 0 6px ${C.greenNeon}` }} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: C.greenNeon }}>LIVE</span>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {topMarkets.map(pair => {
             const def = INSTRUMENT_DEFS.find(d => d.pair === pair);
-            const pd  = prices[pair];
+            const pd = prices[pair];
             if (!def || !pd) return null;
             return (
               <div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 13px" }}>
                 <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{def.name}</div>
                 <div style={{ fontWeight: 900, fontSize: 12, color: C.text, marginBottom: 5 }}>{pair}</div>
-                <div style={{ fontWeight: 900, fontSize: 16, color: C.text, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>
-                  {fmtPrice(pd.price, def.cat)}
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red }}>
-                  {pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}
-                </div>
+                <div style={{ fontWeight: 900, fontSize: 16, color: C.text, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{fmtPrice(pd.price, def.cat)}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red }}>{pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}</div>
               </div>
             );
           })}
         </div>
       </Card>
 
-      {/* Quick Actions */}
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}>
-            <ArrowDownToLine size={15} /> Deposit Funds
-          </Btn>
-          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}>
-            <ArrowUpFromLine size={15} /> Withdraw Funds
-          </Btn>
-          <Btn variant="ghost" style={{ width: "100%" }}>
-            <FileBarChart size={15} /> View Reports
-          </Btn>
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds</Btn>
+          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds</Btn>
+          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports</Btn>
         </div>
       </Card>
 
-      {/* Account Status */}
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
-        {[
-          { label: "Verification",  value: "Verified", color: C.green },
-          { label: "Account Type",  value: "Premium",  color: C.gold2 },
-          { label: "KYC Level",     value: "Level 3",  color: "#a78bfa" },
-        ].map((row, i, arr) => (
+        {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" }].map((row, i, arr) => (
           <div key={i}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}>
               <span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span>
@@ -1428,13 +1173,10 @@ function TradePage({ prices }) {
         ))}
       </Card>
 
-      {/* Portfolio Holdings */}
       <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div>
-          <button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
-            View All <ChevronRight size={12} />
-          </button>
+          <button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>View All <ChevronRight size={12} /></button>
         </div>
         {HOLDINGS.map((h, i) => {
           const lp = prices[h.pair]?.price;
@@ -1449,12 +1191,8 @@ function TradePage({ prices }) {
                   <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>
-                    {h.pct >= 0 ? "+" : ""}{h.pct}%
-                  </div>
-                  <div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>
-                    {h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}
-                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div>
+                  <div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div>
                 </div>
               </div>
               {i < HOLDINGS.length - 1 && <GoldLine />}
@@ -1463,7 +1201,6 @@ function TradePage({ prices }) {
         })}
       </Card>
 
-      {/* Market Sentiment */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div>
@@ -1475,7 +1212,7 @@ function TradePage({ prices }) {
         </div>
         <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}>
           <div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} />
-          <div style={{ flex: 24, background: C.red,   borderRadius: "0 4px 4px 0" }} />
+          <div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} />
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
           <span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span>
@@ -1483,22 +1220,11 @@ function TradePage({ prices }) {
         </div>
         {showVote && (
           <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
-            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}>
-              <X size={14} />
-            </button>
-            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}>
-              How do you feel about the Market today?
-            </div>
+            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
+            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}>How do you feel about the Market today?</div>
             <div style={{ display: "flex", gap: 8 }}>
               {[["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (
-                <button key={key} onClick={() => setVote(key)} style={{
-                  flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer",
-                  fontWeight: 800, fontSize: 13, transition: "all .2s",
-                  background: vote === key ? col : `${col}22`,
-                  color:      vote === key ? "#fff" : col,
-                }}>
-                  {lbl}
-                </button>
+                <button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col }}>{lbl}</button>
               ))}
             </div>
             {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}>✓ Thanks — sentiment updated</div>}
@@ -1508,57 +1234,30 @@ function TradePage({ prices }) {
     </div>
   );
 }
-// ─── [BLOCK END: TradePage] ──────────────────────────────────────────────────
 
-// ─── [BLOCK START: SettingsPage] ─────────────────────────────────────────────
 function SettingsPage() {
   const { isAuthenticated, logout, requireAuth } = useAuth();
   const GROUPS = [
-    { title: "Platform", items: [
-      { icon: BarChart2,  label: "Markets",        sub: "View all trading pairs" },
-      { icon: TrendingUp, label: "Trading",         sub: "Configure trading preferences" },
-      { icon: BookOpen,   label: "Support Center",  sub: "Help and documentation" },
-    ]},
-    { title: "Account", items: [
-      { icon: Eye,  label: "Dashboard",          sub: "View performance overview" },
-      { icon: Lock, label: "Security Settings",  sub: "2FA and login management" },
-      { icon: Bell, label: "Notifications",      sub: "Alerts and push settings" },
-    ]},
-    { title: "Resources", items: [
-      { icon: BookOpen, label: "Trading Guide",   sub: "Learn trading strategies" },
-      { icon: Award,    label: "Market Analysis", sub: "Expert insights and reports" },
-    ]},
+    { title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" }] },
+    { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" }] },
+    { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" }] },
   ];
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }} className="page-enter">
       <div style={{ padding: "20px 0 4px" }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
         <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Manage your profile and settings</div>
       </div>
-
-      {/* Platform brand card */}
-      <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
+      <Card style={{ background: `linear-gradient(160deg,rgba(20,12,0,0.95),${C.card})`, border: `1px solid ${C.gold}33` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}>
-            <span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span>
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>{CONFIG.platformName}</div>
-            <div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div>
-          </div>
+          <BrandLogo size={54} textSize={13} />
         </div>
         <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}>
-          Enterprise-grade trading platform providing access to global financial markets with
-          institutional-level security and performance.
+          Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance.
         </div>
         <GoldLine />
         <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>
-          {[
-            [Mail,   CONFIG.supportEmail],
-            [Phone,  CONFIG.supportPhone],
-            [MapPin, CONFIG.supportLocation],
-          ].map(([Icon, val]) => (
+          {[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (
             <div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Icon size={13} color={C.gold} />
               <span style={{ fontSize: 13, color: C.text2 }}>{val}</span>
@@ -1566,10 +1265,8 @@ function SettingsPage() {
           ))}
         </div>
       </Card>
-
-      {/* Unauthenticated CTA */}
       {!isAuthenticated && (
-        <Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}>
+        <Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,rgba(26,15,0,0.95),${C.card})` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <IconBox icon={Lock} color={C.gold} size={16} />
             <div>
@@ -1577,18 +1274,12 @@ function SettingsPage() {
               <div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div>
             </div>
           </div>
-          <Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}>
-            <UserPlus size={15} /> Create Free Account
-          </Btn>
+          <Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account</Btn>
         </Card>
       )}
-
-      {/* Settings groups */}
       {GROUPS.map(group => (
         <Card key={group.title} style={{ padding: "4px 0" }}>
-          <div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            {group.title}
-          </div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>
           {group.items.map((item, i) => (
             <div key={item.label}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}>
@@ -1606,65 +1297,41 @@ function SettingsPage() {
           ))}
         </Card>
       ))}
-
-      {isAuthenticated && (
-        <Btn variant="danger" onClick={logout} style={{ width: "100%" }}>
-          <LogOut size={16} /> Sign Out
-        </Btn>
-      )}
+      {isAuthenticated && <Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out</Btn>}
     </div>
   );
 }
-// ─── [BLOCK END: SettingsPage] ───────────────────────────────────────────────
 
-// ─── [BLOCK START: AppShell] ─────────────────────────────────────────────────
+/* ─── App Shell ───────────────────────────────────────────────────────────── */
 function AppShell() {
-  const [page,     setPage]     = useState("home");
+  const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
 
-  // Auth guard: Trade route strictly gated
   const handleSetPage = useCallback((p) => {
     if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
     setPage(p);
   }, [isAuthenticated, requireAuth]);
 
   const PAGES = {
-    home:     <HomePage     setPage={handleSetPage} />,
-    markets:  <MarketsPage  prices={prices} flash={flash} />,
-    trade:    <TradePage    prices={prices} />,
+    home: <HomePage setPage={handleSetPage} />,
+    markets: <MarketsPage prices={prices} flash={flash} />,
+    trade: <TradePage prices={prices} />,
     settings: <SettingsPage />,
   };
 
   return (
     <div style={{
-      minHeight: "100vh", background: C.bg, color: C.text,
-      fontFamily: "'DM Sans','Sora',system-ui,sans-serif",
+      minHeight: "100vh",
+      color: C.text,
+      fontFamily: "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', 'DM Mono', monospace",
       width: "100%", maxWidth: 600, margin: "0 auto",
-      position: "relative", WebkitFontSmoothing: "antialiased",
+      position: "relative",
+      WebkitFontSmoothing: "antialiased",
     }}>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; }
-        body { background: ${C.bg}; margin: 0; }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
-        #gvxm-root { background: ${C.bg}; min-height: 100vh; }
-      `}</style>
-
-      {/* Ambient gold radial glow */}
-      <div style={{
-        position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)",
-        width: 400, height: 400,
-        background: `radial-gradient(${C.gold}07 0%,transparent 70%)`,
-        pointerEvents: "none", zIndex: 0,
-      }} />
-
+      <style>{GLOBAL_CSS}</style>
+      <LivingBackground />
       <div style={{ position: "relative", zIndex: 1 }}>
         <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} />
         <main style={{ padding: "0 16px", paddingBottom: 100 }}>
@@ -1675,9 +1342,7 @@ function AppShell() {
     </div>
   );
 }
-// ─── [BLOCK END: AppShell] ───────────────────────────────────────────────────
 
-// ─── [BLOCK START: Root Export] ──────────────────────────────────────────────
 export default function GoldenVaultXM() {
   return (
     <AuthProvider>
@@ -1685,8 +1350,3 @@ export default function GoldenVaultXM() {
     </AuthProvider>
   );
 }
-// ─── [BLOCK END: Root Export] ────────────────────────────────────────────────
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  END OF FILE — zero orphan braces, zero unclosed hooks                 ║
-// ║  Component stack fully unwound. All { } ( ) balanced.                  ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
