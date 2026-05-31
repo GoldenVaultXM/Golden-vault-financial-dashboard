@@ -215,12 +215,12 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: 'https://goldenvaultxm.live/' }
-    });
-    if (error) { setError(error.message); setGoogleLoading(false); }
-  };
+    const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    redirectTo: `${window.location.origin}/auth/callback`,
+  },
+});
 
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
