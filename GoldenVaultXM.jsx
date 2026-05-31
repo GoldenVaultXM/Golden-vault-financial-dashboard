@@ -215,13 +215,20 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setGoogleLoading(true);
-    const { data, error } = await supabase.auth.signInWithOAuth({
-  provider: 'google',
-  options: {
-    redirectTo: `${window.location.origin}/auth/callback`,
-  },
-});
+  const handleGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/trade`,
+    },
+  });
 
+  if (error) {
+    console.error("Google Auth Error:", error.message);
+    setError(error.message);
+  }
+};
+    
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
