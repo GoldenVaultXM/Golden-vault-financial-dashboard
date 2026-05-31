@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check } from "lucide-react";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check, Maximize2, Minimize2 } from "lucide-react";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -179,7 +179,7 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ─── Auth Modal (MODIFIED: Google button + legal checkbox) ─────────────── */
+/* ─── Auth Modal ─────────────────────────────────────────────────────────── */
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
@@ -236,8 +236,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
         </div>
         <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4 }}> {mode === "signup" ? "Create Account" : "Welcome Back"} </div>
         <div style={{ fontSize: 13, color: C.text3, marginBottom: 22 }}> {mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."} </div>
-
-        {/* Google Button */}
         <button
           onClick={handleGoogle}
           disabled={googleLoading}
@@ -253,13 +251,11 @@ function AuthModal({ onClose, initialMode = "signup" }) {
           )}
           Continue with Google
         </button>
-
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
           <div style={{ flex: 1, height: 1, background: C.border2 }} />
           <span style={{ fontSize: 11, color: C.text3, fontWeight: 700 }}>or</span>
           <div style={{ flex: 1, height: 1, background: C.border2 }} />
         </div>
-
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {mode === "signup" && (<input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />)}
           <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
@@ -268,8 +264,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
             <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}> {showPw ? <EyeOff size={15} /> : <Eye size={15} />} </button>
           </div>
         </div>
-
-        {/* Legal Disclaimer Checkbox */}
         {mode === "signup" && (
           <div
             onClick={() => setLegalChecked(v => !v)}
@@ -286,7 +280,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
             </span>
           </div>
         )}
-
         {error && (<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 8 }}><AlertCircle size={13} color={C.red} /><span style={{ fontSize: 12, color: C.red }}>{error}</span></div>)}
         <Btn variant="gold" onClick={handle} loading={loading} style={{ width: "100%", marginTop: 18 }}> {mode === "signup" ? <><UserPlus size={15} /> Create Account</> : <><LogIn size={15} /> Sign In</>} </Btn>
         {mode === "signup" && (<div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 14 }}> {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (<div key={lbl} style={{ textAlign: "center" }}><div style={{ fontSize: 14 }}>{em}</div><div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>{lbl}</div></div>))} </div>)}
@@ -376,7 +369,6 @@ function HomePage({ setPage }) {
         <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
-      {/* Homepage chart — LEFT EXACTLY AS IS */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>S&P 500 Live</div><div style={{ fontSize: 11, color: C.text3 }}>Simulated real-time feed</div></div>
@@ -408,106 +400,549 @@ function HomePage({ setPage }) {
   );
 }
 
-/* ─── Markets Page (MODIFIED: TradingView chart replaces existing chart) ── */
-function MarketsPage({ prices, flash }) {
-  const [cat, setCat] = useState("All");
-  const [search, setSearch] = useState("");
-  const tvContainerRef = useRef(null);
-  const filtered = INSTRUMENT_DEFS.filter(d => (cat === "All" || d.cat === cat) && (!search || d.pair.toLowerCase().includes(search.toLowerCase()) || d.name.toLowerCase().includes(search.toLowerCase())));
+/* ─── TradingView Chart Component ────────────────────────────────────────── */
+const toTVSymbol = (pair) => {
+  const map = {
+    "BTC/USDT": "BINANCE:BTCUSDT", "ETH/USDT": "BINANCE:ETHUSDT", "SOL/USDT": "BINANCE:SOLUSDT",
+    "XRP/USDT": "BINANCE:XRPUSDT", "BNB/USDT": "BINANCE:BNBUSDT", "ADA/USDT": "BINANCE:ADAUSDT",
+    "AVAX/USDT": "BINANCE:AVAXUSDT", "DOGE/USDT": "BINANCE:DOGEUSDT", "MATIC/USDT": "BINANCE:MATICUSDT",
+    "LINK/USDT": "BINANCE:LINKUSDT", "UNI/USDT": "BINANCE:UNIUSDT", "LTC/USDT": "BINANCE:LTCUSDT",
+    "DOT/USDT": "BINANCE:DOTUSDT", "SHIB/USDT": "BINANCE:SHIBUSDT", "ATOM/USDT": "BINANCE:ATOMUSDT",
+    "EUR/USD": "FX:EURUSD", "GBP/USD": "FX:GBPUSD", "USD/JPY": "FX:USDJPY",
+    "AUD/USD": "FX:AUDUSD", "USD/CHF": "FX:USDCHF", "USD/CAD": "FX:USDCAD",
+    "NZD/USD": "FX:NZDUSD", "EUR/GBP": "FX:EURGBP", "EUR/JPY": "FX:EURJPY",
+    "GBP/JPY": "FX:GBPJPY", "EUR/CHF": "FX:EURCHF", "AUD/JPY": "FX:AUDJPY",
+    "USD/MXN": "FX:USDMXN", "USD/SGD": "FX:USDSGD", "USD/ZAR": "FX:USDZAR",
+    "AAPL": "NASDAQ:AAPL", "NVDA": "NASDAQ:NVDA", "TSLA": "NASDAQ:TSLA",
+    "AMZN": "NASDAQ:AMZN", "MSFT": "NASDAQ:MSFT", "GOOGL": "NASDAQ:GOOGL",
+    "META": "NASDAQ:META", "JPM": "NYSE:JPM", "V": "NYSE:V", "WMT": "NYSE:WMT",
+    "NFLX": "NASDAQ:NFLX", "AMD": "NASDAQ:AMD", "COIN": "NASDAQ:COIN", "PLTR": "NYSE:PLTR",
+    "SPX": "SP:SPX", "NDX": "NASDAQ:NDX", "DJIA": "DJ:DJI", "RUT": "TVC:RUT",
+    "VIX": "CBOE:VIX", "FTSE": "SPREADEX:FTSE", "DAX": "XETR:DAX", "N225": "TVC:NI225",
+    "XAU/USD": "TVC:GOLD", "XAG/USD": "TVC:SILVER", "XTI/USD": "TVC:USOIL",
+    "BRENT": "TVC:UKOIL", "NATGAS": "TVC:NATURALGAS", "COPPER": "TVC:COPPER",
+    "ES": "CME_MINI:ES1!", "NQ": "CME_MINI:NQ1!", "YM": "CBOT_MINI:YM1!",
+    "GC": "COMEX:GC1!", "CL": "NYMEX:CL1!", "ZN": "CBOT:ZN1!",
+    "US02Y": "TVC:US02Y", "US05Y": "TVC:US05Y", "US10Y": "TVC:US10Y",
+    "US30Y": "TVC:US30Y", "TLT": "NASDAQ:TLT",
+  };
+  return map[pair] || "BINANCE:BTCUSDT";
+};
+
+/* ─── Timeframe zoom ladder ──────────────────────────────────────────────── */
+const TF_LADDER = ["1", "5", "15", "60", "240", "D", "W", "M"];
+const TF_LABELS = { "1": "1m", "5": "5m", "15": "15m", "60": "1h", "240": "4h", "D": "1D", "W": "1W", "M": "1M" };
+
+function TVChart({ symbol, interval = "D", height = 700, containerId = "tv_chart_inline" }) {
+  const ref = useRef(null);
 
   useEffect(() => {
-    if (!tvContainerRef.current) return;
-    tvContainerRef.current.innerHTML = "";
+    if (!ref.current) return;
+    ref.current.innerHTML = "";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "tradingview-widget-container";
+    wrapper.style.height = "100%";
+    wrapper.style.width = "100%";
+
+    const chartDiv = document.createElement("div");
+    chartDiv.id = containerId;
+    chartDiv.style.height = "100%";
+    chartDiv.style.width = "100%";
+    wrapper.appendChild(chartDiv);
+
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol: "BINANCE:BTCUSDT",
-      interval: "D",
+      symbol: toTVSymbol(symbol),
+      interval,
       timezone: "Etc/UTC",
       theme: "dark",
       style: "1",
       locale: "en",
-      backgroundColor: "#0f0f0f",
-      gridColor: "rgba(34,34,34,0.5)",
+      backgroundColor: "#0a0a0a",
+      gridColor: "rgba(30,30,30,0.8)",
       hide_top_toolbar: false,
       hide_legend: false,
       allow_symbol_change: true,
       save_image: false,
-      hide_volume: false,
-      support_host: "https://www.tradingview.com",
       withdateranges: true,
       hide_side_toolbar: true,
-      toolbar_bg: "#0f0f0f",
+      toolbar_bg: "#0a0a0a",
       enable_publishing: false,
-      studies: [],
-      container_id: "tv_market_chart",
+      container_id: containerId,
       disabled_features: [
         "drawing_toolbar",
         "header_screenshot",
-        "header_chart_type",
         "header_compare",
         "header_undo_redo",
         "header_saveload",
+        "go_to_date",
       ],
-      enabled_features: ["study_templates"],
+      enabled_features: [],
       overrides: {
+        "paneProperties.background": "#0a0a0a",
+        "paneProperties.backgroundType": "solid",
+        "paneProperties.vertGridProperties.color": "#1a1a1a",
+        "paneProperties.horzGridProperties.color": "#1a1a1a",
         "mainSeriesProperties.candleStyle.upColor": "#22c55e",
         "mainSeriesProperties.candleStyle.downColor": "#ef4444",
         "mainSeriesProperties.candleStyle.borderUpColor": "#22c55e",
         "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
         "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
         "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
+        "scalesProperties.textColor": "#525252",
+        "scalesProperties.lineColor": "#222222",
       },
     });
-    tvContainerRef.current.appendChild(script);
-  }, []);
+    wrapper.appendChild(script);
+    ref.current.appendChild(wrapper);
+
+    return () => { if (ref.current) ref.current.innerHTML = ""; };
+  }, [symbol, interval, containerId]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ padding: "20px 0 4px" }}>
-        <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}> Global Trading <span style={{ color: C.gold }}>Markets</span> </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}><div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span></div></div>
+    <div
+      ref={ref}
+      style={{
+        width: "100%",
+        height: typeof height === "number" ? height : height,
+        borderRadius: 0,
+        overflow: "hidden",
+        background: "#0a0a0a",
+        transition: "height 0.3s ease",
+      }}
+    />
+  );
+}
+
+/* ─── Zoom Controls Bar ──────────────────────────────────────────────────── */
+function ZoomBar({ interval, setInterval: setIv, compact = false }) {
+  const idx = TF_LADDER.indexOf(interval);
+  const canZoomIn  = idx > 0;
+  const canZoomOut = idx < TF_LADDER.length - 1;
+
+  const btnBase = {
+    display: "flex", alignItems: "center", justifyContent: "center",
+    border: "none", cursor: "pointer", transition: "all .15s", fontWeight: 900,
+    borderRadius: compact ? 8 : 10,
+  };
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: compact ? 6 : 8 }}>
+      <button
+        onClick={() => canZoomIn && setIv(TF_LADDER[idx - 1])}
+        disabled={!canZoomIn}
+        title="Zoom In (shorter timeframe)"
+        style={{
+          ...btnBase,
+          width: compact ? 32 : 36, height: compact ? 32 : 36,
+          background: canZoomIn ? `${C.gold}18` : C.card2,
+          color: canZoomIn ? C.gold : C.text4,
+          border: `1px solid ${canZoomIn ? C.gold + "44" : C.border}`,
+          opacity: canZoomIn ? 1 : 0.4,
+          fontSize: compact ? 16 : 18,
+        }}
+      >
+        <svg width={compact ? 14 : 16} height={compact ? 14 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+      <div style={{
+        minWidth: compact ? 34 : 40, textAlign: "center",
+        fontSize: compact ? 11 : 12, fontWeight: 900,
+        color: C.gold, background: `${C.gold}12`,
+        border: `1px solid ${C.gold}33`, borderRadius: compact ? 7 : 8,
+        padding: compact ? "5px 6px" : "6px 8px",
+        letterSpacing: "0.04em",
+      }}>
+        {TF_LABELS[interval]}
       </div>
-
-      {/* TradingView Advanced Chart — Markets section only */}
-      <Card style={{ padding: "14px 14px 0 14px", overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Advanced Real-Time Chart</div><div style={{ fontSize: 11, color: C.text3 }}>Powered by TradingView</div></div>
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div>
-        </div>
-        <div
-          id="tv_market_chart"
-          ref={tvContainerRef}
-          className="tradingview-widget-container"
-          style={{ height: 460, width: "100%", borderRadius: 10, overflow: "hidden" }}
-        />
-      </Card>
-
-      <div style={{ position: "relative" }}><Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />{search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}</div>
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>{CATS.map(c => { const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length; return (<button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s", background: c === cat ? C.gold : `${C.gold}14`, color: c === cat ? "#000" : C.text3, display: "flex", alignItems: "center", gap: 4, }}>{c} <span style={{ fontSize: 9, opacity: .7 }}>{count}</span></button>); })}</div>
-      <Card style={{ padding: "0 16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.border}` }}><span style={{ fontSize: 10, color: C.text3, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}> {filtered.length} INSTRUMENTS </span><div style={{ display: "flex", gap: 16 }}><span style={{ fontSize: 10, color: C.text3 }}>PRICE</span><span style={{ fontSize: 10, color: C.text3 }}>24H</span></div></div>
-        {filtered.map((inst, i) => { const pd = prices[inst.pair]; const flDir = flash[inst.pair]; const color = catColor(inst.cat); return (
-          <div key={inst.pair}>
-            <div style={{ display: "flex", alignItems: "center", padding: "12px 0", transition: "background .3s", background: flDir === "up" ? `${C.green}08` : flDir === "dn" ? `${C.red}08` : "transparent", borderRadius: 8 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, background: `${color}18`, display: "grid", placeItems: "center", marginRight: 10 }}><span style={{ fontSize: 9, fontWeight: 900, color, textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.02em" }}>{inst.pair.length > 6 ? inst.pair.slice(0, 5) : inst.pair}</span></div>
-              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.pair}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.name}</div></div>
-              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}><div style={{ fontWeight: 900, fontSize: 14, color: flDir === "up" ? C.green : flDir === "dn" ? C.red : C.text, fontVariantNumeric: "tabular-nums", transition: "color .4s" }}>{fmtPrice(pd?.price, inst.cat)}</div><div style={{ fontSize: 11, fontWeight: 800, color: pd?.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd?.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd?.pct24h)}</div></div>
-            </div>
-            {i < filtered.length - 1 && <GoldLine />}
-          </div>
-        ); })}
-        {filtered.length === 0 && (<div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}> No instruments found for "{search}" </div>)}
-      </Card>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{CATS.slice(1).map(s => { const defs = INSTRUMENT_DEFS.filter(d => d.cat === s); const col = catColor(s); return (<div key={s} onClick={() => setCat(s)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer" }}><div style={{ fontWeight: 800, fontSize: 16, color: col }}>{defs.length}</div><div style={{ fontWeight: 700, fontSize: 12, color: C.text, marginTop: 2 }}>{s}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Live Simulated Feed</div></div>); })}</div>
+      <button
+        onClick={() => canZoomOut && setIv(TF_LADDER[idx + 1])}
+        disabled={!canZoomOut}
+        title="Zoom Out (longer timeframe)"
+        style={{
+          ...btnBase,
+          width: compact ? 32 : 36, height: compact ? 32 : 36,
+          background: canZoomOut ? `${C.card2}` : C.card2,
+          color: canZoomOut ? C.text2 : C.text4,
+          border: `1px solid ${canZoomOut ? C.border2 : C.border}`,
+          opacity: canZoomOut ? 1 : 0.4,
+          fontSize: compact ? 16 : 18,
+        }}
+      >
+        <svg width={compact ? 14 : 16} height={compact ? 14 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <line x1="8" y1="11" x2="14" y2="11"/>
+        </svg>
+      </button>
+      <div style={{ width: 1, height: 22, background: C.border2, marginLeft: compact ? 2 : 4, flexShrink: 0 }} />
+      <div style={{ display: "flex", gap: 4, overflowX: "auto", scrollbarWidth: "none" }}>
+        {TF_LADDER.map(tf => (
+          <button
+            key={tf}
+            onClick={() => setIv(tf)}
+            style={{
+              flexShrink: 0,
+              fontSize: compact ? 9 : 10, fontWeight: 800,
+              padding: compact ? "4px 6px" : "5px 7px",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              background: tf === interval ? C.gold : `${C.gold}10`,
+              color: tf === interval ? "#000" : C.text3,
+              transition: "all .12s",
+            }}
+          >
+            {TF_LABELS[tf]}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-/* ─── Wallet Address Widget (Trade-only, auth-gated) ────────────────────── */
+/* ─── INLINE CHART HEIGHT PRESETS ───────────────────────────────────────── */
+// ▸ SURGICAL CHANGE 1: Three portrait height presets (was hardcoded 500px)
+const CHART_HEIGHT_PRESETS = [
+  { label: "S", px: 480,  title: "Standard" },
+  { label: "T", px: 700,  title: "Tall" },
+  { label: "XL", px: 960, title: "Portrait" },
+];
+
+/* ─── Markets Page ───────────────────────────────────────────────────────── */
+function MarketsPage({ prices, flash }) {
+  const [cat, setCat]                   = useState("All");
+  const [search, setSearch]             = useState("");
+  const [activeSymbol, setActiveSymbol] = useState("BTC/USDT");
+  const [interval, setInterval]         = useState("D");
+  const [zoomPage, setZoomPage]         = useState(false);
+
+  // ▸ SURGICAL CHANGE 2: Inline chart height is now controlled state (default 700 = Tall)
+  const [chartHeightIdx, setChartHeightIdx] = useState(1); // 0=480, 1=700, 2=960
+  const inlineChartH = CHART_HEIGHT_PRESETS[chartHeightIdx].px;
+
+  // ▸ SURGICAL CHANGE 3: Zoom page computes height from window to fill perfectly
+  const [winH, setWinH] = useState(typeof window !== "undefined" ? window.innerHeight : 800);
+  useEffect(() => {
+    const onResize = () => setWinH(window.innerHeight);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  // Chrome heights inside zoom page: topbar(56) + symbols(58) + zoomcontrols(64) + bottomhint(42) = 220
+  const zoomChartH = Math.max(winH - 220, 300);
+
+  const filtered = INSTRUMENT_DEFS.filter(d =>
+    (cat === "All" || d.cat === cat) &&
+    (!search || d.pair.toLowerCase().includes(search.toLowerCase()) || d.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const QUICK_SYMBOLS = [
+    { pair: "BTC/USDT", label: "BTC" },
+    { pair: "ETH/USDT", label: "ETH" },
+    { pair: "EUR/USD", label: "EUR/USD" },
+    { pair: "SPX",     label: "S&P 500" },
+    { pair: "XAU/USD", label: "Gold" },
+    { pair: "NVDA",    label: "NVDA" },
+  ];
+
+  const activeDef = INSTRUMENT_DEFS.find(d => d.pair === activeSymbol);
+
+  useEffect(() => {
+    document.body.style.overflow = zoomPage ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [zoomPage]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* ── Page header ── */}
+      <div style={{ padding: "20px 0 4px" }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
+          Global Trading <span style={{ color: C.gold }}>Markets</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+          <div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── TradingView Chart Card ── */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+
+        {/* Card header row */}
+        <div style={{ padding: "14px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Live Chart</div>
+            <div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>
+              {activeDef?.name || activeSymbol} · TradingView
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} />
+              <span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span>
+            </div>
+
+            {/* ▸ SURGICAL CHANGE 4: Portrait height toggle buttons (S / T / XL) */}
+            <div style={{ display: "flex", gap: 3, background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 9, padding: "3px 4px" }}>
+              {CHART_HEIGHT_PRESETS.map((p, i) => (
+                <button
+                  key={p.label}
+                  onClick={() => setChartHeightIdx(i)}
+                  title={`${p.title} (${p.px}px)`}
+                  style={{
+                    fontSize: 9, fontWeight: 900,
+                    padding: "4px 7px", borderRadius: 6, border: "none", cursor: "pointer",
+                    background: chartHeightIdx === i ? C.gold : "transparent",
+                    color: chartHeightIdx === i ? "#000" : C.text3,
+                    transition: "all .15s",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Zoom Page button */}
+            <button
+              onClick={() => setZoomPage(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                background: `${C.gold}14`, border: `1px solid ${C.gold}44`,
+                borderRadius: 9, padding: "7px 11px", cursor: "pointer",
+                color: C.gold, fontSize: 11, fontWeight: 800, transition: "all .15s",
+              }}
+            >
+              <Maximize2 size={12} />
+              Zoom
+            </button>
+          </div>
+        </div>
+
+        {/* Quick symbol switcher */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "0 16px 10px", scrollbarWidth: "none" }}>
+          {QUICK_SYMBOLS.map(s => {
+            const pd = prices[s.pair];
+            const active = activeSymbol === s.pair;
+            return (
+              <button key={s.pair} onClick={() => setActiveSymbol(s.pair)}
+                style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "7px 10px", borderRadius: 9, border: `1px solid ${active ? C.gold + "66" : C.border}`, background: active ? `${C.gold}12` : C.card2, cursor: "pointer", transition: "all .15s", minWidth: 64 }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 900, color: active ? C.gold : C.text }}>{s.label}</span>
+                {pd && <span style={{ fontSize: 9, fontWeight: 700, color: pd.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd.pct24h >= 0 ? "+" : ""}{pd.pct24h.toFixed(1)}%</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Inline zoom controls */}
+        <div style={{ padding: "0 16px 10px", overflowX: "auto", scrollbarWidth: "none" }}>
+          <ZoomBar interval={interval} setInterval={setInterval} compact />
+        </div>
+
+        {/* ▸ SURGICAL CHANGE 5: Chart height driven by inlineChartH state (was hardcoded 500) */}
+        <TVChart symbol={activeSymbol} interval={interval} height={inlineChartH} containerId="tv_chart_inline" />
+
+        {/* Footer hint */}
+        <div style={{ padding: "10px 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 10, color: C.text3 }}>
+            Tap a row below to switch symbol · S/T/XL to resize
+          </span>
+          <button onClick={() => setZoomPage(true)}
+            style={{ fontSize: 10, fontWeight: 800, color: C.gold, background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+            <Maximize2 size={10} /> Full screen →
+          </button>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          ▸ SURGICAL CHANGE 6: ZOOM PAGE — full-viewport chart with computed height
+      ══════════════════════════════════════════════════════════════════════ */}
+      {zoomPage && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 900, background: "#080808", display: "flex", flexDirection: "column" }}>
+
+          {/* ── Top bar (h=56) ── */}
+          <div style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", background: "#0a0a0a", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <Zap size={14} color="#000" fill="#000" />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: C.text }}>{activeSymbol}</div>
+                <div style={{ fontSize: 9, color: C.text3, marginTop: 1 }}>{activeDef?.name} · {activeDef?.cat}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span>
+              </div>
+              {/* Live price badge in zoom header */}
+              {prices[activeSymbol] && (
+                <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, padding: "5px 10px", textAlign: "right" }}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: C.text, fontVariantNumeric: "tabular-nums" }}>
+                    {fmtPrice(prices[activeSymbol]?.price, activeDef?.cat)}
+                  </div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: prices[activeSymbol]?.pct24h >= 0 ? C.green : C.red }}>
+                    {fmtPct(prices[activeSymbol]?.pct24h)}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setZoomPage(false)}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, padding: "7px 12px", cursor: "pointer", color: C.text2, fontSize: 11, fontWeight: 800 }}>
+                <Minimize2 size={13} /> Close
+              </button>
+            </div>
+          </div>
+
+          {/* ── Symbol switcher row (h≈58) ── */}
+          <div style={{ flexShrink: 0, display: "flex", gap: 6, overflowX: "auto", padding: "10px 16px", background: "#0a0a0a", borderBottom: `1px solid ${C.border}`, scrollbarWidth: "none" }}>
+            {QUICK_SYMBOLS.map(s => {
+              const pd = prices[s.pair];
+              const active = activeSymbol === s.pair;
+              return (
+                <button key={s.pair} onClick={() => setActiveSymbol(s.pair)}
+                  style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "7px 12px", borderRadius: 9, border: `1px solid ${active ? C.gold + "66" : C.border}`, background: active ? `${C.gold}12` : C.card2, cursor: "pointer", transition: "all .15s", minWidth: 68 }}>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: active ? C.gold : C.text }}>{s.label}</span>
+                  {pd && <span style={{ fontSize: 9, fontWeight: 700, color: pd.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd.pct24h >= 0 ? "+" : ""}{pd.pct24h.toFixed(1)}%</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Zoom controls row (h≈64) ── */}
+          <div style={{ flexShrink: 0, padding: "10px 16px", background: "#0c0c0c", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10, overflowX: "auto", scrollbarWidth: "none" }}>
+            {/* Big zoom in button */}
+            <button
+              onClick={() => { const i = TF_LADDER.indexOf(interval); if (i > 0) setInterval(TF_LADDER[i - 1]); }}
+              disabled={TF_LADDER.indexOf(interval) === 0}
+              style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 11, border: `1.5px solid ${TF_LADDER.indexOf(interval) > 0 ? C.gold + "55" : C.border}`, background: TF_LADDER.indexOf(interval) > 0 ? `${C.gold}14` : C.card2, color: TF_LADDER.indexOf(interval) > 0 ? C.gold : C.text4, cursor: TF_LADDER.indexOf(interval) > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", opacity: TF_LADDER.indexOf(interval) > 0 ? 1 : 0.35, transition: "all .15s" }}
+              title="Zoom In"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+              </svg>
+            </button>
+
+            {/* Timeframe pill */}
+            <div style={{ flexShrink: 0, minWidth: 48, textAlign: "center", fontSize: 14, fontWeight: 900, color: C.gold, background: `${C.gold}14`, border: `1.5px solid ${C.gold}44`, borderRadius: 10, padding: "10px 10px", letterSpacing: "0.04em" }}>
+              {TF_LABELS[interval]}
+            </div>
+
+            {/* Big zoom out button */}
+            <button
+              onClick={() => { const i = TF_LADDER.indexOf(interval); if (i < TF_LADDER.length - 1) setInterval(TF_LADDER[i + 1]); }}
+              disabled={TF_LADDER.indexOf(interval) === TF_LADDER.length - 1}
+              style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 11, border: `1.5px solid ${TF_LADDER.indexOf(interval) < TF_LADDER.length - 1 ? C.border2 : C.border}`, background: C.card2, color: TF_LADDER.indexOf(interval) < TF_LADDER.length - 1 ? C.text2 : C.text4, cursor: TF_LADDER.indexOf(interval) < TF_LADDER.length - 1 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", opacity: TF_LADDER.indexOf(interval) < TF_LADDER.length - 1 ? 1 : 0.35, transition: "all .15s" }}
+              title="Zoom Out"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="8" y1="11" x2="14" y2="11"/>
+              </svg>
+            </button>
+
+            {/* Divider */}
+            <div style={{ width: 1, height: 28, background: C.border2, flexShrink: 0, marginLeft: 2 }} />
+
+            {/* All timeframe pills */}
+            {TF_LADDER.map(tf => (
+              <button key={tf} onClick={() => setInterval(tf)}
+                style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "8px 10px", borderRadius: 8, border: "none", cursor: "pointer", background: tf === interval ? C.gold : `${C.gold}12`, color: tf === interval ? "#000" : C.text3, transition: "all .12s" }}>
+                {TF_LABELS[tf]}
+              </button>
+            ))}
+          </div>
+
+          {/* ▸ SURGICAL CHANGE 7: Chart fills exact remaining space using computed pixel height */}
+          <div style={{ flexShrink: 0, height: zoomChartH, overflow: "hidden" }}>
+            <TVChart symbol={activeSymbol} interval={interval} height={zoomChartH} containerId="tv_chart_zoom" />
+          </div>
+
+          {/* ── Bottom hint bar (h≈42) ── */}
+          <div style={{ flexShrink: 0, padding: "10px 16px 14px", background: "#0a0a0a", borderTop: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 10, color: C.text3 }}>
+              <span style={{ color: C.gold, fontWeight: 800 }}>+</span> = zoom in &nbsp;·&nbsp;
+              <span style={{ color: C.text2, fontWeight: 800 }}>−</span> = zoom out &nbsp;·&nbsp;
+              tap timeframe to jump
+            </span>
+            <span style={{ fontSize: 10, color: C.text3 }}>Powered by TradingView</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Instrument list ── */}
+      <div style={{ position: "relative" }}>
+        <Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+        <input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        {search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}
+      </div>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        {CATS.map(c => {
+          const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length;
+          return (
+            <button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s", background: c === cat ? C.gold : `${C.gold}14`, color: c === cat ? "#000" : C.text3, display: "flex", alignItems: "center", gap: 4 }}>
+              {c} <span style={{ fontSize: 9, opacity: .7 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <Card style={{ padding: "0 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 10, color: C.text3, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{filtered.length} INSTRUMENTS</span>
+          <div style={{ display: "flex", gap: 16 }}><span style={{ fontSize: 10, color: C.text3 }}>PRICE</span><span style={{ fontSize: 10, color: C.text3 }}>24H</span></div>
+        </div>
+        {filtered.map((inst, i) => {
+          const pd = prices[inst.pair]; const flDir = flash[inst.pair]; const color = catColor(inst.cat);
+          return (
+            <div key={inst.pair}>
+              <div
+                onClick={() => { setActiveSymbol(inst.pair); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                style={{ display: "flex", alignItems: "center", padding: "12px 0", transition: "background .3s", background: flDir === "up" ? `${C.green}08` : flDir === "dn" ? `${C.red}08` : "transparent", borderRadius: 8, cursor: "pointer" }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, background: `${color}18`, display: "grid", placeItems: "center", marginRight: 10 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, color, textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.02em" }}>{inst.pair.length > 6 ? inst.pair.slice(0, 5) : inst.pair}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.pair}</div>
+                  <div style={{ fontSize: 11, color: C.text3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.name}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: flDir === "up" ? C.green : flDir === "dn" ? C.red : C.text, fontVariantNumeric: "tabular-nums", transition: "color .4s" }}>{fmtPrice(pd?.price, inst.cat)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: pd?.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd?.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd?.pct24h)}</div>
+                </div>
+              </div>
+              {i < filtered.length - 1 && <GoldLine />}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (<div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>No instruments found for "{search}"</div>)}
+      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {CATS.slice(1).map(s => {
+          const defs = INSTRUMENT_DEFS.filter(d => d.cat === s); const col = catColor(s);
+          return (
+            <div key={s} onClick={() => setCat(s)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer" }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: col }}>{defs.length}</div>
+              <div style={{ fontWeight: 700, fontSize: 12, color: C.text, marginTop: 2 }}>{s}</div>
+              <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Live Simulated Feed</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Wallet Address Widget ──────────────────────────────────────────────── */
 function WalletAddressWidget() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -528,12 +963,10 @@ function WalletAddressWidget() {
           if (data?.address) {
             setWalletAddress(data.address);
           } else {
-            // Derive a deterministic display address from user id
             const seed = supaUser.id.replace(/-/g, "").toUpperCase();
             setWalletAddress("0x" + seed.slice(0, 40));
           }
         } else if (user?.email) {
-          // Fallback: derive from email hash for demo
           const raw = user.email.split("").reduce((a, c) => a + c.charCodeAt(0), 0).toString(16);
           setWalletAddress("0x" + raw.padEnd(40, "a0b1c2d3e4f5").slice(0, 40));
         }
@@ -600,7 +1033,7 @@ function WalletAddressWidget() {
   );
 }
 
-/* ─── Trade Page (MODIFIED: auth-gated bg + wallet widget injected) ──────── */
+/* ─── Trade Page ─────────────────────────────────────────────────────────── */
 function TradePage({ prices }) {
   const { isAuthenticated } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
@@ -637,74 +1070,21 @@ function TradePage({ prices }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
-
-      {/* AUTH-GATED MERGED BACKGROUND — Trade section only, strictly isolated */}
       {isAuthenticated && (
         <div
           aria-hidden="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: "none",
-            overflow: "hidden",
-          }}
+          style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}
         >
-          {/* Green gear image — bottom layer */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url('/src/assets/83617.jpg')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            opacity: 0.07,
-            filter: "saturate(1.4) hue-rotate(10deg)",
-          }} />
-          {/* Robot AI image — blended on top */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url('/src/assets/83622.jpg')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            opacity: 0.09,
-            mixBlendMode: "screen",
-          }} />
-          {/* Deep dark gradient overlay to keep content readable */}
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}cc 80%, ${C.bg} 100%)`,
-          }} />
-          {/* Subtle gold ambient glow */}
-          <div style={{
-            position: "absolute",
-            top: "10%",
-            right: "-10%",
-            width: 380,
-            height: 380,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${C.gold}08 0%, transparent 70%)`,
-          }} />
-          <div style={{
-            position: "absolute",
-            bottom: "15%",
-            left: "-8%",
-            width: 300,
-            height: 300,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, #3b82f608 0%, transparent 70%)`,
-          }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `url('/src/assets/83617.jpg')`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.07, filter: "saturate(1.4) hue-rotate(10deg)" }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `url('/src/assets/83622.jpg')`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.09, mixBlendMode: "screen" }} />
+          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}cc 80%, ${C.bg} 100%)` }} />
+          <div style={{ position: "absolute", top: "10%", right: "-10%", width: 380, height: 380, borderRadius: "50%", background: `radial-gradient(circle, ${C.gold}08 0%, transparent 70%)` }} />
+          <div style={{ position: "absolute", bottom: "15%", left: "-8%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, #3b82f608 0%, transparent 70%)` }} />
         </div>
       )}
-
-      {/* All Trade content sits above background at z-index 1 */}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
-
-        {/* Wallet Address — auth-gated, injected in-place after header, no displacement */}
         {isAuthenticated && <WalletAddressWidget />}
-
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold }, { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
         <Card>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
@@ -793,3 +1173,4 @@ function AppShell() {
 export default function GoldenVaultXM() {
   return (<AuthProvider><AppShell /></AuthProvider>);
 }
+
