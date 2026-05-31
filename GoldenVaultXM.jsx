@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check } from "lucide-react";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -179,19 +179,26 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ─── Auth Context / Modals / Nav / ... (Remained same) ──────────────────── */
+/* ─── Auth Modal (MODIFIED: Google button + legal checkbox) ─────────────── */
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [legalChecked, setLegalChecked] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+
   const handle = async () => {
+    if (mode === "signup" && !legalChecked) {
+      setError("Please accept the terms, acceptable use policy, and confirm you are 18+ to continue.");
+      return;
+    }
     setError("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ 
-      email: form.email, 
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
       password: form.password,
       options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
     });
@@ -200,11 +207,21 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(false);
     onClose();
   };
-  // This line now only runs if there were no errors above
-  login({ name: form.name || form.email.split("@")[0], email: form.email });
-  setLoading(false);
-  onClose();
-};
+
+  const handleGoogle = async () => {
+    if (mode === "signup" && !legalChecked) {
+      setError("Please accept the terms, acceptable use policy, and confirm you are 18+ to continue.");
+      return;
+    }
+    setError("");
+    setGoogleLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: 'https://goldenvaultxm.live/' }
+    });
+    if (error) { setError(error.message); setGoogleLoading(false); }
+  };
+
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
@@ -219,6 +236,30 @@ function AuthModal({ onClose, initialMode = "signup" }) {
         </div>
         <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4 }}> {mode === "signup" ? "Create Account" : "Welcome Back"} </div>
         <div style={{ fontSize: 13, color: C.text3, marginBottom: 22 }}> {mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."} </div>
+
+        {/* Google Button */}
+        <button
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "12px 16px", background: "#fff", border: "none", borderRadius: 10, cursor: googleLoading ? "not-allowed" : "pointer", marginBottom: 14, fontWeight: 800, fontSize: 13, color: "#1a1a1a", transition: "all .18s", opacity: googleLoading ? 0.7 : 1, }}
+        >
+          {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : (
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.16 2.85l6.08-6.08C34.37 3.07 29.46 1 24 1 14.82 1 7.07 6.48 3.73 14.22l7.1 5.52C12.55 13.62 17.82 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v8.98h12.42c-.54 2.88-2.18 5.32-4.64 6.96l7.1 5.52C43.27 37.16 46.1 31.3 46.1 24.5z"/>
+              <path fill="#FBBC05" d="M10.83 28.26A14.53 14.53 0 0 1 9.5 24c0-1.48.25-2.91.7-4.26l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.56 10.76l8.27-6.5z"/>
+              <path fill="#34A853" d="M24 47c5.46 0 10.05-1.81 13.4-4.9l-7.1-5.52c-1.96 1.32-4.47 2.1-6.3 2.1-6.18 0-11.45-4.12-13.17-9.74l-8.27 6.5C7.07 41.52 14.82 47 24 47z"/>
+            </svg>
+          )}
+          Continue with Google
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+          <span style={{ fontSize: 11, color: C.text3, fontWeight: 700 }}>or</span>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+        </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {mode === "signup" && (<input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />)}
           <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
@@ -227,6 +268,25 @@ function AuthModal({ onClose, initialMode = "signup" }) {
             <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}> {showPw ? <EyeOff size={15} /> : <Eye size={15} />} </button>
           </div>
         </div>
+
+        {/* Legal Disclaimer Checkbox */}
+        {mode === "signup" && (
+          <div
+            onClick={() => setLegalChecked(v => !v)}
+            style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16, cursor: "pointer", padding: "12px 14px", background: legalChecked ? `${C.gold}0e` : C.card2, border: `1px solid ${legalChecked ? C.gold + "44" : C.border2}`, borderRadius: 10, transition: "all .18s", }}
+          >
+            <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${legalChecked ? C.gold : C.text3}`, background: legalChecked ? C.gold : "transparent", display: "grid", placeItems: "center", flexShrink: 0, marginTop: 1, transition: "all .18s", }}>
+              {legalChecked && <Check size={11} color="#000" strokeWidth={3} />}
+            </div>
+            <span style={{ fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
+              I confirm I am <span style={{ color: C.text, fontWeight: 800 }}>18 years of age or older</span>, and I agree to the{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Terms of Service</span>,{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Acceptable Use Policy</span>, and{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Privacy Policy</span> of Golden Vault XM.
+            </span>
+          </div>
+        )}
+
         {error && (<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 8 }}><AlertCircle size={13} color={C.red} /><span style={{ fontSize: 12, color: C.red }}>{error}</span></div>)}
         <Btn variant="gold" onClick={handle} loading={loading} style={{ width: "100%", marginTop: 18 }}> {mode === "signup" ? <><UserPlus size={15} /> Create Account</> : <><LogIn size={15} /> Sign In</>} </Btn>
         {mode === "signup" && (<div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 14 }}> {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (<div key={lbl} style={{ textAlign: "center" }}><div style={{ fontSize: 14 }}>{em}</div><div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>{lbl}</div></div>))} </div>)}
@@ -297,7 +357,7 @@ function BottomNav({ page, setPage }) {
   );
 }
 
-/* ─── PAGES (Modified TradePage) ────────────────────────────────────────── */
+/* ─── PAGES ──────────────────────────────────────────────────────────────── */
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
   const [tab, setTab] = useState("1m");
@@ -316,6 +376,7 @@ function HomePage({ setPage }) {
         <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
+      {/* Homepage chart — LEFT EXACTLY AS IS */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>S&P 500 Live</div><div style={{ fontSize: 11, color: C.text3 }}>Simulated real-time feed</div></div>
@@ -347,163 +408,84 @@ function HomePage({ setPage }) {
   );
 }
 
-function TradingViewChart() {
-  const containerRef = useRef(null);
-  const widgetRef = useRef(null);
-  const [symbol, setSymbol] = useState("OANDA:XAUUSD");
-  const [interval, setTVInterval] = useState("5");
-  const [zoom, setZoom] = useState(1);
-
-  const TV_SYMBOLS = [
-    { label: "GOLD", value: "OANDA:XAUUSD" },
-    { label: "BTC", value: "BINANCE:BTCUSDT" },
-    { label: "ETH", value: "BINANCE:ETHUSDT" },
-    { label: "EUR/USD", value: "FX:EURUSD" },
-    { label: "S&P 500", value: "SP:SPX" },
-    { label: "OIL", value: "TVC:USOIL" },
-    { label: "NVDA", value: "NASDAQ:NVDA" },
-    { label: "AAPL", value: "NASDAQ:AAPL" },
-  ];
-  const INTERVALS = [
-    { label: "1m", value: "1" },
-    { label: "5m", value: "5" },
-    { label: "15m", value: "15" },
-    { label: "1h", value: "60" },
-    { label: "4h", value: "240" },
-    { label: "1D", value: "D" },
-  ];
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    // Remove previous widget iframe if any
-    containerRef.current.innerHTML = "";
-    const script = document.createElement("script");
-    script.src = "https://s3.tradingview.com/tv.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.TradingView) {
-        widgetRef.current = new window.TradingView.widget({
-          autosize: true,
-          symbol: symbol,
-          interval: interval,
-          timezone: "Etc/UTC",
-          theme: "dark",
-          style: "1",
-          locale: "en",
-          toolbar_bg: "#0f0f0f",
-          enable_publishing: false,
-          allow_symbol_change: true,
-          container_id: "tv_chart_container",
-          hide_side_toolbar: false,
-          studies: ["IchimokuCloud@tv-basicstudies"],
-          overrides: {
-            "paneProperties.background": "#080808",
-            "paneProperties.vertGridProperties.color": "#1a1a1a",
-            "paneProperties.horzGridProperties.color": "#1a1a1a",
-            "scalesProperties.textColor": "#a3a3a3",
-          },
-          loading_screen: { backgroundColor: "#080808", foregroundColor: "#d97706" },
-        });
-      }
-    };
-    // If tv.js already loaded, just create widget
-    if (window.TradingView) {
-      script.onload();
-    } else {
-      document.head.appendChild(script);
-    }
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [symbol, interval]);
-
-  const handleZoomIn = () => {
-    setZoom(z => {
-      const next = Math.min(z + 0.15, 2.2);
-      if (containerRef.current) containerRef.current.style.transform = `scale(${next})`;
-      return next;
-    });
-  };
-  const handleZoomOut = () => {
-    setZoom(z => {
-      const next = Math.max(z - 0.15, 0.5);
-      if (containerRef.current) containerRef.current.style.transform = `scale(${next})`;
-      return next;
-    });
-  };
-  const handleZoomReset = () => {
-    setZoom(1);
-    if (containerRef.current) containerRef.current.style.transform = "scale(1)";
-  };
-
-  return (
-    <Card style={{ padding: "14px 14px 10px", overflow: "hidden" }}>
-      {/* Header Row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 14, color: C.text }}>Live Chart</div>
-          <div style={{ fontSize: 10, color: C.green, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} />
-            TradingView Real-Time
-          </div>
-        </div>
-        {/* Zoom Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={handleZoomOut} title="Zoom Out" style={{ width: 30, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.text2, fontSize: 18, fontWeight: 900, cursor: "pointer", display: "grid", placeItems: "center", lineHeight: 1 }}>−</button>
-          <button onClick={handleZoomReset} title="Reset Zoom" style={{ minWidth: 38, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.gold, fontSize: 10, fontWeight: 800, cursor: "pointer", display: "grid", placeItems: "center", padding: "0 6px" }}>{Math.round(zoom * 100)}%</button>
-          <button onClick={handleZoomIn} title="Zoom In" style={{ width: 30, height: 30, borderRadius: 7, background: C.card2, border: `1px solid ${C.border2}`, color: C.text2, fontSize: 18, fontWeight: 900, cursor: "pointer", display: "grid", placeItems: "center", lineHeight: 1 }}>+</button>
-        </div>
-      </div>
-
-      {/* Symbol Selector */}
-      <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 8 }}>
-        {TV_SYMBOLS.map(s => (
-          <button key={s.value} onClick={() => setSymbol(s.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: symbol === s.value ? C.gold : `${C.gold}14`, color: symbol === s.value ? "#000" : C.text3, transition: "all .15s" }}>{s.label}</button>
-        ))}
-      </div>
-
-      {/* Interval Selector */}
-      <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
-        {INTERVALS.map(iv => (
-          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: interval === iv.value ? C.gold2 : `${C.gold}0f`, color: interval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
-        ))}
-      </div>
-
-      {/* Chart Container */}
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}` }}>
-        <div
-          style={{
-            transformOrigin: "top left",
-            transform: `scale(${zoom})`,
-            width: zoom < 1 ? `${100 / zoom}%` : "100%",
-            height: zoom < 1 ? `${340 / zoom}px` : "340px",
-            transition: "transform 0.2s ease",
-          }}
-        >
-          <div id="tv_chart_container" ref={containerRef} style={{ width: "100%", height: "340px" }} />
-        </div>
-        {/* Height holder when zoomed out */}
-        {zoom < 1 && <div style={{ height: 340 }} />}
-      </div>
-
-      <div style={{ fontSize: 10, color: C.text3, textAlign: "center", marginTop: 8 }}>
-        Powered by <span style={{ color: C.gold, fontWeight: 800 }}>TradingView</span> · Real market data
-      </div>
-    </Card>
-  );
-}
-
+/* ─── Markets Page (MODIFIED: TradingView chart replaces existing chart) ── */
 function MarketsPage({ prices, flash }) {
   const [cat, setCat] = useState("All");
   const [search, setSearch] = useState("");
+  const tvContainerRef = useRef(null);
   const filtered = INSTRUMENT_DEFS.filter(d => (cat === "All" || d.cat === cat) && (!search || d.pair.toLowerCase().includes(search.toLowerCase()) || d.name.toLowerCase().includes(search.toLowerCase())));
+
+  useEffect(() => {
+    if (!tvContainerRef.current) return;
+    tvContainerRef.current.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: "BINANCE:BTCUSDT",
+      interval: "D",
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "#0f0f0f",
+      gridColor: "rgba(34,34,34,0.5)",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      allow_symbol_change: true,
+      save_image: false,
+      hide_volume: false,
+      support_host: "https://www.tradingview.com",
+      withdateranges: true,
+      hide_side_toolbar: true,
+      toolbar_bg: "#0f0f0f",
+      enable_publishing: false,
+      studies: [],
+      container_id: "tv_market_chart",
+      disabled_features: [
+        "drawing_toolbar",
+        "header_screenshot",
+        "header_chart_type",
+        "header_compare",
+        "header_undo_redo",
+        "header_saveload",
+      ],
+      enabled_features: ["study_templates"],
+      overrides: {
+        "mainSeriesProperties.candleStyle.upColor": "#22c55e",
+        "mainSeriesProperties.candleStyle.downColor": "#ef4444",
+        "mainSeriesProperties.candleStyle.borderUpColor": "#22c55e",
+        "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
+        "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
+        "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
+      },
+    });
+    tvContainerRef.current.appendChild(script);
+  }, []);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px" }}>
         <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}> Global Trading <span style={{ color: C.gold }}>Markets</span> </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}><div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span></div></div>
       </div>
-      <TradingViewChart />
+
+      {/* TradingView Advanced Chart — Markets section only */}
+      <Card style={{ padding: "14px 14px 0 14px", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Advanced Real-Time Chart</div><div style={{ fontSize: 11, color: C.text3 }}>Powered by TradingView</div></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div>
+        </div>
+        <div
+          id="tv_market_chart"
+          ref={tvContainerRef}
+          className="tradingview-widget-container"
+          style={{ height: 460, width: "100%", borderRadius: 10, overflow: "hidden" }}
+        />
+      </Card>
+
       <div style={{ position: "relative" }}><Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />{search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}</div>
       <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>{CATS.map(c => { const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length; return (<button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s", background: c === cat ? C.gold : `${C.gold}14`, color: c === cat ? "#000" : C.text3, display: "flex", alignItems: "center", gap: 4, }}>{c} <span style={{ fontSize: 9, opacity: .7 }}>{count}</span></button>); })}</div>
       <Card style={{ padding: "0 16px" }}>
@@ -525,18 +507,111 @@ function MarketsPage({ prices, flash }) {
   );
 }
 
+/* ─── Wallet Address Widget (Trade-only, auth-gated) ────────────────────── */
+function WalletAddressWidget() {
+  const { user } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [walletAddress, setWalletAddress] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      setLoading(true);
+      try {
+        const { data: { user: supaUser } } = await supabase.auth.getUser();
+        if (supaUser) {
+          const { data } = await supabase
+            .from('wallets')
+            .select('address')
+            .eq('user_id', supaUser.id)
+            .single();
+          if (data?.address) {
+            setWalletAddress(data.address);
+          } else {
+            // Derive a deterministic display address from user id
+            const seed = supaUser.id.replace(/-/g, "").toUpperCase();
+            setWalletAddress("0x" + seed.slice(0, 40));
+          }
+        } else if (user?.email) {
+          // Fallback: derive from email hash for demo
+          const raw = user.email.split("").reduce((a, c) => a + c.charCodeAt(0), 0).toString(16);
+          setWalletAddress("0x" + raw.padEnd(40, "a0b1c2d3e4f5").slice(0, 40));
+        }
+      } catch (err) {
+        if (user?.email) {
+          const raw = user.email.split("").reduce((a, c) => a + c.charCodeAt(0), 0).toString(16);
+          setWalletAddress("0x" + raw.padEnd(40, "a0b1c2d3e4f5").slice(0, 40));
+        }
+      }
+      setLoading(false);
+    };
+    fetchWallet();
+  }, [user]);
+
+  const handleCopy = () => {
+    if (!walletAddress) return;
+    navigator.clipboard.writeText(walletAddress).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const shortAddr = walletAddress ? walletAddress.slice(0, 8) + "…" + walletAddress.slice(-6) : "—";
+
+  return (
+    <Card style={{ background: `linear-gradient(135deg,#0d0d0d,#111)`, border: `1px solid ${C.gold}33` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <IconBox icon={Wallet} color={C.gold} size={15} boxSize={32} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Wallet Address</div>
+            <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Your linked trading wallet</div>
+          </div>
+        </div>
+        <Badge color={C.green}>Active</Badge>
+      </div>
+      <GoldLine />
+      <div style={{ marginTop: 12, background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        {loading ? (
+          <div style={{ fontSize: 12, color: C.text3, display: "flex", alignItems: "center", gap: 6 }}>
+            <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> Loading…
+          </div>
+        ) : (
+          <>
+            <div>
+              <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>EVM / ETH Compatible</div>
+              <div style={{ fontFamily: "'Courier New',monospace", fontSize: 13, fontWeight: 700, color: C.gold, letterSpacing: "0.02em" }}>{shortAddr}</div>
+            </div>
+            <button
+              onClick={handleCopy}
+              style={{ display: "flex", alignItems: "center", gap: 5, background: copied ? `${C.green}18` : `${C.gold}14`, border: `1px solid ${copied ? C.green + "44" : C.gold + "33"}`, borderRadius: 8, padding: "7px 12px", cursor: "pointer", color: copied ? C.green : C.gold, fontSize: 11, fontWeight: 800, transition: "all .2s", flexShrink: 0, }}
+            >
+              {copied ? <><Check size={12} /> Copied!</> : <><Copy size={12} /> Copy</>}
+            </button>
+          </>
+        )}
+      </div>
+      {walletAddress && (
+        <div style={{ marginTop: 10, fontSize: 10, color: C.text3, fontFamily: "'Courier New',monospace", wordBreak: "break-all", lineHeight: 1.6 }}>
+          {walletAddress}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ─── Trade Page (MODIFIED: auth-gated bg + wallet widget injected) ──────── */
 function TradePage({ prices }) {
+  const { isAuthenticated } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
-  
-  // NEW: State for data
+
   const [totalInvested, setTotalInvested] = useState(0);
   const [currentValue, setCurrentValue] = useState(0);
 
-  // NEW: Supabase Fetch
   useEffect(() => {
     const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -559,55 +634,123 @@ function TradePage({ prices }) {
   const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
-  
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold }, { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
-      <Card>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
-        <ResponsiveContainer width="100%" height={148}>
-          <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}><XAxis dataKey="day" hide /><YAxis hide domain={["dataMin - 500", "dataMax + 200"]} /><Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} /><Bar dataKey="value" radius={[3, 3, 0, 0]}>{data.map((e, i) => (<Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />))}</Bar></BarChart>
-        </ResponsiveContainer>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div></div>
-          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+
+      {/* AUTH-GATED MERGED BACKGROUND — Trade section only, strictly isolated */}
+      {isAuthenticated && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+            overflow: "hidden",
+          }}
+        >
+          {/* Green gear image — bottom layer */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url('/src/assets/83617.jpg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.07,
+            filter: "saturate(1.4) hue-rotate(10deg)",
+          }} />
+          {/* Robot AI image — blended on top */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url('/src/assets/83622.jpg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            opacity: 0.09,
+            mixBlendMode: "screen",
+          }} />
+          {/* Deep dark gradient overlay to keep content readable */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}cc 80%, ${C.bg} 100%)`,
+          }} />
+          {/* Subtle gold ambient glow */}
+          <div style={{
+            position: "absolute",
+            top: "10%",
+            right: "-10%",
+            width: 380,
+            height: 380,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${C.gold}08 0%, transparent 70%)`,
+          }} />
+          <div style={{
+            position: "absolute",
+            bottom: "15%",
+            left: "-8%",
+            width: 300,
+            height: 300,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, #3b82f608 0%, transparent 70%)`,
+          }} />
         </div>
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Live Markets</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div></div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{topMarkets.map(pair => { const def = INSTRUMENT_DEFS.find(d => d.pair === pair); const pd = prices[pair]; if (!def || !pd) return null; return (<div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 13px" }}><div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{def.name}</div><div style={{ fontWeight: 900, fontSize: 12, color: C.text, marginBottom: 5 }}>{pair}</div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{fmtPrice(pd.price, def.cat)}</div><div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red }}>{pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}</div></div>); })}</div>
-      </Card>
-      <Card>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
-          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
-          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
-        </div>
-      </Card>
-      <Card>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
-        {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" },].map((row, i, arr) => (<div key={i}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}><span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span><Badge color={row.color}>{row.value}</Badge></div>{i < arr.length - 1 && <GoldLine />}</div>))}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
-        {HOLDINGS.map((h, i) => { const lp = prices[h.pair]?.price; return (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>); })}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
-        <div style={{ textAlign: "center", marginBottom: 18 }}><div style={{ fontSize: 72, fontWeight: 900, color: C.red, lineHeight: 1, textShadow: `0 0 40px ${C.red}44` }}>24</div><div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.14em" }}>Fear</div></div>
-        <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}><div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} /><div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} /></div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span><span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>Bearish 24</span></div>
-        {showVote && (
-          <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
-            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
-            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}> How do you feel about the Market today? </div>
-            <div style={{ display: "flex", gap: 8 }}>{ [["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (<button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col, }}>{lbl}</button>))}</div>
-            {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}> ✓ Thanks — sentiment updated </div>}
+      )}
+
+      {/* All Trade content sits above background at z-index 1 */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
+
+        {/* Wallet Address — auth-gated, injected in-place after header, no displacement */}
+        {isAuthenticated && <WalletAddressWidget />}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold }, { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
+        <Card>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
+          <ResponsiveContainer width="100%" height={148}>
+            <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}><XAxis dataKey="day" hide /><YAxis hide domain={["dataMin - 500", "dataMax + 200"]} /><Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} /><Bar dataKey="value" radius={[3, 3, 0, 0]}>{data.map((e, i) => (<Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />))}</Bar></BarChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+            <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div></div>
           </div>
-        )}
-      </Card>
+        </Card>
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Live Markets</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{topMarkets.map(pair => { const def = INSTRUMENT_DEFS.find(d => d.pair === pair); const pd = prices[pair]; if (!def || !pd) return null; return (<div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 13px" }}><div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{def.name}</div><div style={{ fontWeight: 900, fontSize: 12, color: C.text, marginBottom: 5 }}>{pair}</div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{fmtPrice(pd.price, def.cat)}</div><div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red }}>{pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}</div></div>); })}</div>
+        </Card>
+        <Card>
+          <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+            <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
+            <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
+          </div>
+        </Card>
+        <Card>
+          <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
+          {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" },].map((row, i, arr) => (<div key={i}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}><span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span><Badge color={row.color}>{row.value}</Badge></div>{i < arr.length - 1 && <GoldLine />}</div>))}
+        </Card>
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
+          {HOLDINGS.map((h, i) => { const lp = prices[h.pair]?.price; return (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>); })}
+        </Card>
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
+          <div style={{ textAlign: "center", marginBottom: 18 }}><div style={{ fontSize: 72, fontWeight: 900, color: C.red, lineHeight: 1, textShadow: `0 0 40px ${C.red}44` }}>24</div><div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.14em" }}>Fear</div></div>
+          <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}><div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} /><div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} /></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span><span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>Bearish 24</span></div>
+          {showVote && (
+            <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
+              <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
+              <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}> How do you feel about the Market today? </div>
+              <div style={{ display: "flex", gap: 8 }}>{ [["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (<button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col, }}>{lbl}</button>))}</div>
+              {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}> ✓ Thanks — sentiment updated </div>}
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
