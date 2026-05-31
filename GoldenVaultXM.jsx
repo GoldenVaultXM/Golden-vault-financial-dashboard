@@ -253,16 +253,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   Sign in with Google
 </Btn>
 
-          {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : (
-            <svg width="18" height="18" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.16 2.85l6.08-6.08C34.37 3.07 29.46 1 24 1 14.82 1 7.07 6.48 3.73 14.22l7.1 5.52C12.55 13.62 17.82 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v8.98h12.42c-.54 2.88-2.18 5.32-4.64 6.96l7.1 5.52C43.27 37.16 46.1 31.3 46.1 24.5z"/>
-              <path fill="#FBBC05" d="M10.83 28.26A14.53 14.53 0 0 1 9.5 24c0-1.48.25-2.91.7-4.26l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.93 7.53 2.56 10.76l8.27-6.5z"/>
-              <path fill="#34A853" d="M24 47c5.46 0 10.05-1.81 13.4-4.9l-7.1-5.52c-1.96 1.32-4.47 2.1-6.3 2.1-6.18 0-11.45-4.12-13.17-9.74l-8.27 6.5C7.07 41.52 14.82 47 24 47z"/>
-            </svg>
-          )}
-          Continue with Google
-        </button>
+<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
           <div style={{ flex: 1, height: 1, background: C.border2 }} />
