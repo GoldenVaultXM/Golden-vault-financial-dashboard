@@ -1,41 +1,7 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check, Maximize2 } from "lucide-react";
-// Safe Supabase stub — app renders even if env vars are missing
-const _getSupabase = () => {
-  try {
-    const url = import.meta?.env?.VITE_SUPABASE_URL;
-    const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
-    if (!url || !key) return null;
-    // supabaseClient.js must be present; we catch any throw from it
-    return window.__supabaseInstance || null;
-  } catch (_) { return null; }
-};
-// Minimal Supabase shim used by AuthModal
-const supabase = {
-  auth: {
-    signUp: async (opts) => {
-      try {
-        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = import.meta?.env?.VITE_SUPABASE_URL;
-        const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
-        if (!url || !key) return { data: null, error: { message: "Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel." } };
-        const client = createClient(url, key);
-        return client.auth.signUp(opts);
-      } catch (e) { return { data: null, error: { message: e.message } }; }
-    },
-    signInWithOAuth: async (opts) => {
-      try {
-        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = import.meta?.env?.VITE_SUPABASE_URL;
-        const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
-        if (!url || !key) return { data: null, error: { message: "Supabase not configured." } };
-        const client = createClient(url, key);
-        return client.auth.signInWithOAuth(opts);
-      } catch (e) { return { data: null, error: { message: e.message } }; }
-    },
-  },
-};
+import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
@@ -231,13 +197,23 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
-    });
-    if (error) { setError(error.message); setLoading(false); return; }
-    login({ name: form.name || form.email.split("@")[0], email: form.email });
+    if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+      login({ name: form.name || form.email.split("@")[0], email: form.email });
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+      const u = data?.user;
+      login({ name: u?.user_metadata?.full_name || form.email.split("@")[0], email: form.email });
+    }
     setLoading(false);
     onClose();
   };
@@ -250,11 +226,12 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setError("");
     setGoogleLoading(true);
     const { data, error } = await supabase.auth.signInWithOAuth({
-  provider: 'google',
-  options: {
-    redirectTo: `${window.location.origin}/auth/callback`,
-  },
-});
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) { setError(error.message); }
     setGoogleLoading(false);
   };
 
@@ -336,8 +313,39 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
   const isAuthenticated = !!user;
+
+  // Sync with Supabase session on mount and auth state changes
+  useEffect(() => {
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Trader",
+          email: session.user.email,
+        });
+      }
+    }).catch(() => {});
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Trader",
+          email: session.user.email,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const login = (u) => { setUser(u); setModal(null); };
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut().catch(() => {});
+    setUser(null);
+  };
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
   return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
 }
@@ -557,7 +565,8 @@ function WalletAddressWidget() {
     const fetchWallet = async () => {
       setLoading(true);
       try {
-        const { data: { user: supaUser } } = await supabase.auth.getUser();
+        const { data: { user: supaUser }, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
         if (supaUser) {
           const { data } = await supabase
             .from('wallets')
@@ -653,16 +662,16 @@ function TradePage({ prices }) {
 
   useEffect(() => {
     const loadUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) return;
       const { data, error } = await supabase
         .from('account_summary')
         .select('current_value, total_invested')
         .eq('user_id', user.id)
         .single();
-      if (data) {
-        setTotalInvested(data.total_invested);
-        setCurrentValue(data.current_value);
+      if (data && !error) {
+        setTotalInvested(data.total_invested ?? 0);
+        setCurrentValue(data.current_value ?? 0);
       }
     };
     loadUserData();
