@@ -347,40 +347,135 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   );
 }
 
-function AuthProvider({ children, onLogin }) {
-  const [user, setUser] = useState(null);
-  const [modal, setModal] = useState(null);
-  const isAuthenticated = !!user;
+/* ─── Auth Section (Corrected) ───────────────────────────────────────────── */
 
-  // Pick up session on mount (covers Google OAuth redirect-back)
+function AuthModal({ onClose, onLogin, initialMode = "signup" }) {
+  const [mode, setMode] = useState(initialMode);
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      setError(error.message);
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleAuth = async () => {
+    setError("");
+    if (mode === "signup" && !agreed) {
+      setError("Please confirm you are 18 or older and agree to the Terms.");
+      return;
+    }
+    setLoading(true);
+    
+    let authError = null;
+    if (mode === "signup") {
+      const { error } = await supabase.auth.signUp({ 
+        email: form.email, 
+        password: form.password, 
+        options: { data: { full_name: form.name } } 
+      });
+      authError = error;
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email: form.email, 
+        password: form.password 
+      });
+      authError = error;
+    }
+
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+    } else {
+      // Logic for successful auth handled by the listener in AuthProvider
+      onLogin({ name: form.name || form.email.split("@")[0], email: form.email });
+      setLoading(false);
+      onClose();
+    }
+  };
+
+  const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "13px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000c" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
+        
+        <div style={{ fontWeight: 900, fontSize: 24, color: C.text, marginBottom: 20 }}>{mode === "signup" ? "Create Account" : "Welcome Back"}</div>
+        
+        {/* Google button */}
+        <button onClick={handleGoogle} disabled={googleLoading} style={{ width: "100%", background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: "pointer" }}>
+          {googleLoading ? "Redirecting…" : "Continue with Google"}
+        </button>
+
+        {/* Manual Fields */}
+        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 11 }}>
+          {mode === "signup" && <input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />}
+          <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
+          <input placeholder="Password" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} style={inp} />
+        </div>
+
+        {error && <div style={{ marginTop: 12, color: C.red, fontSize: 12 }}>{error}</div>}
+
+        <button onClick={handleAuth} style={{ width: "100%", marginTop: 20, padding: 14, background: C.gold, border: "none", borderRadius: 12, fontWeight: 800, cursor: "pointer" }}>
+          {loading ? "Processing..." : mode === "signup" ? "Create Account" : "Sign In"}
+        </button>
+
+        <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}>
+          <button onClick={() => setMode(m => m === "signup" ? "login" : "signup")} style={{ background: "none", border: "none", color: C.gold, cursor: "pointer" }}>
+            {mode === "signup" ? "Already have an account? Sign In" : "Don't have an account? Create Account"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [modalMode, setModalMode] = useState(null);
+
+  // Sync Supabase session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
-        if (onLogin) onLogin();
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
-        setModal(null);
-        if (onLogin) onLogin();
+        setModalMode(null);
       }
       if (event === "SIGNED_OUT") setUser(null);
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
+  const login = (u) => setUser(u);
   const logout = async () => { await supabase.auth.signOut(); setUser(null); };
-  const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
+  const requireAuth = (mode = "signup") => { if (!user) { setModalMode(mode); return false; } return true; };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
+    <AuthContext.Provider value={{ user, login, logout, requireAuth }}>
       {children}
-      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
+      {modalMode && <AuthModal onClose={() => setModalMode(null)} onLogin={login} initialMode={modalMode} />}
     </AuthContext.Provider>
   );
 }
+
 
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
