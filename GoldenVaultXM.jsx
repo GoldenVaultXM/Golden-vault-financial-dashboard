@@ -197,35 +197,15 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setLoading(true);
-
-    if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        // FIX 4b — dynamic origin works on every env (local, preview, prod).
-        options: { emailRedirectTo: window.location.origin + "/" },
-      });
-      if (error) { setError(error.message); setLoading(false); return; }
-      // data.session is null when Supabase requires email confirmation.
-      // Calling login() before confirmation would bypass email verification.
-      if (data.session) {
-        login({ name: form.name || form.email.split("@")[0], email: form.email });
-        setLoading(false);
-        onClose();
-      } else {
-        setError("\u2709\ufe0f Check your email — we sent you a confirmation link to activate your account.");
-        setLoading(false);
-      }
-    } else {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
-      if (error) { setError(error.message); setLoading(false); return; }
-      login({ name: form.name || data.user.email.split("@")[0], email: data.user.email });
-      setLoading(false);
-      onClose();
-    }
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
+    });
+    if (error) { setError(error.message); setLoading(false); return; }
+    login({ name: form.name || form.email.split("@")[0], email: form.email });
+    setLoading(false);
+    onClose();
   };
 
   const handleGoogle = async () => {
@@ -235,23 +215,15 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        // FIX 4 — redirectTo root URL; AuthProvider.onAuthStateChange picks up the session on return.
-        // /auth/callback does not exist in this app (no router), so we go to origin root.
-        redirectTo: window.location.origin + "/",
-      },
-    });
-    // Only reaches here if the OAuth initiation itself fails (network error, provider misconfigured).
-    // On success the browser navigates away immediately.
-    if (error) {
-      setError(error.message);
-      setGoogleLoading(false);
-    }
-  }; // ← FIX 1: This closing brace was missing. Everything below was incorrectly inside handleGoogle.
+    const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    redirectTo: `${window.location.origin}/auth/callback`,
+  },
+});
+    setGoogleLoading(false);
+  };
 
-  // inp belongs at AuthModal scope, not inside handleGoogle.
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
@@ -330,57 +302,10 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
   const isAuthenticated = !!user;
-
-  const login = useCallback((u) => { setUser(u); setModal(null); }, []);
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  }, []);
-  const requireAuth = useCallback((mode = "signup") => {
-    if (!user) { setModal(mode); return false; }
-    return true;
-  }, [user]);
-
-  // FIX 3 + FIX 4c — Single auth listener at provider level.
-  // Handles: page load with existing session, Google OAuth callback, email link callback.
-  // A new subscription is never created inside click handlers (was the previous memory-leak pattern).
-  useEffect(() => {
-    // Hydrate any existing session immediately on mount (e.g. user refreshes the page).
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        login({
-          name:  session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          email: session.user.email,
-        });
-      }
-    });
-
-    // onAuthStateChange fires for: Google OAuth redirect return, email-link click, sign-out.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        login({
-          name:  session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          email: session.user.email,
-        });
-        // Clean up the #access_token hash Supabase appends to the URL after OAuth redirect.
-        if (window.location.hash) {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-      }
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe(); // Prevent memory leak on unmount.
-  }, [login]);
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
-      {children}
-      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
-    </AuthContext.Provider>
-  );
+  const login = (u) => { setUser(u); setModal(null); };
+  const logout = () => setUser(null);
+  const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
+  return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
 }
 
 function Nav({ page, setPage, open, setOpen }) {
