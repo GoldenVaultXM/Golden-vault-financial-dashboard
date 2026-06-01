@@ -794,5 +794,5 @@ function AppShell() {
 }
 
 export default function GoldenVaultXM() {
-  return (<GoldenVaultXMProvider><AppShell /></GoldenVaultXMProvider>);
+  return (<AuthProvider><AppShell /></AuthProvider>);
 }
