@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { supabase } from './supabaseClient';
 import { X, Zap, RefreshCw, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+
+/* ─── Auth Context ───────────────────────────────────────────────────────── */
+const AuthContext = createContext(null);
+const useAuth = () => useContext(AuthContext);
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
@@ -10,13 +14,13 @@ const C = {
   border: "#222222",
   border2: "#2a2a2a",
   gold: "#d97706",
-  gold2: "#f59e0b",
   goldDim: "#92400e",
   text: "#ffffff",
   text2: "#a3a3a3",
   text3: "#525252",
 };
 
+/* ─── Google Icon Component ──────────────────────────────────────────────── */
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 48 48">
     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -27,6 +31,7 @@ const GoogleIcon = () => (
 );
 
 export default function AuthModal({ onClose, initialMode = "signup" }) {
+  const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,7 +40,7 @@ export default function AuthModal({ onClose, initialMode = "signup" }) {
   const [agreed, setAgreed] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-  /* ── Google OAuth: Simple Trigger Only ── */
+  /* ── Google OAuth: Trigger Only ── */
   const handleGoogle = async () => {
     setError("");
     setGoogleLoading(true);
@@ -47,7 +52,6 @@ export default function AuthModal({ onClose, initialMode = "signup" }) {
       setError(error.message); 
       setGoogleLoading(false); 
     }
-    // We do NOT listen for session here. App.jsx handles the session redirect.
   };
 
   /* ── Email / Password Auth ── */
@@ -60,25 +64,27 @@ export default function AuthModal({ onClose, initialMode = "signup" }) {
     let authError = null;
     
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ 
+      const { error, data } = await supabase.auth.signUp({ 
         email: form.email, 
         password: form.password, 
         options: { data: { full_name: form.name } } 
       });
       authError = error;
+      if (!error && data.user) login({ name: form.name || form.email.split("@")[0], email: form.email });
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { error, data } = await supabase.auth.signInWithPassword({ 
         email: form.email, 
         password: form.password 
       });
       authError = error;
+      if (!error && data.user) login({ name: data.user.user_metadata?.full_name || form.email.split("@")[0], email: form.email });
     }
     
     if (authError) { 
       setError(authError.message); 
       setLoading(false); 
     } else {
-      onClose(); // Close modal on success
+      onClose();
     }
   };
 
