@@ -29,112 +29,6 @@ const C = {
 const AuthContext = createContext(null);
 const useAuth = () => useContext(AuthContext);
 
-/* ─── Layout Context ─────────────────────────────────────────────────────── */
-/*
- * Single source of truth for layout mode.
- * "mobile"  → max-width 600px  (narrow, app-like)
- * "desktop" → max-width 1200px (wide, dashboard-like)
- *
- * Rules:
- *  • Initialised from localStorage on first render — survives page reload.
- *  • ONLY changes when the user explicitly clicks the toggle button.
- *  • No window-resize listener, no auth-event override, no media-query override.
- *  • CSS injected directly onto <html> so it beats every third-party stylesheet.
- */
-const LAYOUT_KEY   = "gvxm_layout_mode";
-const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
-
-const LayoutContext = createContext(null);
-const useLayout = () => useContext(LayoutContext);
-
-function LayoutProvider({ children }) {
-  // Read once from localStorage — never from viewport width
-  const [mode, setModeRaw] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LAYOUT_KEY);
-      return saved === "desktop" ? "desktop" : "mobile";
-    } catch {
-      return "mobile";
-    }
-  });
-
-  // Persist + apply CSS every time mode changes (and on mount)
-  useEffect(() => {
-    try { localStorage.setItem(LAYOUT_KEY, mode); } catch {}
-    applyLayoutCSS(mode);
-  }, [mode]);
-
-  // Public toggle — the ONLY way the mode can change
-  const toggleLayout = useCallback(() => {
-    setModeRaw(prev => (prev === "mobile" ? "desktop" : "mobile"));
-  }, []);
-
-  const width = LAYOUT_WIDTHS[mode];
-  return (
-    <LayoutContext.Provider value={{ mode, width, toggleLayout }}>
-      {children}
-    </LayoutContext.Provider>
-  );
-}
-
-/* ── Viewport meta injection ───────────────────────────────────────────────
-   The single biggest cause of "zoom-in on mobile" is a missing or wrong
-   <meta name="viewport"> tag. We upsert it here so it is always correct
-   regardless of what the host HTML file contains.                          */
-function ensureViewportMeta() {
-  let meta = document.querySelector('meta[name="viewport"]');
-  if (!meta) {
-    meta = document.createElement("meta");
-    meta.name = "viewport";
-    document.head.appendChild(meta);
-  }
-  meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
-}
-
-/* Writes a <style id="gvxm-layout-lock"> tag on <html>.
-   CRITICAL CHANGE: body stays width:100% so it fills the real phone screen
-   without triggering the browser zoom. Only .gvxm-shell gets the max-width. */
-function applyLayoutCSS(mode) {
-  ensureViewportMeta();
-  const w = LAYOUT_WIDTHS[mode];
-  const id = "gvxm-layout-lock";
-  let tag = document.getElementById(id);
-  if (!tag) {
-    tag = document.createElement("style");
-    tag.id = id;
-    document.head.appendChild(tag);
-  }
-  tag.textContent = `
-    html {
-      background: #080808 !important;
-      overflow-x: hidden !important;
-    }
-    body {
-      background: #080808 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
-      overflow-x: hidden !important;
-      -webkit-text-size-adjust: 100% !important;
-      text-size-adjust: 100% !important;
-    }
-    .gvxm-shell {
-      width: 100% !important;
-      max-width: ${w}px !important;
-      min-width: 0 !important;
-      margin: 0 auto !important;
-      overflow-x: hidden !important;
-    }
-    #gvxm-root {
-      width: 100% !important;
-      max-width: 100% !important;
-      overflow-x: hidden !important;
-    }
-  `;
-}
-
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
   { pair: "BTC/USDT", name: "Bitcoin", cat: "Crypto", base: 67800, step: 0.0003 },
@@ -490,9 +384,7 @@ function AuthProvider({ children, onLogin }) {
 
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
-  const { mode, toggleLayout } = useLayout();
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
-  const isMobile = mode === "mobile";
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -504,38 +396,11 @@ function Nav({ page, setPage, open, setOpen }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {isAuthenticated && (<div style={{ fontSize: 11, color: C.text3, marginRight: 6, display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} /> {user?.name}</div>)}
-        {/* ── Layout Toggle Button ── */}
-        <button
-          onClick={toggleLayout}
-          title={isMobile ? "Switch to Desktop View" : "Switch to Mobile View"}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,
-            background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
-            borderRadius: 8, padding: "5px 9px", cursor: "pointer",
-            transition: "background .18s, border-color .18s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}28`; e.currentTarget.style.borderColor = `${C.gold}66`; }}
-          onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}14`; e.currentTarget.style.borderColor = `${C.gold}33`; }}
-        >
-          {/* Mobile icon (phone) ↔ Desktop icon (monitor) */}
-          {isMobile ? (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
-            </svg>
-          ) : (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          )}
-          <span style={{ fontSize: 9, fontWeight: 900, color: C.gold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            {isMobile ? "Mobile" : "Desktop"}
-          </span>
-        </button>
         <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
         <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
       {open && (
-        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: 600, minWidth: 600, maxWidth: 600, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", }}>
               <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
@@ -552,10 +417,9 @@ function Nav({ page, setPage, open, setOpen }) {
 
 function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
-  const { width } = useLayout();
   const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "settings", icon: Settings, label: "More" },];
   return (
-    <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
+    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 600, minWidth: 600, maxWidth: 600, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
         return (
@@ -907,7 +771,6 @@ function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
-  const { mode, width } = useLayout();
   const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
   const renderPage = () => {
     switch (page) {
@@ -920,10 +783,27 @@ function AppShell({ page, setPage }) {
   };
 
   return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
-      {/* Inline styles: only app-internal animations/resets — layout lock is in applyLayoutCSS() */}
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: 600, minWidth: 600, maxWidth: 600, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
+        html, body {
+          background: ${C.bg};
+          margin: 0;
+          padding: 0;
+          overflow-x: hidden;
+          -webkit-text-size-adjust: 100%;
+          text-size-adjust: 100%;
+        }
+        body {
+          width: 600px;
+          min-width: 600px;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        @media (min-width: 601px)  { body { width: 600px !important; min-width: 600px !important; max-width: 600px !important; } }
+        @media (min-width: 768px)  { body { width: 600px !important; min-width: 600px !important; max-width: 600px !important; } }
+        @media (min-width: 1024px) { body { width: 600px !important; min-width: 600px !important; max-width: 600px !important; } }
+        @media (min-width: 1280px) { body { width: 600px !important; min-width: 600px !important; max-width: 600px !important; } }
         ::-webkit-scrollbar { display: none; }
         scrollbar-width: none;
         input, button { font-family: inherit; }
@@ -931,6 +811,15 @@ function AppShell({ page, setPage }) {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
+        #gvxm-root {
+          background: ${C.bg};
+          min-height: 100vh;
+          width: 600px !important;
+          min-width: 600px !important;
+          max-width: 600px !important;
+          margin: 0 auto;
+          overflow-x: hidden;
+        }
       `}</style>
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{renderPage()}</main><BottomNav page={page} setPage={handleSetPage} /></div>
@@ -941,10 +830,8 @@ function AppShell({ page, setPage }) {
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
-    <LayoutProvider>
-      <AuthProvider onLogin={() => setPage("trade")}>
-        <AppShell page={page} setPage={setPage} />
-      </AuthProvider>
-    </LayoutProvider>
+    <AuthProvider onLogin={() => setPage("trade")}>
+      <AppShell page={page} setPage={setPage} />
+    </AuthProvider>
   );
 }
