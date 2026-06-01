@@ -179,7 +179,7 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ─── Auth Modal ─────────────────────────────────────────────────────────── */
+/* ─── Auth Modal (MODIFIED: Google button + legal checkbox) ─────────────── */
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
@@ -208,8 +208,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     onClose();
   };
 
-  // FIX 1: handleGoogle is properly closed, redirectTo goes to root so
-  // onAuthStateChange (in AuthProvider) handles the session and sets hash to #trade.
   const handleGoogle = async () => {
     if (mode === "signup" && !legalChecked) {
       setError("Please accept the terms, acceptable use policy, and confirm you are 18+ to continue.");
@@ -217,13 +215,13 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/',
-      },
-    });
-    if (error) { setError(error.message); setGoogleLoading(false); }
+    const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    redirectTo: `${window.location.origin}/auth/callback`,
+  },
+});
+    setGoogleLoading(false);
   };
 
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
@@ -300,11 +298,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   );
 }
 
-/* ─── Auth Provider ──────────────────────────────────────────────────────── */
-// FIX 2: onAuthStateChange listens for the Google OAuth return. When Supabase
-// detects SIGNED_IN it hydrates the user into React state via login(), then
-// uses window.location.hash to navigate to the trade view without any server
-// request — safe for GitHub Pages static hosting which 404s on real URL paths.
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
@@ -312,28 +305,7 @@ function AuthProvider({ children }) {
   const login = (u) => { setUser(u); setModal(null); };
   const logout = () => setUser(null);
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        login({
-          name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-          email: session.user.email,
-        });
-        // Hash-based navigation: works on GitHub Pages (no server round-trip).
-        // AppShell reads window.location.hash on mount to restore the trade page.
-        window.location.hash = 'trade';
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
-      {children}
-      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
-    </AuthContext.Provider>
-  );
+  return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
 }
 
 function Nav({ page, setPage, open, setOpen }) {
@@ -406,6 +378,7 @@ function HomePage({ setPage }) {
         <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
+      {/* Homepage chart — LEFT EXACTLY AS IS */}
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>S&P 500 Live</div><div style={{ fontSize: 11, color: C.text3 }}>Simulated real-time feed</div></div>
@@ -437,7 +410,7 @@ function HomePage({ setPage }) {
   );
 }
 
-/* ─── Markets Page ───────────────────────────────────────────────────────── */
+/* ─── Markets Page (MODIFIED: TradingView chart replaces existing chart) ── */
 function MarketsPage({ prices, flash }) {
   const [cat, setCat] = useState("All");
   const [search, setSearch] = useState("");
@@ -501,6 +474,7 @@ function MarketsPage({ prices, flash }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}><div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span></div></div>
       </div>
 
+      {/* TradingView Advanced Chart — Markets section only */}
       <Card style={{ padding: "14px 14px 0 14px", overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Advanced Real-Time Chart</div><div style={{ fontSize: 11, color: C.text3 }}>Powered by TradingView</div></div>
@@ -509,7 +483,12 @@ function MarketsPage({ prices, flash }) {
             <a href="https://www.tradingview.com/chart/" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, background: `${C.gold}14`, border: `1px solid ${C.gold}33`, borderRadius: 7, padding: "5px 9px", color: C.gold, fontSize: 10, fontWeight: 800, textDecoration: "none", letterSpacing: "0.04em", transition: "all .18s" }} onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}28`; e.currentTarget.style.borderColor = `${C.gold}66`; }} onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}14`; e.currentTarget.style.borderColor = `${C.gold}33`; }}><Maximize2 size={11} />EXPAND</a>
           </div>
         </div>
-        <div id="tv_market_chart" ref={tvContainerRef} className="tradingview-widget-container" style={{ height: 460, width: "100%", borderRadius: 10, overflow: "hidden" }} />
+        <div
+          id="tv_market_chart"
+          ref={tvContainerRef}
+          className="tradingview-widget-container"
+          style={{ height: 460, width: "100%", borderRadius: 10, overflow: "hidden" }}
+        />
       </Card>
 
       <div style={{ position: "relative" }}><Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />{search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}</div>
@@ -533,7 +512,7 @@ function MarketsPage({ prices, flash }) {
   );
 }
 
-/* ─── Wallet Address Widget ──────────────────────────────────────────────── */
+/* ─── Wallet Address Widget (Trade-only, auth-gated) ────────────────────── */
 function WalletAddressWidget() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -554,10 +533,12 @@ function WalletAddressWidget() {
           if (data?.address) {
             setWalletAddress(data.address);
           } else {
+            // Derive a deterministic display address from user id
             const seed = supaUser.id.replace(/-/g, "").toUpperCase();
             setWalletAddress("0x" + seed.slice(0, 40));
           }
         } else if (user?.email) {
+          // Fallback: derive from email hash for demo
           const raw = user.email.split("").reduce((a, c) => a + c.charCodeAt(0), 0).toString(16);
           setWalletAddress("0x" + raw.padEnd(40, "a0b1c2d3e4f5").slice(0, 40));
         }
@@ -624,7 +605,7 @@ function WalletAddressWidget() {
   );
 }
 
-/* ─── Trade Page ─────────────────────────────────────────────────────────── */
+/* ─── Trade Page (MODIFIED: auth-gated bg + wallet widget injected) ──────── */
 function TradePage({ prices }) {
   const { isAuthenticated } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
@@ -632,6 +613,7 @@ function TradePage({ prices }) {
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
+
   const [totalInvested, setTotalInvested] = useState(0);
   const [currentValue, setCurrentValue] = useState(0);
 
@@ -660,18 +642,74 @@ function TradePage({ prices }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+
+      {/* AUTH-GATED MERGED BACKGROUND — Trade section only, strictly isolated */}
       {isAuthenticated && (
-        <div aria-hidden="true" style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden", }}>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `url('/src/assets/83617.jpg')`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.07, filter: "saturate(1.4) hue-rotate(10deg)", }} />
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `url('/src/assets/83622.jpg')`, backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.09, mixBlendMode: "screen", }} />
-          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}cc 80%, ${C.bg} 100%)`, }} />
-          <div style={{ position: "absolute", top: "10%", right: "-10%", width: 380, height: 380, borderRadius: "50%", background: `radial-gradient(circle, ${C.gold}08 0%, transparent 70%)`, }} />
-          <div style={{ position: "absolute", bottom: "15%", left: "-8%", width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, #3b82f608 0%, transparent 70%)`, }} />
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+            overflow: "hidden",
+          }}
+        >
+          {/* Green gear image — bottom layer */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url('/src/assets/83617.jpg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.07,
+            filter: "saturate(1.4) hue-rotate(10deg)",
+          }} />
+          {/* Robot AI image — blended on top */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url('/src/assets/83622.jpg')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            opacity: 0.09,
+            mixBlendMode: "screen",
+          }} />
+          {/* Deep dark gradient overlay to keep content readable */}
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, ${C.bg}cc 0%, ${C.bg}88 40%, ${C.bg}cc 80%, ${C.bg} 100%)`,
+          }} />
+          {/* Subtle gold ambient glow */}
+          <div style={{
+            position: "absolute",
+            top: "10%",
+            right: "-10%",
+            width: 380,
+            height: 380,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${C.gold}08 0%, transparent 70%)`,
+          }} />
+          <div style={{
+            position: "absolute",
+            bottom: "15%",
+            left: "-8%",
+            width: 300,
+            height: 300,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, #3b82f608 0%, transparent 70%)`,
+          }} />
         </div>
       )}
+
+      {/* All Trade content sits above background at z-index 1 */}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
         <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome Back,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>goldenvaultxm</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
+
+        {/* Wallet Address — auth-gated, injected in-place after header, no displacement */}
         {isAuthenticated && <WalletAddressWidget />}
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold }, { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
         <Card>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
@@ -728,55 +766,6 @@ function SettingsPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div><div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Manage your profile and settings</div></div>
-      <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
-        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
-        <GoldLine />
-        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
-      </Card>
-      {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
-      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
-      {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
-    </div>
-  );
-}
-
-/* ─── App Shell ──────────────────────────────────────────────────────────── */
-// FIX 3: On mount, read window.location.hash so that when Supabase redirects
-// the user back to the root after Google OAuth, the hash '#trade' set by
-// onAuthStateChange is picked up and the correct page is displayed immediately.
-function AppShell() {
-  const getInitialPage = () => {
-    const hash = window.location.hash.replace('#', '');
-    const validPages = ['home', 'markets', 'trade', 'settings'];
-    return validPages.includes(hash) ? hash : 'home';
-  };
-
-  const [page, setPage] = useState(getInitialPage);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
-  const { prices, flash } = useLivePrices();
-
-  // Keep hash in sync with page state so the browser back button also works
-  useEffect(() => {
-    window.location.hash = page;
-  }, [page]);
-
-  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth]);
-  const PAGES = { home: <HomePage setPage={handleSetPage} />, markets: <MarketsPage prices={prices} flash={flash} />, trade: <TradePage prices={prices} />, settings: <SettingsPage />, };
-  return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: 600, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", }}>
-      <style>{` *, *::before, *::after { box-sizing: border-box; } body { background: ${C.bg}; margin: 0; } ::-webkit-scrollbar { display: none; } scrollbar-width: none; input, button { font-family: inherit; } input::placeholder { color: #404040; } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} } @keyframes spin { to { transform: rotate(360deg); } } @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} } #gvxm-root { background: ${C.bg}; min-height: 100vh; } `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{PAGES[page]}</main><BottomNav page={page} setPage={handleSetPage} /></div>
-    </div>
-  );
-}
-
-export default function GoldenVaultXM() {
-  return (<AuthProvider><AppShell /></AuthProvider>);
-}
-
       <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
         <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
