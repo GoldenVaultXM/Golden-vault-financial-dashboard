@@ -77,9 +77,25 @@ function LayoutProvider({ children }) {
   );
 }
 
-/* Writes a <style id="gvxm-layout-lock"> tag on <html> so it has maximum
-   specificity and cannot be overridden by any media query in any stylesheet. */
+/* ── Viewport meta injection ───────────────────────────────────────────────
+   The single biggest cause of "zoom-in on mobile" is a missing or wrong
+   <meta name="viewport"> tag. We upsert it here so it is always correct
+   regardless of what the host HTML file contains.                          */
+function ensureViewportMeta() {
+  let meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "viewport";
+    document.head.appendChild(meta);
+  }
+  meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+}
+
+/* Writes a <style id="gvxm-layout-lock"> tag on <html>.
+   CRITICAL CHANGE: body stays width:100% so it fills the real phone screen
+   without triggering the browser zoom. Only .gvxm-shell gets the max-width. */
 function applyLayoutCSS(mode) {
+  ensureViewportMeta();
   const w = LAYOUT_WIDTHS[mode];
   const id = "gvxm-layout-lock";
   let tag = document.getElementById(id);
@@ -88,34 +104,32 @@ function applyLayoutCSS(mode) {
     tag.id = id;
     document.head.appendChild(tag);
   }
-  // All breakpoint media-queries are neutralised by repeating the hard value
   tag.textContent = `
-    html, body {
+    html {
+      background: #080808 !important;
+      overflow-x: hidden !important;
+    }
+    body {
       background: #080808 !important;
       margin: 0 !important;
       padding: 0 !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
       overflow-x: hidden !important;
       -webkit-text-size-adjust: 100% !important;
       text-size-adjust: 100% !important;
     }
-    body {
-      width: ${w}px !important;
-      min-width: ${w}px !important;
+    .gvxm-shell {
+      width: 100% !important;
       max-width: ${w}px !important;
+      min-width: 0 !important;
       margin: 0 auto !important;
+      overflow-x: hidden !important;
     }
-    /* Defeat every common breakpoint */
-    @media (min-width: 1px)    { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
-    @media (min-width: 480px)  { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
-    @media (min-width: 601px)  { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
-    @media (min-width: 768px)  { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
-    @media (min-width: 1024px) { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
-    @media (min-width: 1280px) { body { width: ${w}px !important; min-width: ${w}px !important; max-width: ${w}px !important; } }
     #gvxm-root {
-      width: ${w}px !important;
-      min-width: ${w}px !important;
-      max-width: ${w}px !important;
-      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
       overflow-x: hidden !important;
     }
   `;
@@ -521,7 +535,7 @@ function Nav({ page, setPage, open, setOpen }) {
         <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
       {open && (
-        <div style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: mode === "desktop" ? 1200 : 600, minWidth: mode === "desktop" ? 1200 : 600, maxWidth: mode === "desktop" ? 1200 : 600, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", }}>
               <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
@@ -541,7 +555,7 @@ function BottomNav({ page, setPage }) {
   const { width } = useLayout();
   const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "settings", icon: Settings, label: "More" },];
   return (
-    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width, minWidth: width, maxWidth: width, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
+    <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
         return (
@@ -906,7 +920,7 @@ function AppShell({ page, setPage }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width, minWidth: width, maxWidth: width, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease" }}>
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
       {/* Inline styles: only app-internal animations/resets — layout lock is in applyLayoutCSS() */}
       <style>{`
         *, *::before, *::after { box-sizing: border-box; }
