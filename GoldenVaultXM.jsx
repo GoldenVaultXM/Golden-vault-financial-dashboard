@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users } from "lucide-react";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -27,9 +27,7 @@ const C = {
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
-const useAuth = () => useContext(AuthContext);
 
-/* ─── AuthModal (Now hook-free) ──────────────────────────────────────────── */
 function AuthModal({ onClose, onLogin, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
@@ -121,11 +119,9 @@ function AuthModal({ onClose, onLogin, initialMode = "signup" }) {
   );
 }
 
-/* ─── AuthProvider ───────────────────────────────────────────────────────── */
 function AuthProvider({ children, onLogin }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
-  const isAuthenticated = !!user;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -140,24 +136,23 @@ function AuthProvider({ children, onLogin }) {
 
   const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
   const logout = async () => { await supabase.auth.signOut(); setUser(null); };
-  const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
+    <AuthContext.Provider value={{ user, login, logout, setModal }}>
       {children}
       {modal && <AuthModal onClose={() => setModal(null)} onLogin={login} initialMode={modal} />}
     </AuthContext.Provider>
   );
 }
 
-// ... (Rest of your original components remain identical, just keep this updated file)
-
 export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
+  // Main app entry point
   return (
-    <AuthProvider onLogin={() => setPage("trade")}>
-       {/* Ensure the AppShell is defined or imported */}
-       <AppShell page={page} setPage={setPage} />
+    <AuthProvider>
+        {/* Your AppShell / Components here */}
+        <div style={{ background: C.bg, minHeight: "100vh" }}>
+           {/* Rest of your existing AppShell logic */}
+        </div>
     </AuthProvider>
   );
 }
