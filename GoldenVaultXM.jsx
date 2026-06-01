@@ -4,8 +4,8 @@ import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, Ar
 
 const _getSupabase = () => {
   try {
-    const url = https://vedrlsuqewykozjtnfis.supabase.co;
-    const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
+    const url = ;
+    const key = ;
     if (!url || !key) return null;
     
     return window.__supabaseInstance || null;
@@ -17,8 +17,8 @@ const supabase = {
     signUp: async (opts) => {
       try {
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = https://vedrlsuqewykozjtnfis.supabase.co;
-        const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
+        const url = ;
+        const key = ;
         if (!url || !key) return { data: null, error: { message: "Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel." } };
         const client = createClient(url, key);
         return client.auth.signUp(opts);
@@ -27,8 +27,8 @@ const supabase = {
     signInWithOAuth: async (opts) => {
       try {
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = https://vedrlsuqewykozjtnfis.supabase.co;
-        const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
+        const url = ;
+        const key = ;
         if (!url || !key) return { data: null, error: { message: "Supabase not configured." } };
         const client = createClient(url, key);
         return client.auth.signInWithOAuth(opts);
