@@ -1,28 +1,7 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
-/* ─── In-memory auth (no Supabase required) ──────────────────────────────── */
-const _users = {};
-const _supabase = {
-  auth: {
-    getSession: async () => ({ data: { session: null } }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    signUp: async ({ email, password, options }) => {
-      if (_users[email]) return { error: { message: "Email already registered." } };
-      _users[email] = { password, full_name: options?.data?.full_name || "" };
-      return { error: null };
-    },
-    signInWithPassword: async ({ email, password }) => {
-      const u = _users[email];
-      if (!u) return { error: { message: "No account found with this email." } };
-      if (u.password !== password) return { error: { message: "Incorrect password." } };
-      return { data: { user: { email, user_metadata: { full_name: u.full_name } } }, error: null };
-    },
-    signInWithOAuth: async () => ({ error: { message: "Google sign-in requires a live Supabase project. Use email/password instead." } }),
-    signOut: async () => {},
-    getUser: async () => ({ data: { user: null } }),
-  },
-};
+import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const C = {
@@ -226,13 +205,13 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const handleGoogle = async () => {
     setError("");
     setGoogleLoading(true);
-    const { error } = await _supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin },
     });
     if (error) { setError(error.message); setGoogleLoading(false); return; }
     // Supabase redirects the browser; listen for session on return
-    const { data: { subscription } } = _supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
         subscription.unsubscribe();
         login({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
@@ -249,10 +228,10 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(true);
     let authError = null;
     if (mode === "signup") {
-      const { error } = await _supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.name } } });
+      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.name } } });
       authError = error;
     } else {
-      const { error } = await _supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+      const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
       authError = error;
     }
     if (authError) { setError(authError.message); setLoading(false); return; }
@@ -375,13 +354,13 @@ function AuthProvider({ children, onLogin }) {
 
   // Pick up session on mount (covers Google OAuth redirect-back)
   useEffect(() => {
-    _supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
         if (onLogin) onLogin();
       }
     });
-    const { data: { subscription } } = _supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
         setModal(null);
@@ -393,7 +372,7 @@ function AuthProvider({ children, onLogin }) {
   }, []);
 
   const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
-  const logout = async () => { await _supabase.auth.signOut(); setUser(null); };
+  const logout = async () => { await supabase.auth.signOut(); setUser(null); };
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
@@ -695,9 +674,20 @@ function TradePage({ prices }) {
 
   // NEW: Supabase Fetch
   useEffect(() => {
-    // Demo values (no live DB)
-    setTotalInvested(42500);
-    setCurrentValue(51340);
+    const loadUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('account_summary')
+        .select('current_value, total_invested')
+        .eq('user_id', user.id)
+        .single();
+      if (data) {
+        setTotalInvested(data.total_invested);
+        setCurrentValue(data.current_value);
+      }
+    };
+    loadUserData();
   }, []);
 
   const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
@@ -800,4 +790,3 @@ export default function GoldenVaultXM() {
     </AuthProvider>
   );
 }
-
