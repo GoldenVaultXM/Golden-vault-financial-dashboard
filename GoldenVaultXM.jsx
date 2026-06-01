@@ -214,8 +214,7 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
 }
 
 /* ─── Auth Modal (MODIFIED: Google button + legal checkbox) ─────────────── */
-function AuthModal({ onClose, initialMode = "signup" }) {
-  const { login } = useAuth();
+function AuthModal({ onClose, onLogin, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -237,7 +236,9 @@ function AuthModal({ onClose, initialMode = "signup" }) {
       options: { emailRedirectTo: 'https://goldenvaultxm.live/' }
     });
     if (error) { setError(error.message); setLoading(false); return; }
-    login({ name: form.name || form.email.split("@")[0], email: form.email });
+    
+    // Using the prop passed from parent instead of useAuth() hook
+    onLogin({ name: form.name || form.email.split("@")[0], email: form.email });
     setLoading(false);
     onClose();
   };
@@ -250,11 +251,11 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setError("");
     setGoogleLoading(true);
     const { data, error } = await supabase.auth.signInWithOAuth({
-  provider: 'google',
-  options: {
-    redirectTo: `${window.location.origin}/auth/callback`,
-  },
-});
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
     setGoogleLoading(false);
   };
 
