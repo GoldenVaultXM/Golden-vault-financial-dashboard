@@ -347,8 +347,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   );
 }
 
-/* ─── Auth Section (Corrected) ───────────────────────────────────────────── */
-
 function AuthModal({ onClose, onLogin, initialMode = "signup" }) {
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
