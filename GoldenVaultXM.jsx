@@ -180,28 +180,58 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
 }
 
 /* ─── Auth Context / Modals / Nav / ... (Remained same) ──────────────────── */
+/* ── Google "G" SVG logo ─────────────────────────────────────────────────── */
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    <path fill="none" d="M0 0h48v48H0z"/>
+  </svg>
+);
+
 function AuthModal({ onClose, initialMode = "signup" }) {
   const { login } = useAuth();
   const [mode, setMode] = useState(initialMode);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  /* ── Google OAuth ── */
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) { setError(error.message); setGoogleLoading(false); return; }
+    // Supabase redirects the browser; listen for session on return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        subscription.unsubscribe();
+        login({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        setGoogleLoading(false);
+        onClose();
+      }
+    });
+  };
+
+  /* ── Email / password ── */
   const handle = async () => {
     setError("");
+    if (mode === "signup" && !agreed) { setError("Please confirm you are 18 or older and agree to the Terms."); return; }
     setLoading(true);
     let authError = null;
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-      });
+      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.name } } });
       authError = error;
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
       authError = error;
     }
     if (authError) { setError(authError.message); setLoading(false); return; }
@@ -209,32 +239,109 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(false);
     onClose();
   };
-  const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
+
+  const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "13px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" };
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(12px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, }}>
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, padding: 28, width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 24px 80px #000a", }}>
+    <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000c" }}>
+
+        {/* Close */}
         <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><Zap size={18} color="#000" fill="#000" /></div>
+
+        {/* Logo row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><Zap size={20} color="#000" fill="#000" /></div>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
-            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.18em" }}>ELITE TRADING</div>
+            <div style={{ fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: "0.12em" }}>GOLDEN VAULT XM</div>
+            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em", marginTop: 1 }}>ELITE TRADING</div>
           </div>
         </div>
-        <div style={{ fontWeight: 900, fontSize: 22, color: C.text, marginBottom: 4 }}> {mode === "signup" ? "Create Account" : "Welcome Back"} </div>
-        <div style={{ fontSize: 13, color: C.text3, marginBottom: 22 }}> {mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."} </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {mode === "signup" && (<input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />)}
+
+        {/* Heading */}
+        <div style={{ fontWeight: 900, fontSize: 24, color: C.text, marginBottom: 4 }}>{mode === "signup" ? "Create Account" : "Welcome Back"}</div>
+        <div style={{ fontSize: 13, color: C.text3, marginBottom: 22, lineHeight: 1.5 }}>{mode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."}</div>
+
+        {/* Google button */}
+        <button
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
+        >
+          {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon />}
+          {googleLoading ? "Redirecting…" : "Continue with Google"}
+        </button>
+
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+          <span style={{ fontSize: 12, color: C.text3, fontWeight: 600 }}>or</span>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+        </div>
+
+        {/* Fields */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          {mode === "signup" && (
+            <input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />
+          )}
           <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
           <div style={{ position: "relative" }}>
-            <input placeholder="Password" type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} style={{ ...inp, paddingRight: 44 }} />
-            <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}> {showPw ? <EyeOff size={15} /> : <Eye size={15} />} </button>
+            <input placeholder="Password" type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} style={{ ...inp, paddingRight: 46 }} />
+            <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}>{showPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>
         </div>
-        {error && (<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 8 }}><AlertCircle size={13} color={C.red} /><span style={{ fontSize: 12, color: C.red }}>{error}</span></div>)}
-        <Btn variant="gold" onClick={handle} loading={loading} style={{ width: "100%", marginTop: 18 }}> {mode === "signup" ? <><UserPlus size={15} /> Create Account</> : <><LogIn size={15} /> Sign In</>} </Btn>
-        {mode === "signup" && (<div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 14 }}> {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (<div key={lbl} style={{ textAlign: "center" }}><div style={{ fontSize: 14 }}>{em}</div><div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>{lbl}</div></div>))} </div>)}
-        <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}> {mode === "signup" ? "Already have an account? " : "Don't have an account? "} <button onClick={() => setMode(m => m === "signup" ? "login" : "signup")} style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}> {mode === "signup" ? "Sign In" : "Create Account"} </button> </div>
+
+        {/* Age + Terms checkbox (signup only) */}
+        {mode === "signup" && (
+          <div
+            onClick={() => setAgreed(a => !a)}
+            style={{ display: "flex", alignItems: "flex-start", gap: 11, marginTop: 14, padding: "13px 14px", background: C.card2, border: `1px solid ${agreed ? C.gold + "55" : C.border2}`, borderRadius: 12, cursor: "pointer", transition: "border-color .2s" }}
+          >
+            {/* Custom checkbox */}
+            <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? C.gold : C.text3}`, background: agreed ? C.gold : "transparent", display: "grid", placeItems: "center", flexShrink: 0, marginTop: 1, transition: "all .15s" }}>
+              {agreed && <CheckCircle2 size={11} color="#000" strokeWidth={3} />}
+            </div>
+            <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.6 }}>
+              I confirm I am <strong style={{ color: C.text }}>18 years of age or older</strong>, and I agree to the{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Terms of Service</span>,{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Acceptable Use Policy</span>, and{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Privacy Policy</span> of Golden Vault XM.
+            </span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 9 }}>
+            <AlertCircle size={13} color={C.red} /><span style={{ fontSize: 12, color: C.red }}>{error}</span>
+          </div>
+        )}
+
+        {/* Submit */}
+        <Btn variant="gold" onClick={handle} loading={loading} disabled={mode === "signup" && !agreed} style={{ width: "100%", marginTop: 16, borderRadius: 12, padding: "14px 16px", fontSize: 15 }}>
+          {mode === "signup" ? <><UserPlus size={16} /> Create Account</> : <><LogIn size={16} /> Sign In</>}
+        </Btn>
+
+        {/* Trust badges (signup only) */}
+        {mode === "signup" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 14 }}>
+            {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (
+              <div key={lbl} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 16 }}>{em}</div>
+                <div style={{ fontSize: 9, color: C.text3, marginTop: 3, letterSpacing: "0.04em" }}>{lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Switch mode */}
+        <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}>
+          {mode === "signup" ? "Already have an account? " : "Don't have an account? "}
+          <button onClick={() => { setMode(m => m === "signup" ? "login" : "signup"); setError(""); setAgreed(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}>
+            {mode === "signup" ? "Sign In" : "Create Account"}
+          </button>
+        </div>
+
       </div>
     </div>
   );
@@ -244,14 +351,35 @@ function AuthProvider({ children, onLogin }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
   const isAuthenticated = !!user;
-  const login = (u) => {
-    setUser(u);
-    setModal(null);
-    if (onLogin) onLogin();
-  };
-  const logout = () => setUser(null);
+
+  // Pick up session on mount (covers Google OAuth redirect-back)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        if (onLogin) onLogin();
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        setModal(null);
+        if (onLogin) onLogin();
+      }
+      if (event === "SIGNED_OUT") setUser(null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
+  const logout = async () => { await supabase.auth.signOut(); setUser(null); };
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
-  return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
+      {children}
+      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
+    </AuthContext.Provider>
+  );
 }
 
 function Nav({ page, setPage, open, setOpen }) {
