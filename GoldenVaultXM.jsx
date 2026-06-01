@@ -1,24 +1,24 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Copy, Check, Maximize2 } from "lucide-react";
-// Safe Supabase stub — app renders even if env vars are missing
+
 const _getSupabase = () => {
   try {
-    const url = import.meta?.env?.VITE_SUPABASE_URL;
-    const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
+    const url = https://vedrlsuqewykozjtnfis.supabase.co;
+    const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
     if (!url || !key) return null;
-    // supabaseClient.js must be present; we catch any throw from it
+    
     return window.__supabaseInstance || null;
   } catch (_) { return null; }
 };
-// Minimal Supabase shim used by AuthModal
+
 const supabase = {
   auth: {
     signUp: async (opts) => {
       try {
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = import.meta?.env?.VITE_SUPABASE_URL;
-        const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
+        const url = https://vedrlsuqewykozjtnfis.supabase.co;
+        const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
         if (!url || !key) return { data: null, error: { message: "Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel." } };
         const client = createClient(url, key);
         return client.auth.signUp(opts);
@@ -27,8 +27,8 @@ const supabase = {
     signInWithOAuth: async (opts) => {
       try {
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-        const url = import.meta?.env?.VITE_SUPABASE_URL;
-        const key = import.meta?.env?.VITE_SUPABASE_ANON_KEY;
+        const url = https://vedrlsuqewykozjtnfis.supabase.co;
+        const key = sb_publishable_PL5CPn7kHa3KnUbHlT0LRg___KtNLud;
         if (!url || !key) return { data: null, error: { message: "Supabase not configured." } };
         const client = createClient(url, key);
         return client.auth.signInWithOAuth(opts);
