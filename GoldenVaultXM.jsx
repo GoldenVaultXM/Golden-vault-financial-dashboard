@@ -217,7 +217,9 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://goldenvaultxm.live/' }
+      options: {
+        redirectTo: `${window.location.origin}/trade`,
+      },
     });
     if (error) { setError(error.message); setGoogleLoading(false); }
   };
@@ -303,6 +305,15 @@ function AuthProvider({ children }) {
   const login = (u) => { setUser(u); setModal(null); };
   const logout = () => setUser(null);
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        login({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        window.location.href = window.location.origin + '/trade';
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
 }
 
