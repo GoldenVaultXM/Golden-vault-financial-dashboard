@@ -179,7 +179,6 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ─── Auth Context / Modals / Nav / ... (Remained same) ──────────────────── */
 /* ── Google "G" SVG logo ─────────────────────────────────────────────────── */
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
