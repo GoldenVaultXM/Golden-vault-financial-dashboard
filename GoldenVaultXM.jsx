@@ -397,12 +397,10 @@ function Nav({ page, setPage, open, setOpen }) {
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {isAuthenticated && (<div style={{ fontSize: 11, color: C.text3, marginRight: 6, display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} /> {user?.name}</div>)}
         <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
-        {/* Hamburger — only rendered on mobile (hidden on desktop via CSS) */}
-        <button className="gvxm-hamburger" onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+        <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
-      {/* Mobile slide-down menu */}
       {open && (
-        <div className="gvxm-hamburger" style={{ position: "fixed", top: 58, left: 0, right: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ position: "fixed", top: 58, left: 0, right: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", }}>
               <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
@@ -421,7 +419,7 @@ function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "settings", icon: Settings, label: "More" },];
   return (
-    <nav className="gvxm-bottomnav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, padding: "8px 0 20px", zIndex: 50 }}>
+    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 600, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
         return (
@@ -769,93 +767,11 @@ function SettingsPage() {
   );
 }
 
-/* ─── Desktop Sidebar Nav ────────────────────────────────────────────────── */
-function DesktopSidebar({ page, setPage }) {
-  const { isAuthenticated, user, logout, requireAuth } = useAuth();
-  const NAV = [
-    { id: "home",     label: "Home",     icon: Home },
-    { id: "markets",  label: "Markets",  icon: BarChart2 },
-    { id: "trade",    label: "Trade",    icon: TrendingUp },
-    { id: "settings", label: "Settings", icon: Settings },
-  ];
-  return (
-    <aside className="gvxm-sidebar" style={{ width: 220, flexShrink: 0, background: C.card, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
-      {/* Logo */}
-      <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}><Zap size={17} color="#000" fill="#000" /></div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 11, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
-            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.16em" }}>ELITE TRADING</div>
-          </div>
-        </div>
-      </div>
-      {/* Nav links */}
-      <nav style={{ padding: "12px 10px", flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
-        {NAV.map(n => {
-          const active = page === n.id;
-          const locked = n.id === "trade" && !isAuthenticated;
-          return (
-            <button key={n.id}
-              onClick={() => { if (locked) { requireAuth("signup"); return; } setPage(n.id); }}
-              style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", background: active ? `${C.gold}14` : "none", border: "none", borderRadius: 10, cursor: "pointer", borderLeft: active ? `3px solid ${C.gold}` : "3px solid transparent", width: "100%", textAlign: "left" }}
-            >
-              <n.icon size={16} color={active ? C.gold : C.text3} />
-              <span style={{ fontSize: 13, fontWeight: 800, color: active ? C.text : C.text3 }}>{n.label}</span>
-              {locked && <Lock size={10} color={C.text4} style={{ marginLeft: "auto" }} />}
-            </button>
-          );
-        })}
-      </nav>
-      {/* User / auth footer */}
-      <div style={{ padding: "12px 10px", borderTop: `1px solid ${C.border}` }}>
-        {isAuthenticated ? (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: C.card2, borderRadius: 10, marginBottom: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.gold}22`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 11, fontWeight: 900, color: C.gold }}>{(user?.name?.[0] || "U").toUpperCase()}</span></div>
-              <div style={{ minWidth: 0 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</div><div style={{ fontSize: 10, color: C.green, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, display: "inline-block" }} />Online</div></div>
-            </div>
-            <button onClick={logout} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "none", border: "none", cursor: "pointer", width: "100%", borderRadius: 10 }}>
-              <LogOut size={14} color={C.red} /><span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>Sign Out</span>
-            </button>
-          </>
-        ) : (
-          <button onClick={() => requireAuth("signup")} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", background: `${C.gold}14`, border: `1px solid ${C.gold}33`, borderRadius: 10, cursor: "pointer", width: "100%" }}>
-            <UserPlus size={14} color={C.gold} /><span style={{ fontSize: 13, fontWeight: 800, color: C.gold }}>Sign Up / Login</span>
-          </button>
-        )}
-      </div>
-    </aside>
-  );
-}
-
-/* ─── AppShell ───────────────────────────────────────────────────────────── */
-/*
- * HOW RESPONSIVE LAYOUT WORKS (no JS involved):
- *
- *  Mobile  (viewport < 768px):  single column, bottom tab bar, hamburger menu
- *  Desktop (viewport ≥ 768px):  sidebar nav, wider main area, no bottom bar
- *
- *  The breakpoint fires automatically based on actual viewport width.
- *  On a real phone the viewport is the screen width → mobile layout.
- *  When the user taps "Desktop site" in their browser, the browser sets
- *  the viewport to ~980px (or removes the viewport constraint) → desktop layout.
- *  Zero JavaScript is involved in switching — it's pure CSS media queries.
- *
- *  The viewport meta tag ensures mobile browsers render at device width by
- *  default instead of the old 980px assumed width that caused the forced-zoom.
- */
 function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
-
-  const handleSetPage = useCallback((p) => {
-    if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
-    setPage(p);
-    setMenuOpen(false);
-  }, [isAuthenticated, requireAuth, setPage]);
-
+  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
   const renderPage = () => {
     switch (page) {
       case "home":     return <HomePage setPage={handleSetPage} />;
@@ -866,105 +782,17 @@ function AppShell({ page, setPage }) {
     }
   };
 
-  const globalStyles = `
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; background: ${C.bg}; }
-    input, button { font-family: inherit; }
-    input::placeholder { color: #404040; }
-    @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.4} }
-    @keyframes spin   { to { transform: rotate(360deg); } }
-    @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: ${C.border2}; border-radius: 4px; }
-    scrollbar-width: thin; scrollbar-color: ${C.border2} transparent;
-
-    /* ════════════════════════════════════════════════════════════
-       MOBILE  (< 768px)  — bottom tab bar, hamburger, no sidebar
-       ════════════════════════════════════════════════════════════ */
-    .gvxm-sidebar   { display: none !important; }
-    .gvxm-rightpanel{ display: none !important; }
-    .gvxm-hamburger { display: flex !important; }
-    .gvxm-bottomnav { display: flex !important; }
-    .gvxm-main      { padding: 0 16px 100px; }
-    .gvxm-body      { display: block; }
-
-    /* ════════════════════════════════════════════════════════════
-       DESKTOP (≥ 768px) — sidebar, no bottom bar, no hamburger
-       When the browser "Desktop site" toggle fires, the viewport
-       expands beyond 768px and this block takes over automatically.
-       ════════════════════════════════════════════════════════════ */
-    @media (min-width: 768px) {
-      .gvxm-sidebar    { display: flex !important; }
-      .gvxm-rightpanel { display: flex !important; }
-      .gvxm-hamburger  { display: none !important; }
-      .gvxm-bottomnav  { display: none !important; }
-      .gvxm-main       { padding: 0 28px 40px; max-width: 900px; margin: 0 auto; }
-      .gvxm-body       { display: flex; min-height: calc(100vh - 58px); }
-    }
-  `;
-
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", WebkitFontSmoothing: "antialiased" }}>
-      <style>{globalStyles}</style>
-
-      {/* Ambient glow */}
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 500, height: 500, background: `radial-gradient(${C.gold}06 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-
-      {/* Top header — always visible */}
-      <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} />
-
-      {/* Body row: sidebar (desktop only) + main + right panel (desktop only) */}
-      <div className="gvxm-body" style={{ position: "relative", zIndex: 1 }}>
-        <DesktopSidebar page={page} setPage={handleSetPage} />
-
-        <main className="gvxm-main">
-          {renderPage()}
-        </main>
-
-        {/* Right market-pulse panel — desktop only */}
-        <div className="gvxm-rightpanel" style={{ width: 220, flexShrink: 0, flexDirection: "column", padding: "20px 16px", gap: 16, borderLeft: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>Market Pulse</div>
-          {["BTC/USDT", "ETH/USDT", "EUR/USD", "XAU/USD"].map(pair => {
-            const pd = prices[pair];
-            const def = INSTRUMENT_DEFS.find(d => d.pair === pair);
-            if (!pd || !def) return null;
-            return (
-              <div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
-                <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{def.name}</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: C.text, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>{fmtPrice(pd.price, def.cat)}</div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Bottom tab bar — mobile only (hidden on desktop via CSS) */}
-      <BottomNav page={page} setPage={handleSetPage} />
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: 600, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", }}>
+      <style>{` *, *::before, *::after { box-sizing: border-box; } body { background: ${C.bg}; margin: 0; } ::-webkit-scrollbar { display: none; } scrollbar-width: none; input, button { font-family: inherit; } input::placeholder { color: #404040; } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} } @keyframes spin { to { transform: rotate(360deg); } } @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} } #gvxm-root { background: ${C.bg}; min-height: 100vh; } `}</style>
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{renderPage()}</main><BottomNav page={page} setPage={handleSetPage} /></div>
     </div>
   );
 }
 
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
-
-  // Inject viewport meta so mobile browsers render at device width.
-  // When the user toggles "Desktop site" in their browser, the browser
-  // itself overrides this and sets a wide viewport — triggering the
-  // @media (min-width: 768px) desktop CSS automatically. No JS needed.
-  useEffect(() => {
-    let meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "viewport";
-      document.head.appendChild(meta);
-    }
-    meta.content = "width=device-width, initial-scale=1";
-  }, []);
-
   return (
     <AuthProvider onLogin={() => setPage("trade")}>
       <AppShell page={page} setPage={setPage} />
