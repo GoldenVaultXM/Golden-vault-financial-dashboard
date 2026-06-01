@@ -215,14 +215,11 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     }
     setError("");
     setGoogleLoading(true);
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/trade`,
-      },
+      options: { redirectTo: 'https://goldenvaultxm.live/' }
     });
-    // Supabase redirects the browser — no further action needed here.
-    // setGoogleLoading(false) is intentionally omitted; page will navigate away.
+    if (error) { setError(error.message); setGoogleLoading(false); }
   };
 
   const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box", };
@@ -303,41 +300,8 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
   const isAuthenticated = !!user;
-
-  // Sync with Supabase session on mount and after OAuth redirect
-  useEffect(() => {
-    // Hydrate session immediately (handles post-OAuth page load)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
-          email: session.user.email,
-        });
-        // If we just landed back from OAuth, navigate to /trade
-        if (window.location.pathname === "/trade" || window.location.hash.includes("access_token")) {
-          window.history.replaceState({}, "", "/trade");
-        }
-      }
-    });
-
-    // Listen for future auth changes (sign-in, sign-out, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
-          email: session.user.email,
-        });
-        setModal(null);
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const login = (u) => { setUser(u); setModal(null); };
-  const logout = async () => { await supabase.auth.signOut(); setUser(null); };
+  const logout = () => setUser(null);
   const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
   return (<AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}> {children} {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />} </AuthContext.Provider>);
 }
@@ -346,7 +310,7 @@ function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
   return (
-    <header className="gvxm-header" style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}><Zap size={17} color="#000" fill="#000" /></div>
         <div>
@@ -379,7 +343,7 @@ function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "settings", icon: Settings, label: "More" },];
   return (
-    <nav className="gvxm-bottom-nav" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 600, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
+    <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 600, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
         return (
@@ -821,63 +785,10 @@ function AppShell() {
   const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth]);
   const PAGES = { home: <HomePage setPage={handleSetPage} />, markets: <MarketsPage prices={prices} flash={flash} />, trade: <TradePage prices={prices} />, settings: <SettingsPage />, };
   return (
-    <div id="gvxm-root" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", WebkitFontSmoothing: "antialiased" }}>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; }
-        body { background: ${C.bg}; margin: 0; }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-        #gvxm-root { background: ${C.bg}; min-height: 100vh; }
-
-        /* ── Responsive shell ── */
-        .gvxm-shell {
-          width: 100%;
-          max-width: 600px;
-          margin: 0 auto;
-          position: relative;
-        }
-
-        /* Desktop: wider, two-column-ready layout */
-        @media (min-width: 1024px) {
-          .gvxm-shell {
-            max-width: 900px;
-          }
-          .gvxm-main {
-            padding: 0 32px !important;
-            padding-bottom: 48px !important;
-          }
-          /* Bottom nav hidden on desktop; top nav carries all navigation */
-          .gvxm-bottom-nav {
-            display: none !important;
-          }
-          /* Give top nav desktop spacing */
-          .gvxm-header {
-            padding: 0 32px !important;
-          }
-        }
-
-        @media (min-width: 768px) and (max-width: 1023px) {
-          .gvxm-shell {
-            max-width: 720px;
-          }
-          .gvxm-main {
-            padding: 0 24px !important;
-          }
-        }
-      `}</style>
-      <div className="gvxm-shell">
-        <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} />
-          <main className="gvxm-main" style={{ padding: "0 16px", paddingBottom: 100 }}>{PAGES[page]}</main>
-          <BottomNav page={page} setPage={handleSetPage} />
-        </div>
-      </div>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: 600, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", }}>
+      <style>{` *, *::before, *::after { box-sizing: border-box; } body { background: ${C.bg}; margin: 0; } ::-webkit-scrollbar { display: none; } scrollbar-width: none; input, button { font-family: inherit; } input::placeholder { color: #404040; } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} } @keyframes spin { to { transform: rotate(360deg); } } @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} } #gvxm-root { background: ${C.bg}; min-height: 100vh; } `}</style>
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
+      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{PAGES[page]}</main><BottomNav page={page} setPage={handleSetPage} /></div>
     </div>
   );
 }
