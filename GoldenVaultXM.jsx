@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
 import { supabase } from './supabaseClient';
@@ -754,7 +754,7 @@ function TradingViewChart() {
   const containerRef = useRef(null);
   const widgetRef = useRef(null);
   const [symbol, setSymbol] = useState("OANDA:XAUUSD");
-  const [interval, setTVInterval] = useState("5");
+  const [tvInterval, setTVInterval] = useState("5");
   const [zoom, setZoom] = useState(1);
 
   const TV_SYMBOLS = [
@@ -783,12 +783,13 @@ function TradingViewChart() {
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/tv.js";
     script.async = true;
-    script.onload = () => {
-      if (window.TradingView) {
+    const createWidget = () => {
+      if (window.TradingView && containerRef.current) {
+        containerRef.current.innerHTML = "";
         widgetRef.current = new window.TradingView.widget({
           autosize: true,
           symbol: symbol,
-          interval: interval,
+          interval: tvInterval,
           timezone: "Etc/UTC",
           theme: "dark",
           style: "1",
@@ -809,16 +810,28 @@ function TradingViewChart() {
         });
       }
     };
-    // If tv.js already loaded, just create widget
+    let injectedScript = null;
+    // If tv.js already loaded, create widget immediately; otherwise inject script once
     if (window.TradingView) {
-      script.onload();
+      createWidget();
     } else {
-      document.head.appendChild(script);
+      script.onload = createWidget;
+      // Only append if not already in DOM (prevent duplicate scripts on hot-reload)
+      if (!document.querySelector('script[src="https://s3.tradingview.com/tv.js"]')) {
+        document.head.appendChild(script);
+        injectedScript = script;
+      } else {
+        // Script tag exists but TradingView may not be ready yet — wait for it
+        script.onload = createWidget;
+      }
     }
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
+      if (injectedScript && injectedScript.parentNode) {
+        injectedScript.parentNode.removeChild(injectedScript);
+      }
     };
-  }, [symbol, interval]);
+  }, [symbol, tvInterval]);
 
   // BUG 8 FIX: Removed direct DOM containerRef.current.style.transform mutations.
   // The parent wrapper div already has transform:scale(zoom) bound to React state,
@@ -857,25 +870,23 @@ function TradingViewChart() {
       {/* Interval Selector */}
       <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
         {INTERVALS.map(iv => (
-          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: interval === iv.value ? "#ffffff" : `${C.gold}0f`, color: interval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
+          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: tvInterval === iv.value ? "#ffffff" : `${C.gold}0f`, color: tvInterval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
         ))}
       </div>
 
       {/* Chart Container */}
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}` }}>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}`, height: 340 }}>
         <div
           style={{
             transformOrigin: "top left",
             transform: `scale(${zoom})`,
-            width: zoom < 1 ? `${100 / zoom}%` : "100%",
-            height: zoom < 1 ? `${340 / zoom}px` : "340px",
+            width: `${100 / zoom}%`,
+            height: `${340 / zoom}px`,
             transition: "transform 0.2s ease",
           }}
         >
           <div id="tv_chart_container" ref={containerRef} style={{ width: "100%", height: "340px" }} />
         </div>
-        {/* Height holder when zoomed out */}
-        {zoom < 1 && <div style={{ height: 340 }} />}
       </div>
 
       <div style={{ fontSize: 10, color: C.text3, textAlign: "center", marginTop: 8 }}>
@@ -933,6 +944,12 @@ function TradePage({ prices }) {
   const [activePositions, setActivePositions] = useState(0);
   const [winRate, setWinRate] = useState(0);
 
+  // Memoize base perf data so it doesn't re-randomize on every render (vote, etc.)
+  const perfData = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    day: i + 1,
+    value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400,
+  })), []);
+
   // Supabase Fetch — fixed: .eq('id', ...) not .eq('user_id', ...)
   useEffect(() => {
     const loadUserData = async () => {
@@ -955,7 +972,6 @@ function TradePage({ prices }) {
     loadUserData();
   }, []);
 
-  const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
   const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : range === "1Y" ? Array.from({ length: 52 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.25) * 2200 + i * 90 + Math.random() * 500 })) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
