@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
 import { supabase } from './supabaseClient';
@@ -483,6 +483,178 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   );
 }
 
+/* ─── Deposit Funds Modal ────────────────────────────────────────────────── */
+const DEPOSIT_WALLETS = [
+  { label: "Bitcoin",       symbol: "BTC",  address: "[Insert Address]" },
+  { label: "Ethereum",      symbol: "ETH",  address: "[Insert Address]" },
+  { label: "USDT (ERC-20)", symbol: "USDT", address: "[Insert Address]" },
+  { label: "BNB",           symbol: "BNB",  address: "[Insert Address]" },
+  { label: "Tron",          symbol: "TRX",  address: "[Insert Address]" },
+  { label: "Bitcoin Cash",  symbol: "BCH",  address: "[Insert Address]" },
+  { label: "Zcash",         symbol: "ZEC",  address: "[Insert Address]" },
+];
+
+const COIN_COLORS = {
+  BTC:  "#f7931a",
+  ETH:  "#627eea",
+  USDT: "#26a17b",
+  BNB:  "#f3ba2f",
+  TRX:  "#ff0013",
+  BCH:  "#8dc351",
+  ZEC:  "#f4b728",
+};
+
+function DepositModal({ onClose }) {
+  const [copied, setCopied] = useState(null);
+
+  const handleCopy = (address, idx) => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(idx);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
+
+  /* Trap focus & close on Escape */
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0,
+        background: "#000000d0",
+        backdropFilter: "blur(16px)",
+        zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "16px",
+        overflowY: "auto",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: C.card,
+          border: `1px solid ${C.gold}44`,
+          borderRadius: 20,
+          width: "100%",
+          maxWidth: 480,
+          boxShadow: `0 0 80px ${C.gold}18, 0 32px 96px #000c`,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Gold accent top bar */}
+        <div style={{ height: 3, background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold2}, ${C.goldDim})` }} />
+
+        {/* Header */}
+        <div style={{ padding: "22px 22px 0" }}>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{ position: "absolute", top: 16, right: 16, background: C.card3, border: `1px solid ${C.border2}`, borderRadius: 8, cursor: "pointer", color: C.text3, padding: "5px 7px", display: "grid", placeItems: "center", transition: "color .15s" }}
+          >
+            <X size={16} />
+          </button>
+
+          {/* Logo row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: `linear-gradient(135deg, ${C.gold}, ${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0, boxShadow: `0 4px 16px ${C.gold}44` }}>
+              <ArrowDownToLine size={20} color="#000" strokeWidth={2.5} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 18, color: C.text, letterSpacing: "-0.01em" }}>Deposit Funds</div>
+              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Send crypto to any address below</div>
+            </div>
+          </div>
+
+          {/* Info banner */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: `${C.gold}10`, border: `1px solid ${C.gold}28`, borderRadius: 10, padding: "10px 12px", marginBottom: 20 }}>
+            <Shield size={13} color={C.gold2} style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 11, color: C.text2, lineHeight: 1.55, margin: 0 }}>
+              Send only the matching coin to each address. Sending the wrong asset may result in permanent loss. Contact support after sending.
+            </p>
+          </div>
+        </div>
+
+        {/* Wallet list */}
+        <div style={{ padding: "0 22px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {DEPOSIT_WALLETS.map((w, idx) => {
+            const color = COIN_COLORS[w.symbol] || C.gold;
+            const isCopied = copied === idx;
+            return (
+              <div
+                key={idx}
+                style={{
+                  background: C.card2,
+                  border: `1px solid ${isCopied ? color + "66" : C.border}`,
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  transition: "border-color .25s",
+                }}
+              >
+                {/* Coin label row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 7, background: `${color}22`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 9, fontWeight: 900, color, letterSpacing: "-0.02em" }}>{w.symbol}</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{w.label}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color, background: `${color}18`, borderRadius: 4, padding: "2px 7px" }}>{w.symbol}</span>
+                </div>
+
+                {/* Address + copy row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card3, borderRadius: 8, padding: "9px 12px", border: `1px solid ${C.border}` }}>
+                  <span style={{ flex: 1, fontSize: 11, color: C.text2, fontFamily: "monospace", wordBreak: "break-all", lineHeight: 1.4, letterSpacing: "0.01em" }}>
+                    {w.address}
+                  </span>
+                  <button
+                    onClick={() => handleCopy(w.address, idx)}
+                    aria-label={`Copy ${w.label} address`}
+                    style={{
+                      flexShrink: 0,
+                      padding: "6px 10px",
+                      borderRadius: 7,
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 11,
+                      letterSpacing: "0.04em",
+                      transition: "all .18s",
+                      background: isCopied ? `${color}33` : `${C.gold}22`,
+                      color: isCopied ? color : C.gold2,
+                      display: "flex", alignItems: "center", gap: 5,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {isCopied
+                      ? <><CheckCircle2 size={12} /> Copied!</>
+                      : <><Globe size={12} /> Copy</>
+                    }
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: C.text3 }}>Need help? <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.com</span></span>
+          <button
+            onClick={onClose}
+            style={{ background: C.card3, border: `1px solid ${C.border2}`, borderRadius: 9, padding: "8px 16px", color: C.text2, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuthProvider({ children, onLogin }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
@@ -754,7 +926,7 @@ function TradingViewChart() {
   const containerRef = useRef(null);
   const widgetRef = useRef(null);
   const [symbol, setSymbol] = useState("OANDA:XAUUSD");
-  const [tvInterval, setTVInterval] = useState("5");
+  const [interval, setTVInterval] = useState("5");
   const [zoom, setZoom] = useState(1);
 
   const TV_SYMBOLS = [
@@ -783,13 +955,12 @@ function TradingViewChart() {
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/tv.js";
     script.async = true;
-    const createWidget = () => {
-      if (window.TradingView && containerRef.current) {
-        containerRef.current.innerHTML = "";
+    script.onload = () => {
+      if (window.TradingView) {
         widgetRef.current = new window.TradingView.widget({
           autosize: true,
           symbol: symbol,
-          interval: tvInterval,
+          interval: interval,
           timezone: "Etc/UTC",
           theme: "dark",
           style: "1",
@@ -810,28 +981,16 @@ function TradingViewChart() {
         });
       }
     };
-    let injectedScript = null;
-    // If tv.js already loaded, create widget immediately; otherwise inject script once
+    // If tv.js already loaded, just create widget
     if (window.TradingView) {
-      createWidget();
+      script.onload();
     } else {
-      script.onload = createWidget;
-      // Only append if not already in DOM (prevent duplicate scripts on hot-reload)
-      if (!document.querySelector('script[src="https://s3.tradingview.com/tv.js"]')) {
-        document.head.appendChild(script);
-        injectedScript = script;
-      } else {
-        // Script tag exists but TradingView may not be ready yet — wait for it
-        script.onload = createWidget;
-      }
+      document.head.appendChild(script);
     }
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
-      if (injectedScript && injectedScript.parentNode) {
-        injectedScript.parentNode.removeChild(injectedScript);
-      }
     };
-  }, [symbol, tvInterval]);
+  }, [symbol, interval]);
 
   // BUG 8 FIX: Removed direct DOM containerRef.current.style.transform mutations.
   // The parent wrapper div already has transform:scale(zoom) bound to React state,
@@ -870,23 +1029,25 @@ function TradingViewChart() {
       {/* Interval Selector */}
       <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
         {INTERVALS.map(iv => (
-          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: tvInterval === iv.value ? "#ffffff" : `${C.gold}0f`, color: tvInterval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
+          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: interval === iv.value ? "#ffffff" : `${C.gold}0f`, color: interval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
         ))}
       </div>
 
       {/* Chart Container */}
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}`, height: 340 }}>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}` }}>
         <div
           style={{
             transformOrigin: "top left",
             transform: `scale(${zoom})`,
-            width: `${100 / zoom}%`,
-            height: `${340 / zoom}px`,
+            width: zoom < 1 ? `${100 / zoom}%` : "100%",
+            height: zoom < 1 ? `${340 / zoom}px` : "340px",
             transition: "transform 0.2s ease",
           }}
         >
           <div id="tv_chart_container" ref={containerRef} style={{ width: "100%", height: "340px" }} />
         </div>
+        {/* Height holder when zoomed out */}
+        {zoom < 1 && <div style={{ height: 340 }} />}
       </div>
 
       <div style={{ fontSize: 10, color: C.text3, textAlign: "center", marginTop: 8 }}>
@@ -932,6 +1093,7 @@ function TradePage({ prices }) {
   const { user } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -943,12 +1105,6 @@ function TradePage({ prices }) {
   const [totalProfit, setTotalProfit] = useState(0);
   const [activePositions, setActivePositions] = useState(0);
   const [winRate, setWinRate] = useState(0);
-
-  // Memoize base perf data so it doesn't re-randomize on every render (vote, etc.)
-  const perfData = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
-    day: i + 1,
-    value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400,
-  })), []);
 
   // Supabase Fetch — fixed: .eq('id', ...) not .eq('user_id', ...)
   useEffect(() => {
@@ -972,6 +1128,7 @@ function TradePage({ prices }) {
     loadUserData();
   }, []);
 
+  const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
   const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : range === "1Y" ? Array.from({ length: 52 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.25) * 2200 + i * 90 + Math.random() * 500 })) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
@@ -979,6 +1136,7 @@ function TradePage({ prices }) {
   
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+      {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
       {/* Keyframes for counter-rotating gears */}
@@ -1044,7 +1202,7 @@ function TradePage({ prices }) {
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+          <Btn variant="gold" onClick={() => setShowDepositModal(true)} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
