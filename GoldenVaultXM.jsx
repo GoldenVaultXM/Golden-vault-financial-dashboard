@@ -922,10 +922,153 @@ function MarketsPage({ prices, flash }) {
   );
 }
 
+/* ─── Deposit Funds Modal ────────────────────────────────────────────────── */
+const DEPOSIT_WALLETS = [
+  { label: "Bitcoin",       symbol: "BTC",       address: "bc1q5quw6afn6y4050mysfjycj04f0hdzq83u4gpmw" },
+  { label: "Ethereum",      symbol: "ETH",        address: "0xBecefd477aDC233d96f9c06F029a25B43d995139" },
+  { label: "USDT (ERC-20)", symbol: "USDT",       address: "0xBecefd477aDC233d96f9c06F029a25B43d995139" },
+  { label: "BNB",           symbol: "BNB",        address: "0x704A9F1CabaFD3AFdF1963A890F580D477d5870E" },
+  { label: "Tron",          symbol: "TRX",        address: "TM9FGDVqFV6zsZwNPRxtEnBY1tZKtV89d4" },
+  { label: "Bitcoin Cash",  symbol: "BCH",        address: "qr95lcna5t6vdghe5dm00kzkewekljjlgsayd0yj5n" },
+  { label: "Zcash",         symbol: "ZEC",        address: "t1fkc3qALWZ52Jq7cnupWeRdcZ9Y9CHj74p" },
+];
+
+function DepositModal({ onClose }) {
+  const [copied, setCopied] = useState(null);
+
+  const handleCopy = (address, index) => {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(index);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0,0,0,0.82)",
+        backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        padding: "0 0 0 0",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 600,
+          background: C.card,
+          border: `1px solid ${C.border2}`,
+          borderRadius: "20px 20px 0 0",
+          padding: "24px 18px 36px",
+          maxHeight: "88vh",
+          overflowY: "auto",
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${C.gold}20`, display: "grid", placeItems: "center" }}>
+              <ArrowDownToLine size={16} color={C.gold} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 16, color: C.text }}>Deposit Funds</div>
+              <div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>Copy a wallet address below</div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, display: "grid", placeItems: "center", cursor: "pointer", color: C.text3 }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: C.border, marginBottom: 18 }} />
+
+        {/* Wallet list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {DEPOSIT_WALLETS.map((w, i) => (
+            <div
+              key={i}
+              style={{
+                background: C.card2,
+                border: `1px solid ${copied === i ? C.gold + "66" : C.border}`,
+                borderRadius: 12,
+                padding: "13px 14px",
+                transition: "border-color 0.2s",
+              }}
+            >
+              {/* Coin label + symbol */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ fontSize: 12, fontWeight: 900, color: C.gold }}>{w.symbol}</span>
+                  <span style={{ fontSize: 11, color: C.text3 }}>{w.label}</span>
+                </div>
+                {copied === i && (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: C.green, display: "flex", alignItems: "center", gap: 3 }}>
+                    <CheckCircle2 size={11} /> Copied!
+                  </span>
+                )}
+              </div>
+              {/* Address row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{
+                  flex: 1,
+                  fontSize: 11,
+                  color: C.text2,
+                  fontFamily: "'Courier New', monospace",
+                  wordBreak: "break-all",
+                  lineHeight: 1.5,
+                  background: C.card3,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  padding: "7px 10px",
+                  userSelect: "all",
+                }}>
+                  {w.address}
+                </div>
+                <button
+                  onClick={() => handleCopy(w.address, i)}
+                  style={{
+                    flexShrink: 0,
+                    background: copied === i ? `${C.green}20` : `${C.gold}18`,
+                    border: `1px solid ${copied === i ? C.green + "55" : C.gold + "44"}`,
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: copied === i ? C.green : C.gold,
+                    transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {copied === i ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer note */}
+        <div style={{ marginTop: 18, padding: "11px 14px", background: `${C.gold}0c`, border: `1px solid ${C.gold}22`, borderRadius: 10 }}>
+          <div style={{ fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
+            ⚠️ Send only the matching asset to each address. Sending wrong assets may result in permanent loss.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TradePage({ prices }) {
   const { user } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -968,6 +1111,7 @@ function TradePage({ prices }) {
   
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+      {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
       {/* Keyframes for counter-rotating gears */}
@@ -1033,7 +1177,7 @@ function TradePage({ prices }) {
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
