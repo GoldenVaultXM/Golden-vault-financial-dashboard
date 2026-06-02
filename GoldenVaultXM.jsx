@@ -837,8 +837,54 @@ function TradePage({ prices }) {
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
   
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+
+      {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
+      {/* Keyframes for counter-rotating gears */}
+      <style>{`
+        @keyframes gearCW  { to { transform: rotate( 360deg); } }
+        @keyframes gearCCW { to { transform: rotate(-360deg); } }
+      `}</style>
+
+      {/* Full-page tinted background image — fixed so it covers whole Trade view */}
+      <div aria-hidden="true" style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        backgroundImage: "url('/99298.jpg')",
+        backgroundSize: "cover", backgroundPosition: "center top",
+        opacity: 0.12,
+        WebkitMaskImage: "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
+        maskImage:        "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
+      }} />
+
+      {/* Gear ring — top-right, clockwise */}
+      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
+        position:"fixed", top:"6%", right:"-20%",
+        width:"65vw", maxWidth:320,
+        opacity:0.11, pointerEvents:"none", zIndex:0,
+        animation:"gearCW 30s linear infinite", transformOrigin:"50% 50%",
+      }}>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#00ff88" strokeWidth="4" strokeDasharray="14 6"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#00cc66" strokeWidth="2" strokeDasharray="6 10"/>
+        <circle cx="100" cy="100" r="52" fill="none" stroke="#00ff88" strokeWidth="5" strokeDasharray="16 5"/>
+        {Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<line key={i} x1={100+60*Math.cos(a)} y1={100+60*Math.sin(a)} x2={100+88*Math.cos(a)} y2={100+88*Math.sin(a)} stroke="#00ff88" strokeWidth="2" opacity="0.6"/>);})}
+      </svg>
+
+      {/* Gear ring — bottom-left, counter-clockwise */}
+      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
+        position:"fixed", bottom:"8%", left:"-24%",
+        width:"70vw", maxWidth:350,
+        opacity:0.09, pointerEvents:"none", zIndex:0,
+        animation:"gearCCW 38s linear infinite", transformOrigin:"50% 50%",
+      }}>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#00cc88" strokeWidth="4" strokeDasharray="10 8"/>
+        <circle cx="100" cy="100" r="68" fill="none" stroke="#00ff88" strokeWidth="2" strokeDasharray="5 12"/>
+        <circle cx="100" cy="100" r="50" fill="none" stroke="#00cc66" strokeWidth="5" strokeDasharray="14 6"/>
+        {Array.from({length:14},(_,i)=>{const a=i*(Math.PI*2/14);return(<line key={i} x1={100+57*Math.cos(a)} y1={100+57*Math.sin(a)} x2={100+86*Math.cos(a)} y2={100+86*Math.sin(a)} stroke="#00cc88" strokeWidth="2" opacity="0.6"/>);})}
+      </svg>
+      {/* ── END GEAR BACKGROUND ──────────────────────────────────────────── */}
+
+      {/* All content sits above background */}
+      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: "$0.00", badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: "$0.00", badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: "0", badge: "+3", color: C.gold }, { icon: Target, label: "Win Rate", value: "0.0%", badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
       <Card>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
