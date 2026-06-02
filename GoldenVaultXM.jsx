@@ -384,7 +384,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
           <div style={{ width: 42, height: 42, borderRadius: 11, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><Zap size={20} color="#000" fill="#000" /></div>
           <div>
             <div style={{ fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: "0.12em" }}>GOLDEN VAULT XM</div>
-            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em", marginTop: 1 }}>ELITE TRADING</div>
+            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em", marginTop: 1 }}>TRADING SMART ENGINE</div>
           </div>
         </div>
 
@@ -523,12 +523,12 @@ function Nav({ page, setPage, open, setOpen }) {
         <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}><Zap size={17} color="#000" fill="#000" /></div>
         <div>
           <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
-          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>ELITE TRADING</div>
+          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>TRADING SMART ENGINE</div>
         </div>
       </div>
         <div>
           <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
-          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>ELITE TRADING</div>
+          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>TRADING SMART ENGINE</div>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -983,3 +983,4 @@ export default function GoldenVaultXM() {
     </LayoutProvider>
   );
 }
+
