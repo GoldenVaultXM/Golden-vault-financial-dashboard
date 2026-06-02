@@ -246,9 +246,9 @@ function useLivePrices() {
   const [flash, setFlash] = useState({});
   useEffect(() => {
     const interval = setInterval(() => {
+      const flashNext = {};
       setPrices(prev => {
         const next = { ...prev };
-        const flashNext = {};
         const toUpdate = INSTRUMENT_DEFS.filter(() => Math.random() < 0.30).map(d => d.pair);
         toUpdate.forEach(pair => {
           const def = INSTRUMENT_DEFS.find(d => d.pair === pair);
@@ -260,9 +260,9 @@ function useLivePrices() {
           next[pair] = { price: newPrice, pct24h: newPct24h, prevDay: cur.prevDay, up: sign === 1, };
           flashNext[pair] = sign === 1 ? "up" : "dn";
         });
-        setFlash(flashNext);
         return next;
       });
+      setFlash(flashNext);
       setTimeout(() => setFlash({}), 600);
     }, 2000);
     return () => clearInterval(interval);
@@ -499,7 +499,7 @@ function AuthProvider({ children, onLogin }) {
       if (event === "SIGNED_OUT") setUser(null);
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [onLogin]);
 
   const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
   const logout = async () => { await supabase.auth.signOut(); setUser(null); };
@@ -533,7 +533,7 @@ function Nav({ page, setPage, open, setOpen }) {
           onClick={toggleLayout}
           title={isMobile ? "Switch to Desktop View" : "Switch to Mobile View"}
           style={{
-            display: "none", alignItems: "center", gap: 5,
+            display: "flex", alignItems: "center", gap: 5,
             background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
             borderRadius: 8, padding: "5px 9px", cursor: "pointer",
             transition: "background .18s, border-color .18s",
@@ -620,7 +620,7 @@ function HomePage({ setPage }) {
         <ResponsiveContainer width="100%" height={130}>
           <AreaChart data={chartData} margin={{ left: -30, right: 0, top: 4, bottom: 0 }}>
             <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.gold} stopOpacity={0.22} /><stop offset="100%" stopColor={C.gold} stopOpacity={0} /></linearGradient></defs>
-            <XAxis dataKey="i" hide /><YAxis domain={["dataMin - 20", "dataMax + 20"]} />
+            <XAxis dataKey="i" hide /><YAxis hide domain={["dataMin - 20", "dataMax + 20"]} />
             <Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 11 }} formatter={v => [v.toFixed(2), "Price"]} labelFormatter={() => ""} />
             <ReferenceLine y={4700} stroke={C.green} strokeDasharray="3 3" strokeWidth={1} /><Area type="monotone" dataKey="v" stroke={C.gold} strokeWidth={2} fill="url(#ag)" dot={false} />
           </AreaChart>
@@ -836,7 +836,8 @@ function TradePage({ prices }) {
   // NEW: Supabase Fetch
   useEffect(() => {
     const loadUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user: supaUser } } = await supabase.auth.getUser();
+      const user = supaUser;
       if (!user) return;
       const { data, error } = await supabase
         .from('account_summary')
