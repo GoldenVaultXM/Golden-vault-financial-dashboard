@@ -671,7 +671,7 @@ function TradingViewChart() {
           allow_symbol_change: true,
           container_id: "tv_chart_container",
           hide_side_toolbar: false,
-          studies: ["IchimokuCloud@tv-basicstudies"],
+          studies: [],
           overrides: {
             "paneProperties.background": "#080808",
             "paneProperties.vertGridProperties.color": "#1a1a1a",
