@@ -518,11 +518,63 @@ function AuthProvider({ children, onLogin }) {
   );
 }
 
+function useNotifications() {
+  const { user, isAuthenticated } = useAuth();
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email) return;
+    const fetchNotes = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, title, body, read, created_at')
+        .eq('recipient_email', user.email)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (data) setNotes(data);
+    };
+    fetchNotes();
+    const channel = supabase
+      .channel('notifications-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_email=eq.${user.email}` },
+        payload => setNotes(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [isAuthenticated, user?.email]);
+
+  const markAllRead = async () => {
+    const unreadIds = notes.filter(n => !n.read).map(n => n.id);
+    if (!unreadIds.length) return;
+    await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+    setNotes(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const unreadCount = notes.filter(n => !n.read).length;
+  return { notes, unreadCount, markAllRead };
+}
+
 function Nav({ page, setPage, open, setOpen }) {
+  const { isAuthenticated, logout, requireAuth } = useAuth();
+  const { mode } = useLayout();
+  const { notes, unreadCount, markAllRead } = useNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
 
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
+
+  const ACTIONS = [
+    { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: ArrowUpFromLine, label: "Withdraw Funds", color: C.gold,    onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: BarChart2,       label: "Markets",        color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+    { icon: TrendingUp,      label: "Trade Now",      color: C.purple,  onClick: () => { if (!requireAuth("signup")) return; setPage("trade"); setOpen(false); } },
+    { icon: FileBarChart,    label: "Reports",        color: "#a78bfa", onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: Mail,            label: "Support",        color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+  ];
+
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+
+      {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -530,26 +582,104 @@ function Nav({ page, setPage, open, setOpen }) {
           <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 400, fontSize: 10, color: "#e69d00", marginTop: -2, lineHeight: 1.2 }}>Expert automated trading</div>
         </div>
       </div>
+
+      {/* Right controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        
-        <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
-        <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+
+        {/* Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); if (!bellOpen) markAllRead(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", lineHeight: 1 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
+                <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
+              </div>
+              {notes.length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>No notifications yet</div>
+              ) : (
+                notes.map((n, i) => (
+                  <div key={n.id} style={{ padding: "13px 16px", borderBottom: i < notes.length - 1 ? `1px solid ${C.border}` : "none", background: n.read ? "transparent" : `${C.gold}08` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.read ? C.text4 : C.gold, flexShrink: 0, marginTop: 4 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>{n.title}</div>
+                        <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{n.body}</div>
+                        <div style={{ fontSize: 10, color: C.text3, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Hamburger */}
+        <button onClick={() => { setOpen(!open); setBellOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </div>
+
+      {/* Bell backdrop */}
+      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+
+      {/* Hamburger drawer */}
       {open && (
-        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+
+          {/* Nav links */}
           {NAV.map(n => (
-            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", }}>
+            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent" }}>
               <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
               <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
               {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
             </button>
           ))}
-          <div style={{ marginTop: "auto" }}><GoldLine /> {isAuthenticated ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%", color: C.red }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button> : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>}</div>
+
+          {/* Quick Actions */}
+          <div style={{ marginTop: 16, marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {ACTIONS.map((a, i) => (
+                <button key={i} onClick={a.onClick}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <a.icon size={15} color={a.color} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sign out / in */}
+          <div style={{ marginTop: "auto", paddingTop: 12 }}>
+            <GoldLine />
+            {isAuthenticated
+              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
+              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+            }
+          </div>
         </div>
       )}
     </header>
   );
 }
+
 
 function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
