@@ -31,47 +31,47 @@ const useAuth = () => useContext(AuthContext);
 
 /* ─── Layout Context ─────────────────────────────────────────────────────── */
 /*
- * Single source of truth for layout mode.
- * "mobile"  → max-width 600px  (narrow, app-like)
- * "desktop" → max-width 1200px (wide, dashboard-like)
+ * Responds automatically to the browser's built-in "Desktop site / Mobile site"
+ * toggle. When the browser switches to desktop mode it removes viewport
+ * shrink-to-fit and reports a wide window.innerWidth (typically 980px+).
+ * When it switches back to mobile it reports the real device pixel width.
  *
  * Rules:
- *  • Initialised from localStorage on first render — survives page reload.
- *  • ONLY changes when the user explicitly clicks the toggle button.
- *  • No window-resize listener, no auth-event override, no media-query override.
- *  • CSS injected directly onto <html> so it beats every third-party stylesheet.
+ *  • "desktop" when window.innerWidth >= 768 (browser desktop-site mode)
+ *  • "mobile"  when window.innerWidth <  768 (browser mobile-site mode)
+ *  • Recalculated on every resize event so the switch is instant.
+ *  • No localStorage, no manual toggle — the browser switch is the ONLY trigger.
  */
-const LAYOUT_KEY   = "gvxm_layout_mode";
+const LAYOUT_BREAKPOINT = 768;
 const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
 
 const LayoutContext = createContext(null);
 const useLayout = () => useContext(LayoutContext);
 
-function LayoutProvider({ children }) {
-  // Read once from localStorage — never from viewport width
-  const [mode, setModeRaw] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LAYOUT_KEY);
-      return saved === "desktop" ? "desktop" : "mobile";
-    } catch {
-      return "mobile";
-    }
-  });
+function getMode() {
+  return window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile";
+}
 
-  // Persist + apply CSS every time mode changes (and on mount)
+function LayoutProvider({ children }) {
+  const [mode, setMode] = useState(getMode);
+
   useEffect(() => {
-    try { localStorage.setItem(LAYOUT_KEY, mode); } catch {}
+    const onResize = () => {
+      const next = getMode();
+      setMode(prev => prev !== next ? next : prev);
+    };
+    window.addEventListener("resize", onResize);
+    applyLayoutCSS(getMode());
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
     applyLayoutCSS(mode);
   }, [mode]);
 
-  // Public toggle — the ONLY way the mode can change
-  const toggleLayout = useCallback(() => {
-    setModeRaw(prev => (prev === "mobile" ? "desktop" : "mobile"));
-  }, []);
-
   const width = LAYOUT_WIDTHS[mode];
   return (
-    <LayoutContext.Provider value={{ mode, width, toggleLayout }}>
+    <LayoutContext.Provider value={{ mode, width }}>
       {children}
     </LayoutContext.Provider>
   );
@@ -102,10 +102,8 @@ function ensureViewportMeta() {
   /*
    * width=device-width  → use real phone pixel width, no shrink-to-fit
    * initial-scale=1.0   → start at 1:1, never zoomed in on load
-   * maximum-scale=1.0   → prevents iOS auto-zoom on input focus
-   * user-scalable=no    → locks scale, browser cannot override it
    */
-  meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+  meta.content = "width=device-width, initial-scale=1.0";
 }
 
 function applyLayoutCSS(mode) {
@@ -154,10 +152,7 @@ function applyLayoutCSS(mode) {
 
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
 ensureViewportMeta();
-applyLayoutCSS((() => {
-  try { return localStorage.getItem(LAYOUT_KEY) === "desktop" ? "desktop" : "mobile"; }
-  catch { return "mobile"; }
-})());
+applyLayoutCSS(window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile");
 
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
@@ -523,39 +518,168 @@ function AuthProvider({ children, onLogin }) {
   );
 }
 
+function useNotifications() {
+  const { user, isAuthenticated } = useAuth();
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email) return;
+    const fetchNotes = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, title, body, read, created_at')
+        .eq('recipient_email', user.email)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (data) setNotes(data);
+    };
+    fetchNotes();
+    const channel = supabase
+      .channel('notifications-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_email=eq.${user.email}` },
+        payload => setNotes(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [isAuthenticated, user?.email]);
+
+  const markAllRead = async () => {
+    const unreadIds = notes.filter(n => !n.read).map(n => n.id);
+    if (!unreadIds.length) return;
+    await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+    setNotes(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const unreadCount = notes.filter(n => !n.read).length;
+  return { notes, unreadCount, markAllRead };
+}
+
 function Nav({ page, setPage, open, setOpen }) {
-  const { isAuthenticated, user, logout, requireAuth } = useAuth();
+  const { isAuthenticated, logout, requireAuth } = useAuth();
   const { mode } = useLayout();
+  const { notes, unreadCount, markAllRead } = useNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
+
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
+
+  const ACTIONS = [
+    { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: ArrowUpFromLine, label: "Withdraw Funds", color: C.gold,    onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: BarChart2,       label: "Markets",        color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+    { icon: TrendingUp,      label: "Trade Now",      color: C.purple,  onClick: () => { if (!requireAuth("signup")) return; setPage("trade"); setOpen(false); } },
+    { icon: FileBarChart,    label: "Reports",        color: "#a78bfa", onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: Mail,            label: "Support",        color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+  ];
+
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}><Zap size={17} color="#000" fill="#000" /></div>
-        <div>
-          <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
-          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>ELITE TRADING</div>
+
+      {/* Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.2 }}>GOLDEN VAULT <span style={{ color: "#ef4444" }}>XM</span></div>
+          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 400, fontSize: 10, color: "#e69d00", marginTop: -2, lineHeight: 1.2 }}>Expert automated trading</div>
         </div>
       </div>
+
+      {/* Right controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        
-        <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
-        <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
+
+        {/* Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); if (!bellOpen) markAllRead(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", lineHeight: 1 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
+                <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
+              </div>
+              {notes.length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>No notifications yet</div>
+              ) : (
+                notes.map((n, i) => (
+                  <div key={n.id} style={{ padding: "13px 16px", borderBottom: i < notes.length - 1 ? `1px solid ${C.border}` : "none", background: n.read ? "transparent" : `${C.gold}08` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.read ? C.text4 : C.gold, flexShrink: 0, marginTop: 4 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>{n.title}</div>
+                        <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{n.body}</div>
+                        <div style={{ fontSize: 10, color: C.text3, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Hamburger */}
+        <button onClick={() => { setOpen(!open); setBellOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </div>
+
+      {/* Bell backdrop */}
+      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+
+      {/* Hamburger drawer */}
       {open && (
-        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "24px 20px 32px", display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+
+          {/* Nav links */}
           {NAV.map(n => (
-            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", }}>
+            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent" }}>
               <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
               <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
               {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
             </button>
           ))}
-          <div style={{ marginTop: "auto" }}><GoldLine /> {isAuthenticated ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%", color: C.red }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button> : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>}</div>
+
+          {/* Quick Actions */}
+          <div style={{ marginTop: 16, marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {ACTIONS.map((a, i) => (
+                <button key={i} onClick={a.onClick}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <a.icon size={15} color={a.color} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sign out / in */}
+          <div style={{ marginTop: "auto", paddingTop: 12 }}>
+            <GoldLine />
+            {isAuthenticated
+              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
+              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+            }
+          </div>
         </div>
       )}
     </header>
   );
 }
+
 
 function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
@@ -674,7 +798,7 @@ function TradingViewChart() {
           allow_symbol_change: true,
           container_id: "tv_chart_container",
           hide_side_toolbar: false,
-          studies: ["IchimokuCloud@tv-basicstudies"],
+          studies: [],
           overrides: {
             "paneProperties.background": "#080808",
             "paneProperties.vertGridProperties.color": "#1a1a1a",
@@ -798,157 +922,10 @@ function MarketsPage({ prices, flash }) {
   );
 }
 
-/* ─── Deposit Funds Modal ────────────────────────────────────────────────── */
-const DEPOSIT_COINS = [
-  { label: "Bitcoin",      symbol: "BTC",  color: "#f7931a", address: "bc1q5quw6afn6y4050mysfjycj04f0hdzq83u4gpmw" },
-  { label: "ETH",          symbol: "ETH",  color: "#627eea", address: "0xBecefd477aDC233d96f9c06F029a25B43d995139" },
-  { label: "USDT (ERC20)", symbol: "USDT", color: "#26a17b", address: "0xBecefd477aDC233d96f9c06F029a25B43d995139" },
-  { label: "BNB",          symbol: "BNB",  color: "#f3ba2f", address: "0x704A9F1CabaFD3AFdF1963A890F580D477d5870E" },
-  { label: "Tron",         symbol: "TRX",  color: "#e50915", address: "TM9FGDVqFV6zsZwNPRxtEnBY1tZKtV89d4" },
-  { label: "BCH",          symbol: "BCH",  color: "#8dc351", address: "qr95lcna5t6vdghe5dm00kzkewekljjlgsayd0yj5n" },
-  { label: "ZEC",          symbol: "ZEC",  color: "#f4b728", address: "t1fkc3qALWZ52Jq7cnupWeRdcZ9Y9CHj74p" },
-];
-
-function DepositModal({ onClose }) {
-  const [copied, setCopied] = useState(null);
-
-  const handleCopy = (symbol, address) => {
-    navigator.clipboard.writeText(address).catch(() => {});
-    setCopied(symbol);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: "fixed", inset: 0,
-        background: "#000000cc", backdropFilter: "blur(14px)",
-        zIndex: 1000, display: "flex", alignItems: "center",
-        justifyContent: "center", padding: 20, overflowY: "auto",
-      }}
-    >
-      <div style={{
-        background: C.card, border: `1px solid ${C.border}`,
-        borderRadius: 20, padding: "28px 24px 24px",
-        width: "100%", maxWidth: 420, position: "relative",
-        boxShadow: "0 32px 96px #000c",
-      }}>
-        {/* Close */}
-        <button
-          onClick={onClose}
-          style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 11, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <ArrowDownToLine size={20} color="#000" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: C.text }}>Deposit Funds</div>
-            <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Send crypto to your wallet address below</div>
-          </div>
-        </div>
-
-        <GoldLine />
-
-        {/* Notice banner */}
-        <div style={{
-          margin: "16px 0 18px",
-          padding: "11px 13px",
-          background: `${C.gold}12`,
-          border: `1px solid ${C.gold}33`,
-          borderRadius: 10,
-          display: "flex", alignItems: "flex-start", gap: 9,
-        }}>
-          <Shield size={14} color={C.gold} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontSize: 11, color: C.text2, lineHeight: 1.6 }}>
-            Only send the matching asset to each address. Sending the wrong coin may result in permanent loss of funds.
-          </span>
-        </div>
-
-        {/* Coin rows */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {DEPOSIT_COINS.map(({ label, symbol, color, address }) => (
-            <div
-              key={symbol}
-              style={{
-                background: C.card2,
-                border: `1px solid ${C.border2}`,
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}
-            >
-              {/* Coin label row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{
-                  width: 26, height: 26, borderRadius: 7,
-                  background: `${color}20`,
-                  display: "grid", placeItems: "center", flexShrink: 0,
-                }}>
-                  <span style={{ fontSize: 9, fontWeight: 900, color }}>{symbol}</span>
-                </div>
-                <span style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{label}</span>
-              </div>
-
-              {/* Address + Copy */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{
-                  flex: 1,
-                  background: C.card3,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: 8,
-                  padding: "9px 11px",
-                  fontSize: 11,
-                  color: C.text3,
-                  fontFamily: "monospace",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}>
-                  {address}
-                </div>
-                <button
-                  onClick={() => handleCopy(symbol, address)}
-                  style={{
-                    flexShrink: 0,
-                    background: copied === symbol ? `${C.green}22` : `${C.gold}18`,
-                    border: `1px solid ${copied === symbol ? C.green + "55" : C.gold + "44"}`,
-                    borderRadius: 8,
-                    padding: "8px 13px",
-                    fontSize: 11,
-                    fontWeight: 800,
-                    color: copied === symbol ? C.green : C.gold,
-                    cursor: "pointer",
-                    transition: "all .2s",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {copied === symbol ? "✓ Copied" : "Copy"}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer note */}
-        <div style={{ marginTop: 18, textAlign: "center", fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
-          Deposits are credited after network confirmation.{" "}
-          <span style={{ color: C.gold, fontWeight: 700 }}>Contact support</span> if your deposit does not arrive within 60 minutes.
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function TradePage({ prices }) {
   const { user } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
-  const [showDeposit, setShowDeposit] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -985,7 +962,7 @@ function TradePage({ prices }) {
 
   const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
-  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
+  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : range === "1Y" ? Array.from({ length: 52 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.25) * 2200 + i * 90 + Math.random() * 500 })) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
   
@@ -1056,8 +1033,7 @@ function TradePage({ prices }) {
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" onClick={() => setShowDeposit(true)} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
-          {showDeposit && <DepositModal onClose={() => setShowDeposit(false)} />}
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => setLoadingDep(false), 1600); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
@@ -1068,7 +1044,7 @@ function TradePage({ prices }) {
       </Card>
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
-        {HOLDINGS.map((h, i) => { const lp = prices[h.pair]?.price; return (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>); })}
+        {HOLDINGS.map((h, i) => (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>))}
       </Card>
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
@@ -1157,4 +1133,3 @@ export default function GoldenVaultXM() {
     </LayoutProvider>
   );
 }
-
