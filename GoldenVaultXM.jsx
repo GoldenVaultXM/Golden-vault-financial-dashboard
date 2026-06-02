@@ -102,8 +102,6 @@ function ensureViewportMeta() {
   /*
    * width=device-width  → use real phone pixel width, no shrink-to-fit
    * initial-scale=1.0   → start at 1:1, never zoomed in on load
-   * maximum-scale=1.0   → prevents iOS auto-zoom on input focus
-   * user-scalable=no    → locks scale, browser cannot override it
    */
   meta.content = "width=device-width, initial-scale=1.0";
 }
@@ -521,8 +519,7 @@ function AuthProvider({ children, onLogin }) {
 }
 
 function Nav({ page, setPage, open, setOpen }) {
-  const { isAuthenticated, user, logout, requireAuth } = useAuth();
-  const { mode } = useLayout();
+
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -835,7 +832,7 @@ function TradePage({ prices }) {
 
   const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
   const RANGES = ["7D", "30D", "3M", "1Y"];
-  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : perfData;
+  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : range === "1Y" ? Array.from({ length: 52 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.25) * 2200 + i * 90 + Math.random() * 500 })) : perfData;
   const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
   const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
   
@@ -917,7 +914,7 @@ function TradePage({ prices }) {
       </Card>
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
-        {HOLDINGS.map((h, i) => { const lp = prices[h.pair]?.price; return (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>); })}
+        {HOLDINGS.map((h, i) => (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>))}
       </Card>
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
