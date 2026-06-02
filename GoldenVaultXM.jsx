@@ -525,9 +525,8 @@ function AuthProvider({ children, onLogin }) {
 
 function Nav({ page, setPage, open, setOpen }) {
   const { isAuthenticated, user, logout, requireAuth } = useAuth();
-  const { mode, toggleLayout } = useLayout();
+  const { mode } = useLayout();
   const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
-  const isMobile = mode === "mobile";
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -539,33 +538,6 @@ function Nav({ page, setPage, open, setOpen }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         {isAuthenticated && (<div style={{ fontSize: 11, color: C.text3, marginRight: 6, display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green }} /> {user?.name}</div>)}
-        {/* ── Layout Toggle Button ── */}
-        <button
-          onClick={toggleLayout}
-          title={isMobile ? "Switch to Desktop View" : "Switch to Mobile View"}
-          style={{
-            display: "flex", alignItems: "center", gap: 5,  /* BUG 4 FIX: was display:"none" — button was permanently invisible */
-            background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
-            borderRadius: 8, padding: "5px 9px", cursor: "pointer",
-            transition: "background .18s, border-color .18s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = `${C.gold}28`; e.currentTarget.style.borderColor = `${C.gold}66`; }}
-          onMouseLeave={e => { e.currentTarget.style.background = `${C.gold}14`; e.currentTarget.style.borderColor = `${C.gold}33`; }}
-        >
-          {/* Mobile icon (phone) ↔ Desktop icon (monitor) */}
-          {isMobile ? (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
-            </svg>
-          ) : (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          )}
-          <span style={{ fontSize: 9, fontWeight: 900, color: C.gold, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            {isMobile ? "Mobile" : "Desktop"}
-          </span>
-        </button>
         <button style={{ background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 8 }}><Bell size={17} /></button>
         <button onClick={() => setOpen(!open)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>{open ? <X size={22} /> : <Menu size={22} />}</button>
       </div>
