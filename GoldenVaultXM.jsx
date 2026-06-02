@@ -483,178 +483,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   );
 }
 
-/* ─── Deposit Funds Modal ────────────────────────────────────────────────── */
-const DEPOSIT_WALLETS = [
-  { label: "Bitcoin",       symbol: "BTC",  address: "[Insert Address]" },
-  { label: "Ethereum",      symbol: "ETH",  address: "[Insert Address]" },
-  { label: "USDT (ERC-20)", symbol: "USDT", address: "[Insert Address]" },
-  { label: "BNB",           symbol: "BNB",  address: "[Insert Address]" },
-  { label: "Tron",          symbol: "TRX",  address: "[Insert Address]" },
-  { label: "Bitcoin Cash",  symbol: "BCH",  address: "[Insert Address]" },
-  { label: "Zcash",         symbol: "ZEC",  address: "[Insert Address]" },
-];
-
-const COIN_COLORS = {
-  BTC:  "#f7931a",
-  ETH:  "#627eea",
-  USDT: "#26a17b",
-  BNB:  "#f3ba2f",
-  TRX:  "#ff0013",
-  BCH:  "#8dc351",
-  ZEC:  "#f4b728",
-};
-
-function DepositModal({ onClose }) {
-  const [copied, setCopied] = useState(null);
-
-  const handleCopy = (address, idx) => {
-    navigator.clipboard.writeText(address).then(() => {
-      setCopied(idx);
-      setTimeout(() => setCopied(null), 2000);
-    });
-  };
-
-  /* Trap focus & close on Escape */
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0,
-        background: "#000000d0",
-        backdropFilter: "blur(16px)",
-        zIndex: 1000,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "16px",
-        overflowY: "auto",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: C.card,
-          border: `1px solid ${C.gold}44`,
-          borderRadius: 20,
-          width: "100%",
-          maxWidth: 480,
-          boxShadow: `0 0 80px ${C.gold}18, 0 32px 96px #000c`,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Gold accent top bar */}
-        <div style={{ height: 3, background: `linear-gradient(90deg, ${C.goldDim}, ${C.gold2}, ${C.goldDim})` }} />
-
-        {/* Header */}
-        <div style={{ padding: "22px 22px 0" }}>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ position: "absolute", top: 16, right: 16, background: C.card3, border: `1px solid ${C.border2}`, borderRadius: 8, cursor: "pointer", color: C.text3, padding: "5px 7px", display: "grid", placeItems: "center", transition: "color .15s" }}
-          >
-            <X size={16} />
-          </button>
-
-          {/* Logo row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: `linear-gradient(135deg, ${C.gold}, ${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0, boxShadow: `0 4px 16px ${C.gold}44` }}>
-              <ArrowDownToLine size={20} color="#000" strokeWidth={2.5} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 18, color: C.text, letterSpacing: "-0.01em" }}>Deposit Funds</div>
-              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Send crypto to any address below</div>
-            </div>
-          </div>
-
-          {/* Info banner */}
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: `${C.gold}10`, border: `1px solid ${C.gold}28`, borderRadius: 10, padding: "10px 12px", marginBottom: 20 }}>
-            <Shield size={13} color={C.gold2} style={{ flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 11, color: C.text2, lineHeight: 1.55, margin: 0 }}>
-              Send only the matching coin to each address. Sending the wrong asset may result in permanent loss. Contact support after sending.
-            </p>
-          </div>
-        </div>
-
-        {/* Wallet list */}
-        <div style={{ padding: "0 22px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {DEPOSIT_WALLETS.map((w, idx) => {
-            const color = COIN_COLORS[w.symbol] || C.gold;
-            const isCopied = copied === idx;
-            return (
-              <div
-                key={idx}
-                style={{
-                  background: C.card2,
-                  border: `1px solid ${isCopied ? color + "66" : C.border}`,
-                  borderRadius: 12,
-                  padding: "12px 14px",
-                  transition: "border-color .25s",
-                }}
-              >
-                {/* Coin label row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 7, background: `${color}22`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 9, fontWeight: 900, color, letterSpacing: "-0.02em" }}>{w.symbol}</span>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{w.label}</span>
-                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color, background: `${color}18`, borderRadius: 4, padding: "2px 7px" }}>{w.symbol}</span>
-                </div>
-
-                {/* Address + copy row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card3, borderRadius: 8, padding: "9px 12px", border: `1px solid ${C.border}` }}>
-                  <span style={{ flex: 1, fontSize: 11, color: C.text2, fontFamily: "monospace", wordBreak: "break-all", lineHeight: 1.4, letterSpacing: "0.01em" }}>
-                    {w.address}
-                  </span>
-                  <button
-                    onClick={() => handleCopy(w.address, idx)}
-                    aria-label={`Copy ${w.label} address`}
-                    style={{
-                      flexShrink: 0,
-                      padding: "6px 10px",
-                      borderRadius: 7,
-                      border: "none",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: 11,
-                      letterSpacing: "0.04em",
-                      transition: "all .18s",
-                      background: isCopied ? `${color}33` : `${C.gold}22`,
-                      color: isCopied ? color : C.gold2,
-                      display: "flex", alignItems: "center", gap: 5,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {isCopied
-                      ? <><CheckCircle2 size={12} /> Copied!</>
-                      : <><Globe size={12} /> Copy</>
-                    }
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Footer */}
-        <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, color: C.text3 }}>Need help? <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.com</span></span>
-          <button
-            onClick={onClose}
-            style={{ background: C.card3, border: `1px solid ${C.border2}`, borderRadius: 9, padding: "8px 16px", color: C.text2, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AuthProvider({ children, onLogin }) {
   const [user, setUser] = useState(null);
   const [modal, setModal] = useState(null);
@@ -1093,7 +921,7 @@ function TradePage({ prices }) {
   const { user } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
-  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showWallet, setShowWallet] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -1136,7 +964,42 @@ function TradePage({ prices }) {
   
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
-      {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
+
+      {/* ── WALLET ADDRESS MODAL ─────────────────────────────────────────── */}
+      {showWallet && (
+        <div style={{ position: "fixed", inset: 0, background: "#000000e8", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#000000", border: `1px solid ${C.gold}55`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000" }}>
+            {/* Close */}
+            <button onClick={() => setShowWallet(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
+            {/* Title */}
+            <div style={{ fontWeight: 900, fontSize: 18, color: C.gold, textAlign: "center", marginBottom: 22, letterSpacing: "0.06em" }}>Your Wallet Address</div>
+            {/* Wallet icon */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+              <div style={{ width: 60, height: 60, borderRadius: 16, background: "#000000", border: `1.5px solid ${C.gold}55`, display: "grid", placeItems: "center" }}>
+                <Wallet size={28} color={C.gold} />
+              </div>
+            </div>
+            {/* Address label */}
+            <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center", marginBottom: 10 }}>USDT (TRC20) Deposit Address</div>
+            {/* Address box */}
+            <div style={{ background: "#000000", border: `1px solid ${C.gold}44`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+              <div style={{ fontFamily: "monospace", fontSize: 13, color: C.gold2, wordBreak: "break-all", textAlign: "center", letterSpacing: "0.04em" }}>
+                TXyz1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef
+              </div>
+            </div>
+            {/* Copy button */}
+            <button
+              onClick={() => { navigator.clipboard?.writeText("TXyz1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"); }}
+              style={{ width: "100%", background: C.gold, border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900, fontSize: 13, color: "#000", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, letterSpacing: "0.04em" }}
+            >
+              <CheckCircle2 size={15} /> Copy Address
+            </button>
+            <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
+              Send only <span style={{ color: C.gold2, fontWeight: 700 }}>USDT (TRC20)</span> to this address.<br />Sending other assets may result in permanent loss.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
       {/* Keyframes for counter-rotating gears */}
@@ -1202,7 +1065,7 @@ function TradePage({ prices }) {
       <Card>
         <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" onClick={() => setShowDepositModal(true)} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); const delay = 2000 + Math.random() * 2000; setTimeout(() => { setLoadingDep(false); setShowWallet(true); }, delay); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
