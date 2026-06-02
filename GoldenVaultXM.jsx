@@ -31,47 +31,47 @@ const useAuth = () => useContext(AuthContext);
 
 /* ─── Layout Context ─────────────────────────────────────────────────────── */
 /*
- * Single source of truth for layout mode.
- * "mobile"  → max-width 600px  (narrow, app-like)
- * "desktop" → max-width 1200px (wide, dashboard-like)
+ * Responds automatically to the browser's built-in "Desktop site / Mobile site"
+ * toggle. When the browser switches to desktop mode it removes viewport
+ * shrink-to-fit and reports a wide window.innerWidth (typically 980px+).
+ * When it switches back to mobile it reports the real device pixel width.
  *
  * Rules:
- *  • Initialised from localStorage on first render — survives page reload.
- *  • ONLY changes when the user explicitly clicks the toggle button.
- *  • No window-resize listener, no auth-event override, no media-query override.
- *  • CSS injected directly onto <html> so it beats every third-party stylesheet.
+ *  • "desktop" when window.innerWidth >= 768 (browser desktop-site mode)
+ *  • "mobile"  when window.innerWidth <  768 (browser mobile-site mode)
+ *  • Recalculated on every resize event so the switch is instant.
+ *  • No localStorage, no manual toggle — the browser switch is the ONLY trigger.
  */
-const LAYOUT_KEY   = "gvxm_layout_mode";
+const LAYOUT_BREAKPOINT = 768;
 const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
 
 const LayoutContext = createContext(null);
 const useLayout = () => useContext(LayoutContext);
 
-function LayoutProvider({ children }) {
-  // Read once from localStorage — never from viewport width
-  const [mode, setModeRaw] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LAYOUT_KEY);
-      return saved === "desktop" ? "desktop" : "mobile";
-    } catch {
-      return "mobile";
-    }
-  });
+function getMode() {
+  return window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile";
+}
 
-  // Persist + apply CSS every time mode changes (and on mount)
+function LayoutProvider({ children }) {
+  const [mode, setMode] = useState(getMode);
+
   useEffect(() => {
-    try { localStorage.setItem(LAYOUT_KEY, mode); } catch {}
+    const onResize = () => {
+      const next = getMode();
+      setMode(prev => prev !== next ? next : prev);
+    };
+    window.addEventListener("resize", onResize);
+    applyLayoutCSS(getMode());
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
     applyLayoutCSS(mode);
   }, [mode]);
 
-  // Public toggle — the ONLY way the mode can change
-  const toggleLayout = useCallback(() => {
-    setModeRaw(prev => (prev === "mobile" ? "desktop" : "mobile"));
-  }, []);
-
   const width = LAYOUT_WIDTHS[mode];
   return (
-    <LayoutContext.Provider value={{ mode, width, toggleLayout }}>
+    <LayoutContext.Provider value={{ mode, width }}>
       {children}
     </LayoutContext.Provider>
   );
@@ -105,7 +105,7 @@ function ensureViewportMeta() {
    * maximum-scale=1.0   → prevents iOS auto-zoom on input focus
    * user-scalable=no    → locks scale, browser cannot override it
    */
-  meta.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+  meta.content = "width=device-width, initial-scale=1.0";
 }
 
 function applyLayoutCSS(mode) {
@@ -154,10 +154,7 @@ function applyLayoutCSS(mode) {
 
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
 ensureViewportMeta();
-applyLayoutCSS((() => {
-  try { return localStorage.getItem(LAYOUT_KEY) === "desktop" ? "desktop" : "mobile"; }
-  catch { return "mobile"; }
-})());
+applyLayoutCSS(window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile");
 
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
@@ -1009,4 +1006,3 @@ export default function GoldenVaultXM() {
     </LayoutProvider>
   );
 }
-
