@@ -966,40 +966,67 @@ function TradePage({ prices }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
 
       {/* ── WALLET ADDRESS MODAL ─────────────────────────────────────────── */}
-      {showWallet && (
-        <div style={{ position: "fixed", inset: 0, background: "#000000e8", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: "#000000", border: `1px solid ${C.gold}55`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000" }}>
-            {/* Close */}
-            <button onClick={() => setShowWallet(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
-            {/* Title */}
-            <div style={{ fontWeight: 900, fontSize: 18, color: C.gold, textAlign: "center", marginBottom: 22, letterSpacing: "0.06em" }}>Your Wallet Address</div>
-            {/* Wallet icon */}
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-              <div style={{ width: 60, height: 60, borderRadius: 16, background: "#000000", border: `1.5px solid ${C.gold}55`, display: "grid", placeItems: "center" }}>
-                <Wallet size={28} color={C.gold} />
+      {showWallet && (() => {
+        const WALLETS = [
+          { label: "Bitcoin",       short: "BTC",  address: "[Insert Address]" },
+          { label: "Ethereum",      short: "ETH",  address: "[Insert Address]" },
+          { label: "USDT (ERC20)",  short: "USDT", address: "[Insert Address]" },
+          { label: "BNB",           short: "BNB",  address: "[Insert Address]" },
+          { label: "Tron",          short: "TRX",  address: "[Insert Address]" },
+          { label: "Bitcoin Cash",  short: "BCH",  address: "[Insert Address]" },
+          { label: "Zcash",         short: "ZEC",  address: "[Insert Address]" },
+        ];
+        const WalletModal = () => {
+          const [selected, setSelected] = useState(0);
+          const [copied, setCopied] = useState(false);
+          const coin = WALLETS[selected];
+          const handleCopy = () => {
+            navigator.clipboard?.writeText(coin.address);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          };
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "#000000e8", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+              <div style={{ background: "#000000", border: `1px solid ${C.gold}55`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000" }}>
+                {/* Close */}
+                <button onClick={() => setShowWallet(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
+                {/* Title */}
+                <div style={{ fontWeight: 900, fontSize: 18, color: C.gold, textAlign: "center", marginBottom: 20, letterSpacing: "0.06em" }}>Your Wallet Address</div>
+                {/* Wallet icon */}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: "#000000", border: `1.5px solid ${C.gold}55`, display: "grid", placeItems: "center" }}>
+                    <Wallet size={26} color={C.gold} />
+                  </div>
+                </div>
+                {/* Coin selector tabs */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 18, justifyContent: "center" }}>
+                  {WALLETS.map((w, i) => (
+                    <button key={w.short} onClick={() => { setSelected(i); setCopied(false); }} style={{ padding: "6px 12px", borderRadius: 20, border: `1px solid ${selected === i ? C.gold : C.border}`, background: selected === i ? C.gold : "#000000", color: selected === i ? "#000" : C.text3, fontWeight: 800, fontSize: 11, cursor: "pointer", letterSpacing: "0.04em", transition: "all .15s" }}>
+                      {w.short}
+                    </button>
+                  ))}
+                </div>
+                {/* Address label */}
+                <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center", marginBottom: 10 }}>{coin.label} Deposit Address</div>
+                {/* Address box */}
+                <div style={{ background: "#000000", border: `1px solid ${C.gold}44`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 13, color: C.gold2, wordBreak: "break-all", textAlign: "center", letterSpacing: "0.04em" }}>
+                    {coin.address}
+                  </div>
+                </div>
+                {/* Copy button */}
+                <button onClick={handleCopy} style={{ width: "100%", background: copied ? C.green : C.gold, border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900, fontSize: 13, color: "#000", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, letterSpacing: "0.04em", transition: "background .2s" }}>
+                  <CheckCircle2 size={15} /> {copied ? "Copied!" : "Copy Address"}
+                </button>
+                <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
+                  Send only <span style={{ color: C.gold2, fontWeight: 700 }}>{coin.label}</span> to this address.<br />Sending other assets may result in permanent loss.
+                </div>
               </div>
             </div>
-            {/* Address label */}
-            <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center", marginBottom: 10 }}>USDT (TRC20) Deposit Address</div>
-            {/* Address box */}
-            <div style={{ background: "#000000", border: `1px solid ${C.gold}44`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-              <div style={{ fontFamily: "monospace", fontSize: 13, color: C.gold2, wordBreak: "break-all", textAlign: "center", letterSpacing: "0.04em" }}>
-                TXyz1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef
-              </div>
-            </div>
-            {/* Copy button */}
-            <button
-              onClick={() => { navigator.clipboard?.writeText("TXyz1234ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"); }}
-              style={{ width: "100%", background: C.gold, border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900, fontSize: 13, color: "#000", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, letterSpacing: "0.04em" }}
-            >
-              <CheckCircle2 size={15} /> Copy Address
-            </button>
-            <div style={{ marginTop: 14, textAlign: "center", fontSize: 11, color: C.text3, lineHeight: 1.6 }}>
-              Send only <span style={{ color: C.gold2, fontWeight: 700 }}>USDT (TRC20)</span> to this address.<br />Sending other assets may result in permanent loss.
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        };
+        return <WalletModal />;
+      })()}
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
       {/* Keyframes for counter-rotating gears */}
