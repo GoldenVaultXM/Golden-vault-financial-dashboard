@@ -1,3 +1,23 @@
+// ─── CORRECTIONS SUMMARY ──────────────────────────────────────────────────────
+// BUG 1 (CRITICAL) : AuthModal handle() was truncated — supabase.auth.signUp()
+//                    call was cut mid-literal, authError was unused, no error
+//                    handling, no login() call, no JSX return. FULLY RESTORED.
+// BUG 2 (CRITICAL) : useLivePrices — setFlash(flashNext) was called INSIDE the
+//                    setPrices functional updater. setState-inside-setState updater
+//                    is forbidden in React. Moved setFlash outside the updater so
+//                    it is called after setPrices completes correctly.
+// BUG 3 (CRITICAL) : AuthModal handleGoogle — onAuthStateChange subscription was
+//                    set up AFTER signInWithOAuth, meaning on a full-page redirect
+//                    the listener is destroyed before it can fire. Subscription now
+//                    set up BEFORE the OAuth call so it survives the redirect cycle.
+// BUG 4 (MINOR)    : Btn spinner — referenced CSS keyframe "spin" was never defined.
+//                    Injected @keyframes spin via a <style> tag on first render.
+// BUG 5 (MINOR)    : `let authError = null` in handle() was dead code (never
+//                    assigned or read). Removed.
+// BUG 6 (MINOR)    : `useRef` imported from React but never used. Removed from
+//                    the import to keep the bundle clean and lint-warning-free.
+// ──────────────────────────────────────────────────────────────────────────────
+
 import {
   useState,
   useEffect,
