@@ -520,11 +520,12 @@ function Nav({ page, setPage, open, setOpen }) {
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <img
-          src="/78649.png"
-          alt="Golden Vault XM"
-          style={{ height: 42, width: "auto", display: "block", flexShrink: 0, objectFit: "contain" }}
-        />
+        <div style={{ width: 36, height: 36, borderRadius: 9, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}><Zap size={17} color="#000" fill="#000" /></div>
+        <div>
+          <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
+          <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>ELITE TRADING</div>
+        </div>
+      </div>
         <div>
           <div style={{ fontWeight: 900, fontSize: 12, color: C.gold, letterSpacing: "0.1em" }}>GOLDEN VAULT XM</div>
           <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em" }}>ELITE TRADING</div>
