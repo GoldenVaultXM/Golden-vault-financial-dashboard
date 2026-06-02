@@ -533,7 +533,7 @@ function Nav({ page, setPage, open, setOpen }) {
           onClick={toggleLayout}
           title={isMobile ? "Switch to Desktop View" : "Switch to Mobile View"}
           style={{
-            display: "flex", alignItems: "center", gap: 5,
+            display: "none", alignItems: "center", gap: 5,
             background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
             borderRadius: 8, padding: "5px 9px", cursor: "pointer",
             transition: "background .18s, border-color .18s",
