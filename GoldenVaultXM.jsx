@@ -1601,7 +1601,7 @@ function AppShell({ page, setPage }) {
     }
   };
 
-  return (
+    return (
     <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
       <style>{`
         *, *::before, *::after {
@@ -1634,4 +1634,4 @@ export default function GoldenVaultXM() {
       </AuthProvider>
     </LayoutProvider>
   );
-                                        }
+}
