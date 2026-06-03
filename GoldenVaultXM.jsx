@@ -1396,9 +1396,8 @@ function NewsPage() {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!import.meta.env.VITE_NEWS_API_KEY) throw new Error("News API key not configured");
       const q = encodeURIComponent(cat || 'finance');
-      const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&token=${import.meta.env.VITE_NEWS_API_KEY}`;
+      const url = `https://<YOUR-PROJECT-REF>.supabase.co/functions/v1/news?q=${encodeURIComponent(cat || 'finance')}`;
       const res = await fetch(url, {
   headers: {
     'Accept': 'application/json'
