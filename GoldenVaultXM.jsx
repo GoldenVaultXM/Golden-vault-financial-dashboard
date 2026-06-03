@@ -1582,7 +1582,6 @@ function NewsPage() {
       )}
     </div>
   );
-}
 
 function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
