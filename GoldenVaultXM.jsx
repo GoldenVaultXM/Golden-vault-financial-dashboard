@@ -1396,7 +1396,7 @@ function NewsPage() {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!API_KEY) throw new Error("News API key not configured (VITE_NEWS_API_KEY)");
+      if (!import.meta.env.VITE_NEWS_API_KEY) throw new Error("News API key not configured");
       const q = encodeURIComponent(cat || 'finance');
       const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&apikey=${import.meta.env.VITE_NEWS_API_KEY}`;
       const res = await fetch(url, {
