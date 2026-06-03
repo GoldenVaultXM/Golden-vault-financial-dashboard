@@ -1393,30 +1393,45 @@ function NewsPage() {
   };
 
   const fetchNews = useCallback(async (cat, isRefresh = false) => {
-    if (!isRefresh) setLoading(true);
-    setError(null);
-    try {
-      const q = encodeURIComponent(cat || 'finance');
-      const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + encodeURIComponent(cat || 'finance'), {
-    method: 'GET',
-  headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI'
+  if (!isRefresh) setLoading(true);
+  setError(null);
+  try {
+    const q = encodeURIComponent(cat || 'finance');
+    const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI'
+      }
+    });
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    const json = await response.json();
+    if (json.status !== "ok") throw new Error(json.message || "API returned error");
+    
+    const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+    
+    if (isRefresh) {
+      const newIds = new Set(items.map(a => a.url));
+      const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
+      if (fresh.length > 0) {
+        setNewStoryCount(c => c + fresh.length);
+        setNewsBellAlerts(prev => [...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name })), ...prev].slice(0, 20));
+      }
+      prevArticleIds.current = newIds;
+      setArticles(items);
+    } else {
+      prevArticleIds.current = new Set(items.map(a => a.url));
+      setArticles(items);
+      setNewStoryCount(0);
     }
-  });
-const data = await response.json();
-  setNews(data.articles);
-} catch (error) {
-  console.error("Error loading news:", error);
-    }
-  headers: {
-    'Accept': 'application/json'
+  } catch (error) {
+    setError(error.message);
+  } finally {
+    setLoading(false);
   }
-});
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const json = await res.json();
-      if (json.status !== "ok") throw new Error(json.message || "API returned error");
-      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+}, []);
+
       if (isRefresh) {
         const newIds = new Set(items.map(a => a.url));
         const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
