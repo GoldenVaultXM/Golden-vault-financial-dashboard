@@ -1397,7 +1397,7 @@ function NewsPage() {
     setError(null);
     try {
       const q = encodeURIComponent(cat || 'finance');
-      const url = `https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=${encodeURIComponent(cat || 'finance')}`;
+      const url = `https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function`;
       const res = await fetch(url, {
   headers: {
     'Accept': 'application/json'
