@@ -1405,7 +1405,10 @@ function NewsPage() {
     }
   });
 const data = await response.json();
-      const res = await fetch(url, {
+  setNews(data.articles);
+} catch (error) {
+  console.error("Error loading news:", error);
+    }
   headers: {
     'Accept': 'application/json'
   }
