@@ -1406,7 +1406,7 @@ function NewsPage() {
         setNewStoryCount(c => c + fresh.length);
         setNewsBellAlerts(prev => [...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name })), ...prev].slice(0, 20));
       }
-      prevArticleIds.current = newIds;
+      prevArticleIds.current = new Set(items.map(a => a.url));
       setArticles(items);
     } else {
       prevArticleIds.current = new Set(items.map(a => a.url));
