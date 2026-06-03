@@ -1401,10 +1401,6 @@ function NewsPage() {
       const data = await response.json();
   console.log("DEBUG_DATA:", JSON.stringify(data));
 
-  return new Response(JSON.stringify({ status: "ok", articles: data.articles || [] }), {
-    const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
-    if (isRefresh) {
-      const newIds = new Set(items.map(a => a.url));
       const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
       if (fresh.length > 0) {
         setNewStoryCount(c => c + fresh.length);
