@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, } from "lucide-react";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, ExternalLink, } from "lucide-react";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -843,7 +843,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   const { notes, unreadCount, markAllRead } = useNotifications();
   const [bellOpen, setBellOpen] = useState(false);
 
-  const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "settings", label: "Settings", icon: Settings },];
+  const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "news", label: "News", icon: Newspaper }, { id: "settings", label: "Settings", icon: Settings },];
 
   const ACTIONS = [
     { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
@@ -967,7 +967,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 function BottomNav({ page, setPage }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { width } = useLayout();
-  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "settings", icon: Settings, label: "More" },];
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];
   return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
@@ -1363,55 +1363,167 @@ function SettingsPage() {
   );
 }
 
-function AppShell({ page, setPage }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
-  const { prices, flash } = useLivePrices();
-  const { mode, width } = useLayout();
-  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
-  const renderPage = () => {
-    switch (page) {
-      case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "settings": return <SettingsPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
+/* ─── News API Key ───────────────────────────────────────────────────────── */
+const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
+
+const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
+
+function NewsPage() {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [category, setCategory] = useState("All");
+  const [newStoryCount, setNewStoryCount] = useState(0);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [newsBellAlerts, setNewsBellAlerts] = useState([]);
+  const prevArticleIds = useRef(new Set());
+  const pollRef = useRef(null);
+
+  const buildQuery = (cat) => {
+    const queries = {
+      "All":         "finance OR markets OR stocks OR crypto OR forex",
+      "Top stories": "markets OR economy OR federal reserve OR inflation",
+      "Stocks":      "stocks OR equities OR S&P OR earnings",
+      "ETFs":        "ETF OR exchange traded fund",
+      "Crypto":      "bitcoin OR ethereum OR cryptocurrency OR crypto",
+      "Forex":       "forex OR currency OR dollar OR euro OR yen",
+      "Commodities": "gold OR oil OR commodities OR crude",
+    };
+    return queries[cat] || queries["All"];
+  };
+
+  const fetchNews = useCallback(async (cat, isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
+      const q = encodeURIComponent(buildQuery(cat));
+      const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const json = await res.json();
+      if (json.status !== "ok") throw new Error(json.message || "API returned error");
+      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      if (isRefresh) {
+        const newIds = new Set(items.map(a => a.url));
+        const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
+        if (fresh.length > 0) {
+          setNewStoryCount(c => c + fresh.length);
+          setNewsBellAlerts(prev => [
+            ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
+            ...prev,
+          ].slice(0, 20));
+        }
+        prevArticleIds.current = newIds;
+        setArticles(items);
+      } else {
+        prevArticleIds.current = new Set(items.map(a => a.url));
+        setArticles(items);
+        setNewStoryCount(0);
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchNews(category);
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => fetchNews(category, true), 60000);
+    return () => clearInterval(pollRef.current);
+  }, [category, fetchNews]);
+
+  const handleShowNew = () => {
+    setNewStoryCount(0);
+    fetchNews(category);
+  };
+
+  const fmtRelTime = (iso) => {
+    if (!iso) return "";
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
-      {/* Internal animation keyframes + universal box-sizing reset */}
-      <style>{`
-        *, *::before, *::after {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button, select, textarea { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        img, svg { display: block; max-width: 100%; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-      `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{renderPage()}</main><BottomNav page={page} setPage={handleSetPage} /></div>
-    </div>
-  );
-}
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
-  return (
-    <LayoutProvider>
-      <AuthProvider onLogin={() => setPage("trade")}>
-        <AppShell page={page} setPage={setPage} />
-      </AuthProvider>
-    </LayoutProvider>
-  );
-}
+      {/* ── Page Header with Notification Bell ── */}
+      <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
+            Market <span style={{ color: C.gold }}>News</span>
+          </div>
+          <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
+        </div>
+
+        {/* News Notification Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
+            style={{ background: newsBellAlerts.length > 0 ? `${C.gold}18` : C.card, border: `1px solid ${newsBellAlerts.length > 0 ? C.gold + "44" : C.border}`, borderRadius: 10, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer", color: newsBellAlerts.length > 0 ? C.gold : C.text3, position: "relative", transition: "all .2s" }}
+          >
+            <Bell size={17} />
+            {newStoryCount > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 9, background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", padding: "0 3px", lineHeight: 1 }}>
+                {newStoryCount > 9 ? "9+" : newStoryCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{ position: "absolute", top: 46, right: 0, width: "min(320px, 88vw)", maxHeight: "60vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 14, boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: C.text }}>News Alerts</span>
+                <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={15} /></button>
+              </div>
+              {newsBellAlerts.length === 0 ? (
+                <div style={{ padding: "28px 14px", textAlign: "center", color: C.text3, fontSize: 13 }}>No new alerts yet</div>
+              ) : (
+                newsBellAlerts.map((a, i) => (
+                  <div key={i} style={{ padding: "11px 14px", borderBottom: i < newsBellAlerts.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, lineHeight: 1.4, marginBottom: 4 }}>{a.title}</div>
+                    <div style={{ fontSize: 10, color: C.text3 }}>{a.source} · {fmtRelTime(a.time)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+        </div>
+      </div>
+
+      {/* ── Category Tabs ── */}
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
+        {NEWS_CATEGORIES.map(cat => (
+          <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 20, border: "none", cursor: "pointer", transition: "all .15s", background: cat === category ? C.text : `${C.gold}14`, color: cat === category ? "#000" : C.text3, }}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* ── New Stories Banner ── */}
+      {newStoryCount > 0 && (
+        <button onClick={handleShowNew} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 20, cursor: "pointer", margin: "0 auto 12px", color: C.text, fontSize: 12, fontWeight: 700 }}>
+          <ChevronRight size={13} color={C.gold} style={{ transform: "rotate(-90deg)" }} />
+          {newStoryCount} new {newStoryCount === 1 ? "story" : "stories"}
+        </button>
+      )}
+
+      {/* ── Loading ── */}
+      {loading && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
+                <
