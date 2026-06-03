@@ -1364,7 +1364,7 @@ function SettingsPage() {
 }
 
 /* ─── News API Key ───────────────────────────────────────────────────────── */
-const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
+const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
 
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
@@ -1396,7 +1396,7 @@ function NewsPage() {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
+      if (!API_KEY) throw new Error("News API key not configured (VITE_NEWS_API_KEY)");
       const q = encodeURIComponent(buildQuery(cat));
       const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
       const res = await fetch(url);
@@ -1526,4 +1526,4 @@ function NewsPage() {
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                 {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
-                <
+                <div st
