@@ -1398,8 +1398,9 @@ function NewsPage() {
   try {
     const q = encodeURIComponent(cat || 'finance');
     const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
-      
-    if (json.status !== "ok") throw new Error(json.message || "API returned error");
+const json = await response.json(); 
+
+if (json.status !== "ok") throw new Error(json.message || "API returned error");
     const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
     if (isRefresh) {
       const newIds = new Set(items.map(a => a.url));
