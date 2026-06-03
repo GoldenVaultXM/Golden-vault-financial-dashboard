@@ -1398,7 +1398,7 @@ function NewsPage() {
     try {
       if (!API_KEY) throw new Error("News API key not configured (VITE_NEWS_API_KEY)");
       const q = encodeURIComponent(buildQuery(cat));
-      const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${VITE_NEWS_API_KEY}`;
+      const url = `/api/news?q=${encodeURIComponent(q)}`;
       const res = await fetch(url, {
   headers: {
     'Accept': 'application/json'
