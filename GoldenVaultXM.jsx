@@ -1592,16 +1592,16 @@ function AppShell({ page, setPage }) {
   const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
   const renderPage = () => {
     switch (page) {
-      case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "news":     return <NewsPage />;
+      case "home": return <HomePage setPage={handleSetPage} />;
+      case "markets": return <MarketsPage prices={prices} flash={flash} />;
+      case "trade": return <TradePage prices={prices} />;
+      case "news": return <Newspage />;
       case "settings": return <SettingsPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
+      default: return <HomePage setPage={handleSetPage} />;
     }
   };
 
-    return (
+  return (
     <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
       <style>{`
         *, *::before, *::after {
@@ -1627,7 +1627,7 @@ function AppShell({ page, setPage }) {
 
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
-    return (
+  return (
     <LayoutProvider>
       <AuthProvider onLogin={() => setPage("trade")}>
         <AppShell page={page} setPage={setPage} />
