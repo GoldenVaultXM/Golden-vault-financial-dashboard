@@ -1432,30 +1432,6 @@ function NewsPage() {
   }
 }, []);
 
-      if (isRefresh) {
-        const newIds = new Set(items.map(a => a.url));
-        const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
-        if (fresh.length > 0) {
-          setNewStoryCount(c => c + fresh.length);
-          setNewsBellAlerts(prev => [
-            ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
-            ...prev,
-          ].slice(0, 20));
-        }
-        prevArticleIds.current = newIds;
-        setArticles(items);
-      } else {
-        prevArticleIds.current = new Set(items.map(a => a.url));
-        setArticles(items);
-        setNewStoryCount(0);
-      }
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     fetchNews(category);
     clearInterval(pollRef.current);
