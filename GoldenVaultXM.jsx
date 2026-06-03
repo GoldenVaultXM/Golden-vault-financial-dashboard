@@ -1406,12 +1406,8 @@ function NewsPage() {
       }
     });
 
-    const url = new URL(req.url);
-    const q = url.searchParams.get('q');
     if (json.status !== "ok") throw new Error(json.message || "API returned error");
-    
     const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
-    
     if (isRefresh) {
       const newIds = new Set(items.map(a => a.url));
       const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
