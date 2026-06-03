@@ -1406,8 +1406,8 @@ function NewsPage() {
       }
     });
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    const json = await response.json();
+    const url = new URL(req.url);
+    const q = url.searchParams.get('q');
     if (json.status !== "ok") throw new Error(json.message || "API returned error");
     
     const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
