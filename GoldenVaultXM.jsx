@@ -1397,7 +1397,7 @@ function NewsPage() {
     setError(null);
     try {
       const q = encodeURIComponent(cat || 'finance');
-      const url = `https://<YOUR-PROJECT-REF>.supabase.co/functions/v1/news?q=${encodeURIComponent(cat || 'finance')}`;
+      const url = `https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/news?q=${encodeURIComponent(cat || 'finance')}`;
       const res = await fetch(url, {
   headers: {
     'Accept': 'application/json'
