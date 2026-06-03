@@ -1364,7 +1364,7 @@ function SettingsPage() {
 }
 
 /* ─── News API Key ───────────────────────────────────────────────────────── */
-const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
+const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
 
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
@@ -1393,26 +1393,40 @@ function NewsPage() {
   };
 
   const fetchNews = useCallback(async (cat, isRefresh = false) => {
-  if (!isRefresh) setLoading(true);
-  setError(null);
-        try {
-      const q = encodeURIComponent(cat || 'finance');
-      const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
-      const data = await response.json();
-      const items = (data.articles || []).filter(a => a.title && a.title !== "[Removed]");
-      
-      const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
-      if (fresh.length > 0) {
-        setNewStoryCount(c => c + fresh.length);
-        setNewsBellAlerts(prev => [...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name })), ...prev].slice(0, 20));
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
+      const q = encodeURIComponent(buildQuery(cat));
+      const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const json = await res.json();
+      if (json.status !== "ok") throw new Error(json.message || "API returned error");
+      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      if (isRefresh) {
+        const newIds = new Set(items.map(a => a.url));
+        const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
+        if (fresh.length > 0) {
+          setNewStoryCount(c => c + fresh.length);
+          setNewsBellAlerts(prev => [
+            ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
+            ...prev,
+          ].slice(0, 20));
+        }
+        prevArticleIds.current = newIds;
+        setArticles(items);
+      } else {
+        prevArticleIds.current = new Set(items.map(a => a.url));
+        setArticles(items);
+        setNewStoryCount(0);
       }
-      prevArticleIds.current = new Set(items.map(a => a.url));
-      setArticles(items);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
-        }
+    }
+  }, []);
 
   useEffect(() => {
     fetchNews(category);
@@ -1441,7 +1455,7 @@ function NewsPage() {
   };
 
   return (
-  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
       {/* ── Page Header with Notification Bell ── */}
       <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
@@ -1488,23 +1502,6 @@ function NewsPage() {
         </div>
       </div>
 
-      {/* ── Category Tabs ── */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
-        {NEWS_CATEGORIES.map(cat => (
-          <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 20, border: "none", cursor: "pointer", transition: "all .15s", background: cat === category ? C.text : `${C.gold}14`, color: cat === category ? "#000" : C.text3, }}>
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* ── New Stories Banner ── */}
-      {newStoryCount > 0 && (
-        <button onClick={handleShowNew} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 20, cursor: "pointer", margin: "0 auto 12px", color: C.text, fontSize: 12, fontWeight: 700 }}>
-          <ChevronRight size={13} color={C.gold} style={{ transform: "rotate(-90deg)" }} />
-          {newStoryCount} new {newStoryCount === 1 ? "story" : "stories"}
-        </button>
-      )}
-
       {/* ── Loading ── */}
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
@@ -1512,21 +1509,7 @@ function NewsPage() {
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                 {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
-                <div style={{ width: 60, height: 12, borderRadius: 4, background: C.card3, alignSelf: "center" }} />
-              </div>
-              <div style={{ height: 14, borderRadius: 4, background: C.card3, marginBottom: 8 }} />
-              <div style={{ height: 14, borderRadius: 4, background: C.card3, width: "70%" }} />
-            </div>
-          ))}
-        </div>
-      )}
-    }
-            
-function AppShell({ page, setPage }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
-  <div style={{ flex: 1 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ height: 10, borderRadius: 6, background: C.card3, marginBottom: 6, width: "60%" }} />
                   <div style={{ height: 8, borderRadius: 6, background: C.card3, width: "40%" }} />
                 </div>
@@ -1536,50 +1519,13 @@ function AppShell({ page, setPage }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
-  return (
-    <LayoutProvider>
-      <AuthProvider onLogin={() => setPage("trade")}>
-        <AppShell page={page} setPage={setPage} />
-      </AuthProvider>
-    </LayoutProvider>
-  };
-
-  return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
-      <style>{`
-        *, *::before, *::after {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button, select, textarea { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        img, svg { display: block; max-width: 100%; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-      `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{renderPage()}</main><BottomNav page={page} setPage={handleSetPage} /></div>
-    </div>
-  );
-}
 
       {/* ── Error ── */}
       {!loading && error && (
-        <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center", marginTop: 8 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
           <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
           <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
-          <div style={{ fontSize: 12, color: C.text3, marginBottom: 14, lineHeight: 1.5 }}>{error}</div>
+          <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
           <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
             <RefreshCw size={13} /> Retry
           </Btn>
@@ -1602,7 +1548,7 @@ export default function GoldenVaultXM() {
             >
               {/* Source row */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}33`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}44`, display: "grid", placeItems: "center" }}>
                   <Newspaper size={10} color={C.gold} />
                 </div>
                 <span style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>{article.source?.name || "Unknown"}</span>
@@ -1637,6 +1583,59 @@ export default function GoldenVaultXM() {
   );
 }
 
+function AppShell({ page, setPage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
+  const { isAuthenticated, requireAuth } = useAuth();
+  const { prices, flash } = useLivePrices();
+  const { mode, width } = useLayout();
+
+  const handleSetPage = useCallback((p) => {
+    if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
+    setPage(p);
+  }, [isAuthenticated, requireAuth, setPage]);
+
+  const renderPage = () => {
+    switch (page) {
+      case "home":     return <HomePage setPage={handleSetPage} />;
+      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+      case "trade":    return <TradePage prices={prices} />;
+      case "news":     return <NewsPage />;
+      case "settings": return <SettingsPage />;
+      default:         return <HomePage setPage={handleSetPage} />;
+    }
+  };
+
+  return (
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
+      <style>{`
+        *, *::before, *::after {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        ::-webkit-scrollbar { display: none; }
+        scrollbar-width: none;
+        input, button, select, textarea { font-family: inherit; }
+        input::placeholder { color: #404040; }
+        img, svg { display: block; max-width: 100%; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
+      `}</style>
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
+      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
+        <main style={{ padding: "0 16px 100px" }}>
+          {renderPage()}
+        </main>
+        <BottomNav page={page} setPage={handleSetPage} />
+      </div>
+    </div>
+  );
+}
+
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
@@ -1646,4 +1645,4 @@ export default function GoldenVaultXM() {
       </AuthProvider>
     </LayoutProvider>
   );
-}
+                  }
