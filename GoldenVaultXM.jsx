@@ -1397,7 +1397,7 @@ function NewsPage() {
     setError(null);
     try {
       if (!API_KEY) throw new Error("News API key not configured (VITE_NEWS_API_KEY)");
-      const q = encodeURIComponent(buildQuery(cat));
+      const q = encodeURIComponent(cat || 'finance');
       const url = `/api/news?q=${encodeURIComponent(q)}`;
       const res = await fetch(url, {
   headers: {
