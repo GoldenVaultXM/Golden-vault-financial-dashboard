@@ -1425,8 +1425,8 @@ function NewsPage() {
       setArticles(items);
       setNewStoryCount(0);
     }
-  } catch (error) {
-    setError(error.message);
+  } catch (e) {
+    setError(e.message);
   } finally {
     setLoading(false);
   }
