@@ -1397,7 +1397,7 @@ function NewsPage() {
   setError(null);
   try {
     const q = encodeURIComponent(cat || 'finance');
-    const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q, {
+        const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
       method: 'GET',
     });
 
