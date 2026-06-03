@@ -1395,29 +1395,24 @@ function NewsPage() {
   const fetchNews = useCallback(async (cat, isRefresh = false) => {
   if (!isRefresh) setLoading(true);
   setError(null);
-  try {
-    const q = encodeURIComponent(cat || 'finance');
-    const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
+        try {
+      const q = encodeURIComponent(cat || 'finance');
+      const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
       const data = await response.json();
-  console.log("DEBUG_DATA:", JSON.stringify(data));
-
-          const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
-    if (fresh.length > 0) {
-      setNewStoryCount(c => c + fresh.length);
-      setNewsBellAlerts(prev => [...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name })), ...prev].slice(0, 20));
+      const items = (data.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      
+      const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
+      if (fresh.length > 0) {
+        setNewStoryCount(c => c + fresh.length);
+        setNewsBellAlerts(prev => [...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name })), ...prev].slice(0, 20));
+      }
       prevArticleIds.current = new Set(items.map(a => a.url));
       setArticles(items);
-    } else {
-      prevArticleIds.current = new Set(items.map(a => a.url));
-      setArticles(items);
-      setNewStoryCount(0);
-    }
-  } catch (e) {
-    setError(e.message);
-  } finally {
-    setLoading(false);
-  }
-}, []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+        }
 
   useEffect(() => {
     fetchNews(category);
