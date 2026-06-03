@@ -1627,7 +1627,7 @@ function AppShell({ page, setPage }) {
 
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
-  return (
+    return (
     <LayoutProvider>
       <AuthProvider onLogin={() => setPage("trade")}>
         <AppShell page={page} setPage={setPage} />
@@ -1635,4 +1635,3 @@ export default function GoldenVaultXM() {
     </LayoutProvider>
   );
 }
-
