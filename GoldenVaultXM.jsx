@@ -1397,7 +1397,15 @@ function NewsPage() {
     setError(null);
     try {
       const q = encodeURIComponent(cat || 'finance');
-      const url = 'https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + encodeURIComponent(cat || 'finance');
+      const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + encodeURIComponent(cat || 'finance'), {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    // If you have a Supabase anon key, add it here:
+    // 'Authorization': 'Bearer YOUR_SUPABASE_ANON_KEY' 
+  }
+});
+const data = await response.json();
       const res = await fetch(url, {
   headers: {
     'Accept': 'application/json'
