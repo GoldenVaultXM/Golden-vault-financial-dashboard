@@ -1527,3 +1527,13 @@ function NewsPage() {
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                 {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
                 <
+export default function GoldenVaultXM() {
+  const [page, setPage] = useState("home");
+  return (
+    <LayoutProvider>
+      <AuthProvider onLogin={() => setPage("trade")}>
+        <AppShell page={page} setPage={setPage} />
+      </AuthProvider>
+    </LayoutProvider>
+  );
+                }
