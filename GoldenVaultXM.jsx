@@ -1526,18 +1526,28 @@ function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
-  const { prices, flash } = useLivePrices();
-  const { mode, width } = useLayout();
-  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
-  const renderPage = () => {
-    switch (page) {
-      case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "news":     return <NewsPage />;
-      case "settings": return <SettingsPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
-    }
+  <div style={{ flex: 1 }}>
+                  <div style={{ height: 10, borderRadius: 6, background: C.card3, marginBottom: 6, width: "60%" }} />
+                  <div style={{ height: 8, borderRadius: 6, background: C.card3, width: "40%" }} />
+                </div>
+              </div>
+              <div style={{ height: 12, borderRadius: 6, background: C.card3, width: "90%", marginTop: 6 }} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function GoldenVaultXM() {
+  const [page, setPage] = useState("home");
+  return (
+    <LayoutProvider>
+      <AuthProvider onLogin={() => setPage("trade")}>
+        <AppShell page={page} setPage={setPage} />
+      </AuthProvider>
+    </LayoutProvider>
   };
 
   return (
