@@ -1398,7 +1398,7 @@ function NewsPage() {
   try {
     const q = encodeURIComponent(cat || 'finance');
     const response = await fetch('https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=' + q);
-const json = await response.json(); 
+const json = await response.json();
 
 if (json.status !== "ok") throw new Error(json.message || "API returned error");
     const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
