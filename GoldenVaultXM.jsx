@@ -1582,47 +1582,6 @@ function NewsPage() {
       )}
     </div>
   );
-
-function AppShell({ page, setPage }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
-  const { prices, flash } = useLivePrices();
-  const { mode, width } = useLayout();
-  const handleSetPage = useCallback((p) => { if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; } setPage(p); }, [isAuthenticated, requireAuth, setPage]);
-  const renderPage = () => {
-    switch (page) {
-      case "home": return <HomePage setPage={handleSetPage} />;
-      case "markets": return <MarketsPage prices={prices} flash={flash} />;
-      case "trade": return <TradePage prices={prices} />;
-      case "news": return <Newspage />;
-      case "settings": return <SettingsPage />;
-      default: return <HomePage setPage={handleSetPage} />;
-    }
-  };
-
-  return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Sora',system-ui,sans-serif", width: "100%", maxWidth: width, minWidth: 0, margin: "0 auto", position: "relative", WebkitFontSmoothing: "antialiased", overflowX: "hidden", transition: "max-width 0.25s ease" }}>
-      <style>{`
-        *, *::before, *::after {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button, select, textarea { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        img, svg { display: block; max-width: 100%; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-      `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}07 0%,transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
-      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", zIndex: 1 }}><Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} /><main style={{ padding: "0 16px", paddingBottom: 100 }}>{renderPage()}</main><BottomNav page={page} setPage={handleSetPage} /></div>
-    </div>
-  );
 }
 
 export default function GoldenVaultXM() {
