@@ -1330,7 +1330,9 @@ function TradePage({ prices }) {
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
       </Card>
-
+      </div>
+  );
+}
 function SettingsPage() {
   const { isAuthenticated, logout, requireAuth } = useAuth();
   const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
