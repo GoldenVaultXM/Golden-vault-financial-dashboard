@@ -891,9 +891,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
-  <span style={{ color: C.text }}>GOLDEN VAULT </span>
-  <span style={{ color: "#ef4444" }}>XM</span>
-</div>
+        <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
       </div>
 
       {/* Right controls */}
