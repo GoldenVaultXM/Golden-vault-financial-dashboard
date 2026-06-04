@@ -1395,7 +1395,6 @@ function NewsPage() {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!API_KEY) throw new Error("__NO_KEY__");
       const q = encodeURIComponent(buildQuery(cat));
       const url = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI`;
 const res = await fetch(url, {
