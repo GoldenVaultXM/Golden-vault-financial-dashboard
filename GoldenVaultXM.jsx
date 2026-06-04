@@ -4,26 +4,23 @@ import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, Ar
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
-const C = {
-  bg: "#080808",
-  card: "#0f0f0f",
-  card2: "#141414",
-  card3: "#1a1a1a",
-  border: "#222222",
-  border2: "#2a2a2a",
-  gold: "#d97706",
-  gold2: "#f59e0b",
-  gold3: "#fbbf24",
-  goldDim: "#92400e",
-  green: "#22c55e",
-  red: "#ef4444",
-  purple: "#7c3aed",
-  blue: "#3b82f6",
-  text: "#ffffff",
-  text2: "#a3a3a3",
-  text3: "#525252",
-  text4: "#303030",
+const DARK_TOKENS = {
+  bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
+  border: "#222222", border2: "#2a2a2a",
+  gold: "#d97706", gold2: "#f59e0b", gold3: "#fbbf24", goldDim: "#92400e",
+  green: "#22c55e", red: "#ef4444", purple: "#7c3aed", blue: "#3b82f6",
+  text: "#ffffff", text2: "#a3a3a3", text3: "#525252", text4: "#303030",
 };
+const LIGHT_TOKENS = {
+  bg: "#f5f1ea", card: "#ffffff", card2: "#faf7f2", card3: "#f0ebe0",
+  border: "#e2d9c8", border2: "#d4c9b4",
+  gold: "#b45309", gold2: "#d97706", gold3: "#f59e0b", goldDim: "#92400e",
+  green: "#15803d", red: "#dc2626", purple: "#6d28d9", blue: "#1d4ed8",
+  text: "#1a1008", text2: "#44403c", text3: "#78716c", text4: "#c8bfaf",
+};
+const C = { ...DARK_TOKENS };
+const ThemeContext = createContext(null);
+const useTheme = () => useContext(ThemeContext);
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
@@ -75,8 +72,58 @@ function LayoutProvider({ children }) {
       {children}
     </LayoutContext.Provider>
   );
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("gvxm-theme") || "dark"; } catch { return "dark"; }
+  });
+  const [, tick] = useState(0);
+  const { mode } = useLayout();
+
+  useEffect(() => {
+    const tokens = theme === "light" ? LIGHT_TOKENS : DARK_TOKENS;
+    Object.assign(C, tokens);
+    applyLayoutCSS(mode, theme);
+    try { localStorage.setItem("gvxm-theme", theme); } catch {}
+    tick(n => n + 1);
+  }, [theme, mode]);
+
+  const toggle = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);
+  return (
+    <ThemeContext.Provider value={{ theme, toggle }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={toggle}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title={theme === "dark" ? "Switch to Light" : "Switch to Dark"}
+      style={{
+        background: hov ? C.card3 : C.card2,
+        border: `1.5px solid ${C.border2}`,
+        borderRadius: 20,
+        padding: "6px 12px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        transition: "all .18s",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: 15 }}>{theme === "dark" ? "☀️" : "🌒"}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.text2, letterSpacing: "0.03em" }}>
+        {theme === "dark" ? "Light" : "Dark"}
+      </span>
+    </button>
+  );
+}
 /* ─── Viewport + Base CSS — SYNCHRONOUS module-level execution ───────────────
  *
  * WHY THIS MUST RUN AT MODULE LOAD (not in useEffect):
@@ -106,50 +153,31 @@ function ensureViewportMeta() {
   meta.content = "width=device-width, initial-scale=1.0";
 }
 
-function applyLayoutCSS(mode) {
+function applyLayoutCSS(mode, theme = "dark") {
   const w = LAYOUT_WIDTHS[mode];
+  const bg = theme === "light" ? "#f5f1ea" : "#080808";
   const id = "gvxm-layout-lock";
   let tag = document.getElementById(id);
   if (!tag) {
     tag = document.createElement("style");
     tag.id = id;
-    /* Prepend to <head> so this beats every other stylesheet */
     document.head.insertBefore(tag, document.head.firstChild);
   }
   tag.textContent = `
-    html {
-      background: #080808 !important;
-      overflow-x: hidden !important;
-    }
+    html { background: ${bg} !important; overflow-x: hidden !important; }
     body {
-      background: #080808 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      /* FLUID — fills phone screen natively, no browser zoom triggered */
-      width: 100% !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
+      background: ${bg} !important; margin: 0 !important; padding: 0 !important;
+      width: 100% !important; min-width: 0 !important; max-width: 100% !important;
       overflow-x: hidden !important;
-      -webkit-text-size-adjust: 100% !important;
-      text-size-adjust: 100% !important;
+      -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
     }
-    /* App shell is capped at chosen layout width, centred on wider screens */
     .gvxm-shell {
-      width: 100% !important;
-      max-width: ${w}px !important;
-      min-width: 0 !important;
-      margin: 0 auto !important;
-      overflow-x: hidden !important;
-      box-sizing: border-box !important;
+      width: 100% !important; max-width: ${w}px !important; min-width: 0 !important;
+      margin: 0 auto !important; overflow-x: hidden !important; box-sizing: border-box !important;
     }
-    #gvxm-root {
-      width: 100% !important;
-      max-width: 100% !important;
-      overflow-x: hidden !important;
-    }
+    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
   `;
 }
-
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
 ensureViewportMeta();
 applyLayoutCSS(window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile");
@@ -1650,9 +1678,11 @@ export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
     <LayoutProvider>
-      <AuthProvider onLogin={() => setPage("trade")}>
-        <AppShell page={page} setPage={setPage} />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider onLogin={() => setPage("trade")}>
+          <AppShell page={page} setPage={setPage} />
+        </AuthProvider>
+      </ThemeProvider>
     </LayoutProvider>
   );
-                  }
+}
