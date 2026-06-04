@@ -893,6 +893,8 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
           <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
         <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
       </div>
+</div>
+</div>
 
       {/* Right controls */}
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
