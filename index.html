@@ -9,97 +9,157 @@
     <div id="root"></div>
     <script type="module" src="/main.jsx"></script>
 
-    <!-- Draggable, resized and purple tawk.to widget -->
+    <!-- ============================================================
+         TAWK.TO CHAT — PASTE YOUR TAWK.TO EMBED LINK ON LINE BELOW
+         Replace the src URL with your own from tawk.to dashboard
+         ============================================================ -->
     <script type="text/javascript">
-      window.addEventListener('load', function () {
-        var interval = setInterval(function () {
-          var widget = document.querySelector('#tawkchat-minified-container') ||
-                       document.querySelector('[id^="tawkchat"]') ||
-                       document.querySelector('#chat-widget-container');
-          if (widget) {
-            clearInterval(interval);
-            var tawkDirectLink = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
-            widget.addEventListener('click', function () {
-              window.open(tawkDirectLink, '_blank');
-            });
-            widget.style.position = 'fixed';
-            widget.style.bottom = 'auto';
-            widget.style.top = '40%';
-            widget.style.right = '10px';
-            widget.style.left = 'auto';
-            widget.style.cursor = 'grab';
-            widget.style.zIndex = '9999';
-            widget.style.transform = 'scale(0.75) translateY(-50%)';
-            widget.style.transformOrigin = 'top right';
-            var styleTag = document.createElement('style');
-            styleTag.innerHTML = `
-              #tawkchat-minified-container iframe,
-              [id^="tawkchat"] iframe {
-                filter: hue-rotate(200deg) saturate(2) !important;
-              }
-            `;
-            document.head.appendChild(styleTag);
-            var isDragging = false;
-            var offsetX, offsetY;
-            widget.addEventListener('touchstart', function (e) {
-              isDragging = true;
-              var touch = e.touches[0];
-              var rect = widget.getBoundingClientRect();
-              offsetX = touch.clientX - rect.left;
-              offsetY = touch.clientY - rect.top;
-              widget.style.transform = 'scale(0.75)';
-              widget.style.cursor = 'grabbing';
-            });
-            document.addEventListener('touchmove', function (e) {
-              if (!isDragging) return;
-              e.preventDefault();
-              var touch = e.touches[0];
-              widget.style.top = (touch.clientY - offsetY) + 'px';
-              widget.style.left = (touch.clientX - offsetX) + 'px';
-              widget.style.right = 'auto';
-              widget.style.bottom = 'auto';
-            }, { passive: false });
-            document.addEventListener('touchend', function () {
-              isDragging = false;
-              widget.style.cursor = 'grab';
-            });
-            widget.addEventListener('mousedown', function (e) {
-              isDragging = true;
-              var rect = widget.getBoundingClientRect();
-              offsetX = e.clientX - rect.left;
-              offsetY = e.clientY - rect.top;
-              widget.style.transform = 'scale(0.75)';
-              widget.style.cursor = 'grabbing';
-            });
-            document.addEventListener('mousemove', function (e) {
-              if (!isDragging) return;
-              widget.style.top = (e.clientY - offsetY) + 'px';
-              widget.style.left = (e.clientX - offsetX) + 'px';
-              widget.style.right = 'auto';
-              widget.style.bottom = 'auto';
-            });
-            document.addEventListener('mouseup', function () {
-              isDragging = false;
-              widget.style.cursor = 'grab';
-            });
+      // ➡️  PASTE YOUR TAWK.TO CHAT LINK HERE (replace the src value below):
+      var TAWK_SRC = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
+      // ============================================================
+
+      var Tawk_API = Tawk_API || {};
+      var Tawk_LoadStart = new Date();
+
+      // --- 1. Load Tawk.to script ---
+      (function () {
+        var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
+        s1.async = true;
+        s1.src = TAWK_SRC;
+        s1.charset = 'UTF-8';
+        s1.setAttribute('crossorigin', '*');
+        s0.parentNode.insertBefore(s1, s0);
+      })();
+
+      // --- 2. Show widget ONLY on home page (/  or  /index.html) ---
+      function isHomePage() {
+        var p = window.location.pathname;
+        return p === '/' || p === '/index.html' || p === '';
+      }
+
+      Tawk_API.onLoad = function () {
+        if (!isHomePage()) {
+          Tawk_API.hideWidget();
+        }
+      };
+
+      // Handle SPA route changes (works with React Router / history API)
+      (function () {
+        var _pushState = history.pushState;
+        var _replaceState = history.replaceState;
+
+        function handleRouteChange() {
+          if (typeof Tawk_API !== 'undefined' && Tawk_API.hideWidget) {
+            if (isHomePage()) {
+              Tawk_API.showWidget();
+            } else {
+              Tawk_API.hideWidget();
+            }
           }
+        }
+
+        history.pushState = function () {
+          _pushState.apply(history, arguments);
+          handleRouteChange();
+        };
+        history.replaceState = function () {
+          _replaceState.apply(history, arguments);
+          handleRouteChange();
+        };
+        window.addEventListener('popstate', handleRouteChange);
+      })();
+
+      // --- 3. Make the Tawk widget DRAGGABLE ---
+      (function () {
+        var dragging = false, startX, startY, origX, origY;
+        var widget = null;
+
+        function makeDraggable(el) {
+          if (!el || el._tawkDraggable) return;
+          el._tawkDraggable = true;
+          el.style.cursor = 'grab';
+          el.style.userSelect = 'none';
+          el.style.position = 'fixed';
+          el.style.touchAction = 'none';
+
+          // Mouse
+          el.addEventListener('mousedown', function (e) {
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            var rect = el.getBoundingClientRect();
+            origX = rect.left;
+            origY = rect.top;
+            el.style.cursor = 'grabbing';
+            e.preventDefault();
+          });
+
+          document.addEventListener('mousemove', function (e) {
+            if (!dragging) return;
+            var dx = e.clientX - startX;
+            var dy = e.clientY - startY;
+            var newX = Math.min(Math.max(origX + dx, 0), window.innerWidth - el.offsetWidth);
+            var newY = Math.min(Math.max(origY + dy, 0), window.innerHeight - el.offsetHeight);
+            el.style.left = newX + 'px';
+            el.style.top = newY + 'px';
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+          });
+
+          document.addEventListener('mouseup', function () {
+            dragging = false;
+            if (widget) widget.style.cursor = 'grab';
+          });
+
+          // Touch
+          el.addEventListener('touchstart', function (e) {
+            dragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            var rect = el.getBoundingClientRect();
+            origX = rect.left;
+            origY = rect.top;
+            e.preventDefault();
+          }, { passive: false });
+
+          document.addEventListener('touchmove', function (e) {
+            if (!dragging) return;
+            var dx = e.touches[0].clientX - startX;
+            var dy = e.touches[0].clientY - startY;
+            var newX = Math.min(Math.max(origX + dx, 0), window.innerWidth - el.offsetWidth);
+            var newY = Math.min(Math.max(origY + dy, 0), window.innerHeight - el.offsetHeight);
+            el.style.left = newX + 'px';
+            el.style.top = newY + 'px';
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+          }, { passive: false });
+
+          document.addEventListener('touchend', function () {
+            dragging = false;
+          });
+        }
+
+        // Poll for Tawk iframe/widget container to appear in DOM
+        var attempts = 0;
+        var interval = setInterval(function () {
+          attempts++;
+          // Tawk renders inside an iframe wrapper div with id containing "tawk"
+          var candidates = document.querySelectorAll('[id*="tawk"], [class*="tawk"], iframe[src*="tawk"]');
+          candidates.forEach(function (el) {
+            // Target the outermost fixed container
+            var target = el;
+            while (target.parentElement && target.parentElement !== document.body) {
+              target = target.parentElement;
+            }
+            if (target && target !== document.body) {
+              makeDraggable(target);
+              widget = target;
+            }
+          });
+          if (widget || attempts > 60) clearInterval(interval);
         }, 500);
-      });
+      })();
     </script>
-
-    <!--Start of Tawk.to Script-->
-    <script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/default';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    })();
-    </script>
-    <!--End of Tawk.to Script-->
-
+    <!-- End of Tawk.to Chat -->
   </body>
 </html>
