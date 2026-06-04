@@ -1606,11 +1606,12 @@ function AppShell({ page, setPage }) {
   const renderPage = () => {
     switch (page) {
       case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "news": return <NewsPage onNewsCount={setNewsCount} />;
-      case "settings": return <SettingsPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
+case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+case "trade":    return <TradePage prices={prices} />;
+case "mining":   return <Mining user={user} />;
+case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+case "settings": return <SettingsPage />;
+default:         return <HomePage setPage={handleSetPage} />;
     }
   };
 
