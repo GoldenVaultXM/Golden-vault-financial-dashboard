@@ -24,23 +24,29 @@ import { Zap, Cpu, TrendingUp, Lock, X, UserPlus, LogIn } from "lucide-react";
    Design tokens
 ───────────────────────────────────────────────────────────────────────── */
 const C = {
-  bg: "#080808",
-  card: "#0f0f0f",
-  card2: "#141414",
-  card3: "#1a1a1a",
-  border: "#222222",
-  border2: "#2a2a2a",
+  bg: "#07050f",
+  bgMid: "#0e0a1c",
+  card: "#110d20",
+  card2: "#160f28",
+  card3: "#1c1430",
+  border: "#2a1f4a",
+  border2: "#352860",
   gold: "#d97706",
   gold2: "#f59e0b",
   gold3: "#fbbf24",
   goldDim: "#92400e",
+  purple: "#7c3aed",
+  purple2: "#9d5cf5",
+  purple3: "#c084fc",
+  purpleGlow: "#a855f7",
+  pink: "#ec4899",
+  pink2: "#f472b6",
   green: "#22c55e",
   red: "#ef4444",
-  purple: "#7c3aed",
   text: "#ffffff",
-  text2: "#a3a3a3",
-  text3: "#525252",
-  text4: "#303030",
+  text2: "#c4b5d8",
+  text3: "#6b5a8a",
+  text4: "#3d2f5c",
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -388,193 +394,316 @@ function PairSelector({ pairs, selected, onSelect }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Pinky smoke burst – renders on each tap
+───────────────────────────────────────────────────────────────────────── */
+function SmokePuff({ id, onDone }) {
+  const puffs = Array.from({ length: 7 }, (_, i) => ({
+    angle: (i / 7) * 360,
+    dist: 55 + Math.random() * 40,
+    size: 28 + Math.random() * 24,
+    delay: i * 0.04,
+  }));
+
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10 }}>
+      {puffs.map((p, i) => {
+        const rad = (p.angle * Math.PI) / 180;
+        const tx = Math.cos(rad) * p.dist;
+        const ty = Math.sin(rad) * p.dist;
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0.85, scale: 0.3, x: 0, y: 0 }}
+            animate={{ opacity: 0, scale: 1.8, x: tx, y: ty }}
+            transition={{ duration: 0.7, delay: p.delay, ease: "easeOut" }}
+            onAnimationComplete={i === 0 ? onDone : undefined}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              marginTop: -p.size / 2,
+              marginLeft: -p.size / 2,
+              width: p.size,
+              height: p.size,
+              borderRadius: "50%",
+              background: `radial-gradient(circle, #f472b688 0%, #a855f744 50%, transparent 100%)`,
+              filter: "blur(6px)",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Large floating vault coin – Priority 1 visual
 ───────────────────────────────────────────────────────────────────────── */
 function TapCoin({ pair, onTap, exhausted }) {
   const [ringKey, setRingKey] = useState(0);
-  const [pressed, setPressed] = useState(false);
+  const [smokes, setSmokes] = useState([]);
+  const smokeId = useRef(0);
 
   const handleTap = useCallback(
     (e) => {
-      if (exhausted) return;
       onTap(e);
-      setRingKey((k) => k + 1);
+      if (!exhausted) {
+        setRingKey((k) => k + 1);
+        const sid = smokeId.current++;
+        setSmokes((s) => [...s, sid]);
+      }
     },
     [exhausted, onTap]
   );
+
+  const removeSmoke = useCallback((id) => {
+    setSmokes((s) => s.filter((x) => x !== id));
+  }, []);
 
   return (
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        // Coin takes up ~40% of viewport height on mobile
-        height: "42vw",
-        maxHeight: 320,
-        minHeight: 220,
+        minHeight: 310,
         position: "relative",
+        paddingTop: 16,
+        paddingBottom: 0,
       }}
     >
-      {/* Ambient outer glow pool */}
-      <div
+      {/* Deep purple ambient light pool behind coin */}
+      <motion.div
+        animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.75, 0.5] }}
+        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
         style={{
           position: "absolute",
-          width: "90%",
-          height: "90%",
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "82%",
+          height: "72%",
           borderRadius: "50%",
-          background: exhausted
-            ? "transparent"
-            : `radial-gradient(circle, ${pair.color}30 0%, transparent 70%)`,
-          filter: "blur(28px)",
-          transform: "scale(1.3)",
-          transition: "background 0.4s",
+          background: `radial-gradient(ellipse, ${C.purpleGlow}40 0%, ${C.purple}22 40%, transparent 70%)`,
+          filter: "blur(32px)",
           pointerEvents: "none",
         }}
       />
 
+      {/* Coin wrapper with float animation */}
       <motion.div
-        whileTap={exhausted ? {} : { scale: 0.87 }}
-        transition={{ type: "spring", stiffness: 380, damping: 18 }}
-        onPointerDown={handleTap}
-        style={{
-          position: "relative",
-          width: "38vw",
-          height: "38vw",
-          maxWidth: 260,
-          maxHeight: 260,
-          minWidth: 180,
-          minHeight: 180,
-          borderRadius: "50%",
-          cursor: exhausted ? "not-allowed" : "pointer",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-          touchAction: "none",
-        }}
+        animate={{ y: [0, -12, 0] }}
+        transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut" }}
+        style={{ position: "relative", zIndex: 2 }}
       >
-        {/* Multi-layer conic glow ring */}
         <motion.div
-          animate={exhausted ? {} : { rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+          whileTap={exhausted ? {} : { scale: 0.88, rotate: -2 }}
+          transition={{ type: "spring", stiffness: 400, damping: 18 }}
+          onPointerDown={handleTap}
           style={{
-            position: "absolute",
-            inset: -8,
+            position: "relative",
+            width: "72vw",
+            height: "72vw",
+            maxWidth: 290,
+            maxHeight: 290,
+            minWidth: 220,
+            minHeight: 220,
             borderRadius: "50%",
-            background: exhausted
-              ? "none"
-              : `conic-gradient(from 0deg, ${pair.color}88, ${C.gold3}cc, ${pair.color}44, ${C.gold2}aa, transparent, ${pair.color}88)`,
-            filter: "blur(10px)",
-            opacity: exhausted ? 0 : 0.85,
-            transition: "opacity 0.4s",
-          }}
-        />
-
-        {/* Static border ring */}
-        <div
-          style={{
-            position: "absolute",
-            inset: -3,
-            borderRadius: "50%",
-            border: `2px solid ${exhausted ? C.border : C.gold2 + "66"}`,
-            pointerEvents: "none",
-          }}
-        />
-
-        {/* Coin body */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "50%",
-            background: exhausted
-              ? `radial-gradient(circle at 38% 32%, #2a2a2a, #111)`
-              : `radial-gradient(circle at 35% 28%, ${C.gold3}, ${C.gold2} 40%, ${C.gold} 65%, ${C.goldDim})`,
-            boxShadow: exhausted
-              ? "none"
-              : `0 12px 48px ${C.gold}66, 0 3px 0 #fff4 inset, 0 -6px 0 #0008 inset, 0 0 0 1px ${C.gold}33`,
-            border: `3px solid ${exhausted ? C.border : C.gold + "aa"}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-            gap: 0,
-            transition: "background 0.4s, box-shadow 0.4s",
-            overflow: "hidden",
+            cursor: exhausted ? "not-allowed" : "pointer",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            touchAction: "none",
           }}
         >
-          {/* Inner rim */}
+          {/* Rotating conic halo */}
+          <motion.div
+            animate={exhausted ? {} : { rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 9, ease: "linear" }}
+            style={{
+              position: "absolute",
+              inset: -10,
+              borderRadius: "50%",
+              background: exhausted
+                ? "none"
+                : `conic-gradient(from 0deg, ${C.purpleGlow}66, ${C.gold3}cc, ${C.pink}55, ${C.gold2}bb, transparent, ${C.purpleGlow}66)`,
+              filter: "blur(12px)",
+              opacity: exhausted ? 0 : 0.9,
+            }}
+          />
+
+          {/* Outer ring */}
           <div
             style={{
               position: "absolute",
-              inset: 8,
+              inset: -2,
               borderRadius: "50%",
-              border: `1.5px solid ${exhausted ? "#333" : "#fff3"}`,
+              border: `2px solid ${exhausted ? C.border : C.gold2 + "55"}`,
               pointerEvents: "none",
             }}
           />
 
-          {/* Lightning bolt logo overlay */}
-          {!exhausted && (
+          {/* Coin body – rich gold radial */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background: exhausted
+                ? `radial-gradient(circle at 38% 32%, #2a2040, #0e0a1c)`
+                : `radial-gradient(circle at 33% 26%, #fff3a0, ${C.gold3} 22%, ${C.gold2} 45%, ${C.gold} 65%, ${C.goldDim} 85%, #3d1c00)`,
+              boxShadow: exhausted
+                ? `0 8px 32px #00000088`
+                : `0 16px 60px ${C.gold}55, 0 4px 0 #fffbe066 inset, 0 -8px 0 #00000055 inset, 0 0 0 2px ${C.gold}44`,
+              border: `3px solid ${exhausted ? "#2a1f4a" : C.gold + "99"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "column",
+              overflow: "hidden",
+              transition: "background 0.4s, box-shadow 0.4s",
+            }}
+          >
+            {/* Coin rim groove */}
             <div
               style={{
                 position: "absolute",
-                inset: 0,
+                inset: 10,
+                borderRadius: "50%",
+                border: `2px solid ${exhausted ? "#2a1f4a" : "#fff4"}`,
+                pointerEvents: "none",
+              }}
+            />
+
+            {/* Lightning bolt – large centrepiece */}
+            <div
+              style={{
+                position: "relative",
+                zIndex: 1,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: 0.07,
+                opacity: exhausted ? 0.25 : 1,
+                filter: exhausted ? "none" : `drop-shadow(0 0 12px ${C.gold3}cc) drop-shadow(0 4px 8px #00000088)`,
               }}
             >
-              <Zap size={100} color="#000" strokeWidth={3} />
+              <Zap
+                size={90}
+                color={exhausted ? C.text4 : "#fff"}
+                fill={exhausted ? C.text4 : C.gold3}
+                strokeWidth={1.5}
+              />
             </div>
-          )}
 
-          {/* Asset logo */}
-          <div style={{ opacity: exhausted ? 0.3 : 1, transition: "opacity 0.3s", zIndex: 1 }}>
-            {pair.logo}
+            {/* Pair label */}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 900,
+                color: exhausted ? C.text4 : "#00000099",
+                letterSpacing: "0.22em",
+                zIndex: 1,
+                marginTop: -6,
+                textShadow: exhausted ? "none" : "0 1px 0 #fff5",
+              }}
+            >
+              {exhausted ? "RECHARGING" : pair.label}
+            </span>
           </div>
 
-          {/* Pair label */}
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 900,
-              color: exhausted ? C.text4 : "#000",
-              letterSpacing: "0.18em",
-              zIndex: 1,
-              marginTop: -4,
-              textShadow: exhausted ? "none" : "0 1px 0 #fff6",
-            }}
-          >
-            {exhausted ? "RECHARGING" : pair.label}
-          </span>
-        </div>
+          {/* Smoke puffs on tap */}
+          <AnimatePresence>
+            {smokes.map((sid) => (
+              <SmokePuff key={sid} id={sid} onDone={() => removeSmoke(sid)} />
+            ))}
+          </AnimatePresence>
 
-        {/* Tap instruction hint when not exhausted */}
-        {!exhausted && (
-          <motion.div
-            animate={{ opacity: [0.4, 0.9, 0.4] }}
-            transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-            style={{
-              position: "absolute",
-              bottom: -32,
-              left: "50%",
-              transform: "translateX(-50%)",
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: "0.2em",
-              color: C.text3,
-              whiteSpace: "nowrap",
-              textTransform: "uppercase",
-            }}
-          >
-            TAP TO MINE
-          </motion.div>
-        )}
-
-        {/* Electric burst ring */}
-        <ElectricRing trigger={ringKey} />
+          {/* Electric burst ring */}
+          <ElectricRing trigger={ringKey} />
+        </motion.div>
       </motion.div>
+
+      {/* ── Coin pedestal / base ── */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          marginTop: -18,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        {/* Shadow cast by coin onto base */}
+        <motion.div
+          animate={{ scaleX: [1, 0.88, 1], opacity: [0.55, 0.35, 0.55] }}
+          transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut" }}
+          style={{
+            width: "55%",
+            height: 14,
+            borderRadius: "50%",
+            background: `radial-gradient(ellipse, ${C.gold}55 0%, transparent 70%)`,
+            filter: "blur(6px)",
+            marginBottom: -7,
+          }}
+        />
+        {/* Top disc */}
+        <div
+          style={{
+            width: "62vw",
+            maxWidth: 220,
+            height: 18,
+            borderRadius: "50%",
+            background: `linear-gradient(180deg, #2a1f4a, #1a1030)`,
+            border: `1px solid ${C.border2}`,
+            boxShadow: `0 4px 18px #00000077, 0 1px 0 ${C.purple2}33 inset`,
+          }}
+        />
+        {/* Pedestal body */}
+        <div
+          style={{
+            width: "44vw",
+            maxWidth: 156,
+            height: 22,
+            background: `linear-gradient(180deg, #1e1535, #110d20)`,
+            borderLeft: `1px solid ${C.border}`,
+            borderRight: `1px solid ${C.border}`,
+            boxShadow: `0 6px 20px #00000066`,
+            clipPath: "polygon(4% 0%, 96% 0%, 100% 100%, 0% 100%)",
+          }}
+        />
+        {/* Base plate */}
+        <div
+          style={{
+            width: "52vw",
+            maxWidth: 188,
+            height: 10,
+            borderRadius: "0 0 8px 8px",
+            background: `linear-gradient(180deg, #160f28, #0d0a18)`,
+            border: `1px solid ${C.border}`,
+            borderTop: "none",
+            boxShadow: `0 4px 16px #00000055`,
+          }}
+        />
+      </div>
+
+      {/* Tap hint */}
+      {!exhausted && (
+        <motion.div
+          animate={{ opacity: [0.35, 0.8, 0.35] }}
+          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+          style={{
+            marginTop: 16,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.22em",
+            color: C.text3,
+            textTransform: "uppercase",
+          }}
+        >
+          TAP THE COIN TO MINE
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -619,8 +748,8 @@ function StatsStrip({ balance, sessionEarned, taps }) {
         <div
           key={s.label}
           style={{
-            background: "linear-gradient(145deg, #161616, #0e0e0e)",
-            border: `1px solid #282828`,
+            background: `linear-gradient(145deg, ${C.card2}, ${C.card})`,
+            border: `1px solid ${C.border}`,
             borderRadius: 14,
             padding: "14px 8px 12px",
             textAlign: "center",
@@ -799,7 +928,7 @@ function AuthGate({ onSignUp, onSignIn }) {
         style={{
           padding: "18px 16px 14px",
           borderBottom: `1px solid ${C.border}`,
-          background: `linear-gradient(180deg, #0c0c0c, ${C.bg})`,
+          background: `linear-gradient(180deg, #0d0818, ${C.bg})`,
         }}
       >
         <h1
@@ -1140,21 +1269,57 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
   return (
     <div
       style={{
-        background: C.bg,
+        background: `linear-gradient(160deg, #0d0818 0%, #07050f 40%, #0a0618 70%, #06040e 100%)`,
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         gap: 0,
         fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
         paddingBottom: 100,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* ── Purple mesh background orbs ── */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        {/* Top-left orb */}
+        <div style={{
+          position: "absolute", top: "-10%", left: "-15%",
+          width: 320, height: 320, borderRadius: "50%",
+          background: "radial-gradient(circle, #7c3aed22 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+        {/* Top-right orb */}
+        <div style={{
+          position: "absolute", top: "5%", right: "-10%",
+          width: 260, height: 260, borderRadius: "50%",
+          background: "radial-gradient(circle, #a855f718 0%, transparent 70%)",
+          filter: "blur(50px)",
+        }} />
+        {/* Centre accent */}
+        <div style={{
+          position: "absolute", top: "25%", left: "50%",
+          transform: "translateX(-50%)",
+          width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, #6d28d912 0%, transparent 65%)",
+          filter: "blur(60px)",
+        }} />
+        {/* Bottom orb */}
+        <div style={{
+          position: "absolute", bottom: "8%", right: "10%",
+          width: 200, height: 200, borderRadius: "50%",
+          background: "radial-gradient(circle, #ec489914 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+      </div>
+
       {/* ── Header ── */}
       <div
         style={{
           padding: "18px 16px 14px",
           borderBottom: `1px solid ${C.border}`,
-          background: `linear-gradient(180deg, #0c0c0c, ${C.bg})`,
+          background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`,
+          position: "relative", zIndex: 1,
         }}
       >
         <h1
