@@ -1519,17 +1519,27 @@ function NewsPage() {
         </div>
       )}
 
-      {/* ── Error ── */}
-      {!loading && error && (
-        <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
-          <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
-          <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
-          <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
-            <RefreshCw size={13} /> Retry
-          </Btn>
-        </div>
-      )}
+      {/* ── Error / No Key ── */}
+{!loading && error && (
+  error === "__NO_KEY__" ? (
+    <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
+      <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+        Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
+      </div>
+    </div>
+  ) : (
+    <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+      <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
+      <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
+      <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
+      <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
+        <RefreshCw size={13} /> Retry
+      </Btn>
+    </div>
+  )
+)}
 
       {/* ── Articles ── */}
       {!loading && !error && (
