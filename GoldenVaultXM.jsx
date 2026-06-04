@@ -1400,7 +1400,7 @@ function SettingsPage() {
 /* ─── News API Key ───────────────────────────────────────────────────────── */
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
-function NewsPage() {
+function NewsPage({ onNewsCount }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1447,6 +1447,7 @@ useEffect(() => {
         const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
         if (fresh.length > 0) {
           setNewStoryCount(c => c + fresh.length);
+       if (onNewsCount) onNewsCount(fresh.length);
           setNewsBellAlerts(prev => [
             ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
             ...prev,
@@ -1633,6 +1634,7 @@ useEffect(() => {
 
 function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [newsCount, setNewsCount] = useState(0);
   const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
   const { isAuthenticated, requireAuth } = useAuth();
   const { prices, flash } = useLivePrices();
@@ -1648,7 +1650,7 @@ function AppShell({ page, setPage }) {
       case "home":     return <HomePage setPage={handleSetPage} />;
       case "markets":  return <MarketsPage prices={prices} flash={flash} />;
       case "trade":    return <TradePage prices={prices} />;
-      case "news":     return <NewsPage />;
+      case "news": return <NewsPage onNewsCount={setNewsCount} />;
       case "settings": return <SettingsPage />;
       default:         return <HomePage setPage={handleSetPage} />;
     }
@@ -1678,7 +1680,7 @@ function AppShell({ page, setPage }) {
         <main style={{ padding: "0 16px 100px" }}>
           {renderPage()}
         </main>
-        <BottomNav page={page} setPage={handleSetPage} />
+        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
       </div>
     </div>
   );
