@@ -72,6 +72,7 @@ function LayoutProvider({ children }) {
       {children}
     </LayoutContext.Provider>
   );
+}
 function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem("gvxm-theme") || "dark"; } catch { return "dark"; }
