@@ -1364,7 +1364,6 @@ function SettingsPage() {
 }
 
 /* ─── News API Key ───────────────────────────────────────────────────────── */
-const API_KEY = (typeof process !== "undefined" && process.env?.REACT_APP_NEWS_API_KEY) || null;
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
 function NewsPage() {
