@@ -1301,7 +1301,7 @@ function TradePage({ prices }) {
       <div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}>Here's your trading overview for today</div>
     </div>
     <button onClick={() => setIsMasked(m => !m)} style={{ background: isMasked ? `${C.gold}18` : C.card2, border: `1.5px solid ${isMasked ? C.gold : C.border2}`, borderRadius: 10, padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, marginTop: 4, transition: "all .2s" }}>
-      {isMasked ? <EyeOff size={16} color={C.gold} /> : <Eye size={16} color={C.text2} />}
+      {isMasked ? <EyeOff size={13} color={C.gold} /> : <Eye size={12} color={C.text} />}
       <span style={{ fontSize: 10, fontWeight: 800, color: isMasked ? C.gold : C.text3, letterSpacing: "0.06em" }}>{isMasked ? "HIDDEN" : "VISIBLE"}</span>
     </button>
   </div>
