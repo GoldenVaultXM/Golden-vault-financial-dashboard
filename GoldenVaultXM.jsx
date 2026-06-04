@@ -1364,8 +1364,7 @@ function SettingsPage() {
 }
 
 /* ─── News API Key ───────────────────────────────────────────────────────── */
-const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
-
+const API_KEY = (typeof process !== "undefined" && process.env?.REACT_APP_NEWS_API_KEY) || null;
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
 function NewsPage() {
@@ -1396,7 +1395,7 @@ function NewsPage() {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
+      if (!API_KEY) throw new Error("__NO_KEY__");
       const q = encodeURIComponent(buildQuery(cat));
       const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
       const res = await fetch(url);
