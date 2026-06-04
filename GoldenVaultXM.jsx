@@ -1407,7 +1407,11 @@ function NewsPage() {
   const [newsBellAlerts, setNewsBellAlerts] = useState([]);
   const prevArticleIds = useRef(new Set());
   const pollRef = useRef(null);
-
+  const [now, setNow] = useState(Date.now());
+useEffect(() => {
+  const t = setInterval(() => setNow(Date.now()), 30000);
+  return () => clearInterval(t);
+}, []);
   const buildQuery = (cat) => {
   const queries = {
     "All":         "finance",
@@ -1471,9 +1475,9 @@ function NewsPage() {
     fetchNews(category);
   };
 
-  const fmtRelTime = (iso) => {
+  const fmtRelTime = (iso, now = Date.now()) => {
     if (!iso) return "";
-    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    const diff = (now - new Date(iso).getTime()) / 1000;
     if (diff < 60) return "just now";
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
