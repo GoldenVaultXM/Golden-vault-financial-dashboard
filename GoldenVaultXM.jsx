@@ -1239,6 +1239,7 @@ function TradePage({ prices }) {
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
+  const [isMasked, setIsMasked] = useState(true);
   
   // State for all 6 dashboard metrics
   const [totalInvested, setTotalInvested] = useState(0);
@@ -1280,60 +1281,40 @@ function TradePage({ prices }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
-      {/* Keyframes for counter-rotating gears */}
       <style>{`
-        @keyframes gearCW  { to { transform: rotate( 360deg); } }
-        @keyframes gearCCW { to { transform: rotate(-360deg); } }
-      `}</style>
-
-      {/* Full-page tinted background image — fixed so it covers whole Trade view */}
-      <div aria-hidden="true" style={{
-        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-        backgroundImage: "url('/99298.jpg')",
-        backgroundSize: "cover", backgroundPosition: "center top",
-        opacity: 0.12,
-        WebkitMaskImage: "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
-        maskImage:        "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
-      }} />
-
-      {/* Gear ring — top-right, clockwise */}
-      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
-        position:"fixed", top:"6%", right:"-20%",
-        width:"65vw", maxWidth:320,
-        opacity:0.11, pointerEvents:"none", zIndex:0,
-        animation:"gearCW 30s linear infinite", transformOrigin:"50% 50%",
-      }}>
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#00ff88" strokeWidth="4" strokeDasharray="14 6"/>
-        <circle cx="100" cy="100" r="70" fill="none" stroke="#00cc66" strokeWidth="2" strokeDasharray="6 10"/>
-        <circle cx="100" cy="100" r="52" fill="none" stroke="#00ff88" strokeWidth="5" strokeDasharray="16 5"/>
-        {Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<line key={i} x1={100+60*Math.cos(a)} y1={100+60*Math.sin(a)} x2={100+88*Math.cos(a)} y2={100+88*Math.sin(a)} stroke="#00ff88" strokeWidth="2" opacity="0.6"/>);})}
-      </svg>
-
-      {/* Gear ring — bottom-left, counter-clockwise */}
-      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
-        position:"fixed", bottom:"8%", left:"-24%",
-        width:"70vw", maxWidth:350,
-        opacity:0.09, pointerEvents:"none", zIndex:0,
-        animation:"gearCCW 38s linear infinite", transformOrigin:"50% 50%",
-      }}>
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#00cc88" strokeWidth="4" strokeDasharray="10 8"/>
-        <circle cx="100" cy="100" r="68" fill="none" stroke="#00ff88" strokeWidth="2" strokeDasharray="5 12"/>
-        <circle cx="100" cy="100" r="50" fill="none" stroke="#00cc66" strokeWidth="5" strokeDasharray="14 6"/>
-        {Array.from({length:14},(_,i)=>{const a=i*(Math.PI*2/14);return(<line key={i} x1={100+57*Math.cos(a)} y1={100+57*Math.sin(a)} x2={100+86*Math.cos(a)} y2={100+86*Math.sin(a)} stroke="#00cc88" strokeWidth="2" opacity="0.6"/>);})}
-      </svg>
+  @keyframes gearCW  { to { transform: rotate( 360deg); } }
+  @keyframes gearCCW { to { transform: rotate(-360deg); } }
+`}</style>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", top:"-5%", right:"-18%", width:"62vw", maxWidth:300, opacity:0.13, pointerEvents:"none", zIndex:0, animation:"gearCW 22s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:16},(_,i)=>(<rect key={i} x={-4} y={-8} width={8} height={16} rx={2} fill="#00ff88" opacity="0.85" transform={`rotate(${i*(360/16)}) translate(77,0)`}/>))}<circle r="68" fill="none" stroke="#00ff88" strokeWidth="2.5"/><circle r="55" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="4 4"/><circle r="42" fill="none" stroke="#00ff88" strokeWidth="2"/><circle r="28" fill="none" stroke="#00cc66" strokeWidth="1"/><circle r="13" fill="#00ff8814" stroke="#00ff88" strokeWidth="2"/><circle r="5" fill="#00ff88" opacity="0.7"/>{Array.from({length:8},(_,i)=>{const a=i*(Math.PI*2/8);return(<line key={i} x1={0} y1={0} x2={40*Math.cos(a)} y2={40*Math.sin(a)} stroke="#00ff88" strokeWidth="1" opacity="0.35"/>);})}{Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<circle key={i} cx={55*Math.cos(a)} cy={55*Math.sin(a)} r="2.5" fill="#00ff88" opacity="0.5"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", bottom:"-8%", left:"-20%", width:"68vw", maxWidth:340, opacity:0.11, pointerEvents:"none", zIndex:0, animation:"gearCCW 28s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:18},(_,i)=>(<rect key={i} x={-3.5} y={-7.5} width={7} height={15} rx={2} fill="#00cc88" opacity="0.85" transform={`rotate(${i*(360/18)}) translate(74,0)`}/>))}<circle r="72" fill="none" stroke="#00cc88" strokeWidth="2.5"/><circle r="59" fill="none" stroke="#00ff88" strokeWidth="1.5" strokeDasharray="5 5"/><circle r="46" fill="none" stroke="#00cc66" strokeWidth="2"/><circle r="32" fill="none" stroke="#00cc88" strokeWidth="1"/><circle r="14" fill="#00cc8814" stroke="#00cc88" strokeWidth="2"/><circle r="5.5" fill="#00cc88" opacity="0.65"/>{Array.from({length:6},(_,i)=>{const a=i*(Math.PI*2/6);return(<line key={i} x1={0} y1={0} x2={44*Math.cos(a)} y2={44*Math.sin(a)} stroke="#00cc88" strokeWidth="1.5" opacity="0.3"/>);})}{Array.from({length:18},(_,i)=>{const a=i*(Math.PI*2/18);return(<circle key={i} cx={59*Math.cos(a)} cy={59*Math.sin(a)} r="2" fill="#00cc88" opacity="0.45"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", top:"16%", left:"-12%", width:"34vw", maxWidth:165, opacity:0.09, pointerEvents:"none", zIndex:0, animation:"gearCCW 16s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:12},(_,i)=>(<rect key={i} x={-3} y={-6} width={6} height={13} rx={1.5} fill="#00ff88" opacity="0.85" transform={`rotate(${i*(360/12)}) translate(62,0)`}/>))}<circle r="60" fill="none" stroke="#00ff88" strokeWidth="2"/><circle r="48" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="3 4"/><circle r="36" fill="none" stroke="#00ff88" strokeWidth="1.5"/><circle r="11" fill="#00ff8814" stroke="#00ff88" strokeWidth="1.5"/><circle r="4.5" fill="#00ff88" opacity="0.6"/>{Array.from({length:6},(_,i)=>{const a=i*(Math.PI*2/6);return(<line key={i} x1={0} y1={0} x2={34*Math.cos(a)} y2={34*Math.sin(a)} stroke="#00ff88" strokeWidth="1" opacity="0.3"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", bottom:"22%", right:"-14%", width:"44vw", maxWidth:215, opacity:0.10, pointerEvents:"none", zIndex:0, animation:"gearCW 19s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:14},(_,i)=>(<rect key={i} x={-3.5} y={-7} width={7} height={14} rx={2} fill="#00ee88" opacity="0.85" transform={`rotate(${i*(360/14)}) translate(66,0)`}/>))}<circle r="64" fill="none" stroke="#00ee88" strokeWidth="2.5"/><circle r="52" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="4 5"/><circle r="40" fill="none" stroke="#00ee88" strokeWidth="1.5"/><circle r="24" fill="none" stroke="#00cc88" strokeWidth="1"/><circle r="12" fill="#00ee8814" stroke="#00ee88" strokeWidth="1.5"/><circle r="5" fill="#00ee88" opacity="0.6"/>{Array.from({length:8},(_,i)=>{const a=i*(Math.PI*2/8);return(<line key={i} x1={0} y1={0} x2={38*Math.cos(a)} y2={38*Math.sin(a)} stroke="#00ee88" strokeWidth="1" opacity="0.3"/>);})}</g></svg>
+      
       {/* ── END GEAR BACKGROUND ──────────────────────────────────────────── */}
-
       {/* All content sits above background */}
-      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: `$${balance.toLocaleString()}`, badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: `${activePositions}`, badge: "+3", color: C.gold }, { icon: Target, label: "Signal Value", value: `${winRate.toFixed(1)}%`, badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
+      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}>
+  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+    <div>
+      <div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Trading Overview</div>
+      <div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div>
+      <div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div>
+      <div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}>Here's your trading overview for today</div>
+    </div>
+    <button onClick={() => setIsMasked(m => !m)} style={{ background: isMasked ? `${C.gold}18` : C.card2, border: `1.5px solid ${isMasked ? C.gold : C.border2}`, borderRadius: 10, padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, marginTop: 4, transition: "all .2s" }}>
+      {isMasked ? <EyeOff size={16} color={C.gold} /> : <Eye size={16} color={C.text2} />}
+      <span style={{ fontSize: 10, fontWeight: 800, color: isMasked ? C.gold : C.text3, letterSpacing: "0.06em" }}>{isMasked ? "HIDDEN" : "VISIBLE"}</span>
+    </button>
+  </div>
+</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: `$${balance.toLocaleString()}`, badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: `${activePositions}`, badge: "+3", color: C.gold }, { icon: Target, label: "Signal Value", value: `${winRate.toFixed(1)}%`, badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{isMasked ? "••••••" : s.value}</div></div></Card>))}</div>
       <Card>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
         <ResponsiveContainer width="100%" height={148}>
           <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}><XAxis dataKey="day" hide /><YAxis hide domain={["dataMin - 500", "dataMax + 200"]} /><Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} /><Bar dataKey="value" radius={[3, 3, 0, 0]}>{data.map((e, i) => (<Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />))}</Bar></BarChart>
         </ResponsiveContainer>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div></div>
-          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div></div>
+          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>{isMasked ? "••••••" : `$${totalInvested.toLocaleString()}`}</div></div>
+          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>{isMasked ? "••••••" : `$${currentValue.toLocaleString()}`}</div></div>
         </div>
       </Card>
       <Card>
@@ -1349,31 +1330,6 @@ function TradePage({ prices }) {
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
       </Card>
-      <Card>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
-        {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" },].map((row, i, arr) => (<div key={i}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}><span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span><Badge color={row.color}>{row.value}</Badge></div>{i < arr.length - 1 && <GoldLine />}</div>))}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
-        {HOLDINGS.map((h, i) => (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>))}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
-        <div style={{ textAlign: "center", marginBottom: 18 }}><div style={{ fontSize: 72, fontWeight: 900, color: C.red, lineHeight: 1, textShadow: `0 0 40px ${C.red}44` }}>24</div><div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.14em" }}>Fear</div></div>
-        <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}><div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} /><div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} /></div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span><span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>Bearish 24</span></div>
-        {showVote && (
-          <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
-            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
-            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}> How do you feel about the Market today? </div>
-            <div style={{ display: "flex", gap: 8 }}>{ [["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (<button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col, }}>{lbl}</button>))}</div>
-            {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}> ✓ Thanks — sentiment updated </div>}
-          </div>
-        )}
-      </Card>
-    </div>
-  );
-}
 
 function SettingsPage() {
   const { isAuthenticated, logout, requireAuth } = useAuth();
