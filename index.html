@@ -9,16 +9,12 @@
       if (widget) {
         clearInterval(interval);
 
-        // =============================================
-        // ADD YOUR TAWK.TO DIRECT CHAT LINK HERE
         var tawkDirectLink = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
-        // =============================================
 
         widget.addEventListener('click', function () {
           window.open(tawkDirectLink, '_blank');
         });
 
-        // Initial position (top-right, slightly above middle)
         widget.style.position = 'fixed';
         widget.style.bottom = 'auto';
         widget.style.top = '40%';
@@ -27,11 +23,9 @@
         widget.style.cursor = 'grab';
         widget.style.zIndex = '9999';
 
-        // Resize
         widget.style.transform = 'scale(0.75) translateY(-50%)';
         widget.style.transformOrigin = 'top right';
 
-        // Recolor to purple
         var styleTag = document.createElement('style');
         styleTag.innerHTML = `
           #tawkchat-minified-container iframe,
@@ -41,11 +35,9 @@
         `;
         document.head.appendChild(styleTag);
 
-        // Drag logic
         var isDragging = false;
         var offsetX, offsetY;
 
-        // Touch drag (mobile)
         widget.addEventListener('touchstart', function (e) {
           isDragging = true;
           var touch = e.touches[0];
@@ -71,7 +63,6 @@
           widget.style.cursor = 'grab';
         });
 
-        // Mouse drag (desktop)
         widget.addEventListener('mousedown', function (e) {
           isDragging = true;
           var rect = widget.getBoundingClientRect();
@@ -104,7 +95,7 @@ var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
 (function(){
 var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
 s1.async=true;
-s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/';';
+s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/';
 s1.charset='UTF-8';
 s1.setAttribute('crossorigin','*');
 s0.parentNode.insertBefore(s1,s0);
