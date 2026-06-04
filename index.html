@@ -1,104 +1,105 @@
-<!-- Draggable, resized and purple tawk.to widget -->
-<script type="text/javascript">
-  window.addEventListener('load', function () {
-    var interval = setInterval(function () {
-      var widget = document.querySelector('#tawkchat-minified-container') ||
-                   document.querySelector('[id^="tawkchat"]') ||
-                   document.querySelector('#chat-widget-container');
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Dashboard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.jsx"></script>
 
-      if (widget) {
-        clearInterval(interval);
-
-        var tawkDirectLink = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
-
-        widget.addEventListener('click', function () {
-          window.open(tawkDirectLink, '_blank');
-        });
-
-        widget.style.position = 'fixed';
-        widget.style.bottom = 'auto';
-        widget.style.top = '40%';
-        widget.style.right = '10px';
-        widget.style.left = 'auto';
-        widget.style.cursor = 'grab';
-        widget.style.zIndex = '9999';
-
-        widget.style.transform = 'scale(0.75) translateY(-50%)';
-        widget.style.transformOrigin = 'top right';
-
-        var styleTag = document.createElement('style');
-        styleTag.innerHTML = `
-          #tawkchat-minified-container iframe,
-          [id^="tawkchat"] iframe {
-            filter: hue-rotate(200deg) saturate(2) !important;
+    <!-- Draggable, resized and purple tawk.to widget -->
+    <script type="text/javascript">
+      window.addEventListener('load', function () {
+        var interval = setInterval(function () {
+          var widget = document.querySelector('#tawkchat-minified-container') ||
+                       document.querySelector('[id^="tawkchat"]') ||
+                       document.querySelector('#chat-widget-container');
+          if (widget) {
+            clearInterval(interval);
+            var tawkDirectLink = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
+            widget.addEventListener('click', function () {
+              window.open(tawkDirectLink, '_blank');
+            });
+            widget.style.position = 'fixed';
+            widget.style.bottom = 'auto';
+            widget.style.top = '40%';
+            widget.style.right = '10px';
+            widget.style.left = 'auto';
+            widget.style.cursor = 'grab';
+            widget.style.zIndex = '9999';
+            widget.style.transform = 'scale(0.75) translateY(-50%)';
+            widget.style.transformOrigin = 'top right';
+            var styleTag = document.createElement('style');
+            styleTag.innerHTML = `
+              #tawkchat-minified-container iframe,
+              [id^="tawkchat"] iframe {
+                filter: hue-rotate(200deg) saturate(2) !important;
+              }
+            `;
+            document.head.appendChild(styleTag);
+            var isDragging = false;
+            var offsetX, offsetY;
+            widget.addEventListener('touchstart', function (e) {
+              isDragging = true;
+              var touch = e.touches[0];
+              var rect = widget.getBoundingClientRect();
+              offsetX = touch.clientX - rect.left;
+              offsetY = touch.clientY - rect.top;
+              widget.style.transform = 'scale(0.75)';
+              widget.style.cursor = 'grabbing';
+            });
+            document.addEventListener('touchmove', function (e) {
+              if (!isDragging) return;
+              e.preventDefault();
+              var touch = e.touches[0];
+              widget.style.top = (touch.clientY - offsetY) + 'px';
+              widget.style.left = (touch.clientX - offsetX) + 'px';
+              widget.style.right = 'auto';
+              widget.style.bottom = 'auto';
+            }, { passive: false });
+            document.addEventListener('touchend', function () {
+              isDragging = false;
+              widget.style.cursor = 'grab';
+            });
+            widget.addEventListener('mousedown', function (e) {
+              isDragging = true;
+              var rect = widget.getBoundingClientRect();
+              offsetX = e.clientX - rect.left;
+              offsetY = e.clientY - rect.top;
+              widget.style.transform = 'scale(0.75)';
+              widget.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', function (e) {
+              if (!isDragging) return;
+              widget.style.top = (e.clientY - offsetY) + 'px';
+              widget.style.left = (e.clientX - offsetX) + 'px';
+              widget.style.right = 'auto';
+              widget.style.bottom = 'auto';
+            });
+            document.addEventListener('mouseup', function () {
+              isDragging = false;
+              widget.style.cursor = 'grab';
+            });
           }
-        `;
-        document.head.appendChild(styleTag);
+        }, 500);
+      });
+    </script>
 
-        var isDragging = false;
-        var offsetX, offsetY;
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/default';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <!--End of Tawk.to Script-->
 
-        widget.addEventListener('touchstart', function (e) {
-          isDragging = true;
-          var touch = e.touches[0];
-          var rect = widget.getBoundingClientRect();
-          offsetX = touch.clientX - rect.left;
-          offsetY = touch.clientY - rect.top;
-          widget.style.transform = 'scale(0.75)';
-          widget.style.cursor = 'grabbing';
-        });
-
-        document.addEventListener('touchmove', function (e) {
-          if (!isDragging) return;
-          e.preventDefault();
-          var touch = e.touches[0];
-          widget.style.top = (touch.clientY - offsetY) + 'px';
-          widget.style.left = (touch.clientX - offsetX) + 'px';
-          widget.style.right = 'auto';
-          widget.style.bottom = 'auto';
-        }, { passive: false });
-
-        document.addEventListener('touchend', function () {
-          isDragging = false;
-          widget.style.cursor = 'grab';
-        });
-
-        widget.addEventListener('mousedown', function (e) {
-          isDragging = true;
-          var rect = widget.getBoundingClientRect();
-          offsetX = e.clientX - rect.left;
-          offsetY = e.clientY - rect.top;
-          widget.style.transform = 'scale(0.75)';
-          widget.style.cursor = 'grabbing';
-        });
-
-        document.addEventListener('mousemove', function (e) {
-          if (!isDragging) return;
-          widget.style.top = (e.clientY - offsetY) + 'px';
-          widget.style.left = (e.clientX - offsetX) + 'px';
-          widget.style.right = 'auto';
-          widget.style.bottom = 'auto';
-        });
-
-        document.addEventListener('mouseup', function () {
-          isDragging = false;
-          widget.style.cursor = 'grab';
-        });
-      }
-    }, 500);
-  });
-</script>
-
-<!--Start of Tawk.to Script-->
-<script type="text/javascript">
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-(function(){
-var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-s1.async=true;
-s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/';
-s1.charset='UTF-8';
-s1.setAttribute('crossorigin','*');
-s0.parentNode.insertBefore(s1,s0);
-})();
-</script>
-<!--End of Tawk.to Script-->
+  </body>
+</html>
