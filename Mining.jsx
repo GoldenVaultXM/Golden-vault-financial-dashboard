@@ -607,58 +607,49 @@ export default function Mining({ user }) {
               color: selectedPair.color,
               borderRadius: 10,
               padding: "2px 7px",
-              letterSpaci
-          /* ─── Render ────────────────────────────────────────────────────────────── */
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 8 }}>
-
-      {/* ── Page Header ── */}
-      <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
-            Tap <span style={{ color: C.gold }}>Mining</span>
-          </div>
-          <div style={{ fontSize: 11, color: C.text3, marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Simulation only — no real assets
-          </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, background: `${C.gold}12`, border: `1px solid ${C.gold}44`, borderRadius: 20, padding: "5px 10px", flexShrink: 0 }}>
-          <Info size={11} color={C.gold} />
-          <span style={{ fontSize: 9, fontWeight: 900, color: C.gold, letterSpacing: "0.12em" }}>
-            MINING SIMULATION
-          </span>
-        </div>
-      </div>
-
-      {pairSelector}
-
-      <StatsRow balance={balance} sessionEarned={sessionEarned} taps={tapCount} />
-
-      <div style={{ background: `linear-gradient(160deg, #1a0f00 0%, ${C.bg} 70%)`, border: `1px solid ${selectedPair.color}33`, borderRadius: 18, padding: "10px 16px 18px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%, -50%)", width: 220, height: 220, borderRadius: "50%", background: `radial-gradient(${C.gold}1a, transparent 70%)`, pointerEvents: "none" }} />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, color: selectedPair.color }}>{selectedPair.name}</span>
-          <span style={{ fontSize: 9, fontWeight: 700, background: `${selectedPair.color}22`, color: selectedPair.color, borderRadius: 10, padding: "2px 7px", letterSpacing: "0.08em" }}>
+              letterSpacing: "0.08em",
+            }}
+          >
             +{selectedPair.rate} / TAP
           </span>
         </div>
+
+        {/* Coin */}
         <TapCoin pair={selectedPair} onTap={handleTap} exhausted={exhausted} />
+
+        {/* Exhausted message */}
         <AnimatePresence>
           {exhausted && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} style={{ textAlign: "center", fontSize: 11, color: C.red, fontWeight: 700, marginTop: -6, marginBottom: 10 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              style={{ textAlign: "center", fontSize: 11, color: C.red, fontWeight: 700, marginTop: -6, marginBottom: 10 }}
+            >
               ⚡ Energy depleted — regenerating…
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Energy bar */}
         <EnergyBar energy={energy} max={MAX_ENERGY} />
+
+        {/* Tap prompt */}
         {!exhausted && (
-          <motion.div animate={{ opacity: [0.45, 1, 0.45] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} style={{ textAlign: "center", fontSize: 10, color: C.text3, letterSpacing: "0.16em", marginTop: 12, textTransform: "uppercase", fontWeight: 700 }}>
+          <motion.div
+            animate={{ opacity: [0.45, 1, 0.45] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ textAlign: "center", fontSize: 10, color: C.text3, letterSpacing: "0.16em", marginTop: 12, textTransform: "uppercase", fontWeight: 700 }}
+          >
             Tap the coin to mine
           </motion.div>
         )}
       </div>
 
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+      {/* Disclaimer card */}
+      <div
+        style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}
+      >
         <Info size={14} color={C.text3} style={{ flexShrink: 0, marginTop: 1 }} />
         <p style={{ margin: 0, fontSize: 11, color: C.text3, lineHeight: 1.65 }}>
           <span style={{ color: C.gold, fontWeight: 800 }}>Mining Simulation</span> — This feature is
@@ -668,9 +659,10 @@ export default function Mining({ user }) {
         </p>
       </div>
 
+      {/* Floating particles */}
       {particles.map((p) => (
         <TapParticle key={p.id} x={p.x} y={p.y} amount={p.amount} onDone={() => removeParticle(p.id)} />
       ))}
     </div>
   );
-          }
+}
