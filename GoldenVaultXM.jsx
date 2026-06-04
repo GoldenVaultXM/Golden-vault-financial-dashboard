@@ -1378,18 +1378,17 @@ function NewsPage() {
   const pollRef = useRef(null);
 
   const buildQuery = (cat) => {
-    const queries = {
-      "All":         "finance OR markets OR stocks OR crypto OR forex",
-      "Top stories": "markets OR economy OR federal reserve OR inflation",
-      "Stocks":      "stocks OR equities OR S&P OR earnings",
-      "ETFs":        "ETF OR exchange traded fund",
-      "Crypto":      "bitcoin OR ethereum OR cryptocurrency OR crypto",
-      "Forex":       "forex OR currency OR dollar OR euro OR yen",
-      "Commodities": "gold OR oil OR commodities OR crude",
-    };
-    return queries[cat] || queries["All"];
+  const queries = {
+    "All":         "finance",
+    "Top stories": "markets",
+    "Stocks":      "stocks",
+    "ETFs":        "ETF",
+    "Crypto":      "bitcoin",
+    "Forex":       "forex",
+    "Commodities": "gold",
   };
-
+  return queries[cat] || "finance";
+};
   const fetchNews = useCallback(async (cat, isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     setError(null);
