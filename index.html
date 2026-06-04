@@ -1,511 +1,113 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Dashboard</title>
-    <link href="https://tawk.to/chat/6a2187aa4a36f41c2edf040c/" rel="stylesheet">
-    <style>
-      /* ── Purple Chat Bubble Button ── */
-      #support-btn {
-        position: fixed;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 64px;
-        height: 56px;
-        cursor: pointer;
-        z-index: 9999;
-        user-select: none;
-        filter: drop-shadow(0 6px 24px rgba(0,0,0,0.7)) drop-shadow(0 0 12px rgba(138,92,246,0.45));
-        transition: filter 0.3s ease;
-      }
-      #support-btn:hover {
-        filter: drop-shadow(0 8px 30px rgba(0,0,0,0.8)) drop-shadow(0 0 22px rgba(138,92,246,0.7));
-      }
-      #support-btn svg.bubble-shape {
-        width: 100%;
-        height: 100%;
-        overflow: visible;
-      }
-      #support-btn .btn-label {
-        position: absolute;
-        bottom: -18px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-family: 'DM Sans', sans-serif;
-        font-size: 8px;
-        font-weight: 500;
-        letter-spacing: 1.8px;
-        text-transform: uppercase;
-        color: #a78bfa;
-        white-space: nowrap;
-      }
-      #support-btn.dragging {
-        filter: drop-shadow(0 12px 40px rgba(0,0,0,0.9)) drop-shadow(0 0 28px rgba(138,92,246,0.8));
-        transform: scale(1.07);
-      }
+<!-- Draggable, resized and purple tawk.to widget -->
+<script type="text/javascript">
+  window.addEventListener('load', function () {
+    var interval = setInterval(function () {
+      var widget = document.querySelector('#tawkchat-minified-container') ||
+                   document.querySelector('[id^="tawkchat"]') ||
+                   document.querySelector('#chat-widget-container');
 
-      /* ── Purple Popup ── */
-      #agent-popup {
-        position: fixed;
-        right: 96px;
-        top: 50%;
-        transform: translateY(-50%) scale(0.9) translateX(10px);
-        width: 260px;
-        background: linear-gradient(160deg, #0e0b18 0%, #160e2a 60%, #0e0b18 100%);
-        border: 1px solid rgba(138,92,246,0.35);
-        border-radius: 20px;
-        padding: 22px 18px 18px;
-        z-index: 9998;
-        font-family: 'DM Sans', sans-serif;
-        box-shadow:
-          0 24px 64px rgba(0,0,0,0.8),
-          0 0 0 1px rgba(138,92,246,0.08),
-          inset 0 1px 0 rgba(138,92,246,0.2);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1);
-      }
-      #agent-popup.open {
-        opacity: 1;
-        pointer-events: all;
-        transform: translateY(-50%) scale(1) translateX(0);
-      }
-      /* Purple top line */
-      #agent-popup::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 20px; right: 20px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #8a5cf6, transparent);
-        border-radius: 1px;
-      }
+      if (widget) {
+        clearInterval(interval);
 
-      .popup-header {
-        text-align: center;
-        margin-bottom: 16px;
+        // =============================================
+        // ADD YOUR TAWK.TO DIRECT CHAT LINK HERE
+        var tawkDirectLink = 'https://tawk.to/YOUR_DIRECT_LINK_HERE';
+        // =============================================
+
+        widget.addEventListener('click', function () {
+          window.open(tawkDirectLink, '_blank');
+        });
+
+        // Initial position (top-right, slightly above middle)
+        widget.style.position = 'fixed';
+        widget.style.bottom = 'auto';
+        widget.style.top = '40%';
+        widget.style.right = '10px';
+        widget.style.left = 'auto';
+        widget.style.cursor = 'grab';
+        widget.style.zIndex = '9999';
+
+        // Resize
+        widget.style.transform = 'scale(0.75) translateY(-50%)';
+        widget.style.transformOrigin = 'top right';
+
+        // Recolor to purple
+        var styleTag = document.createElement('style');
+        styleTag.innerHTML = `
+          #tawkchat-minified-container iframe,
+          [id^="tawkchat"] iframe {
+            filter: hue-rotate(200deg) saturate(2) !important;
+          }
+        `;
+        document.head.appendChild(styleTag);
+
+        // Drag logic
+        var isDragging = false;
+        var offsetX, offsetY;
+
+        // Touch drag (mobile)
+        widget.addEventListener('touchstart', function (e) {
+          isDragging = true;
+          var touch = e.touches[0];
+          var rect = widget.getBoundingClientRect();
+          offsetX = touch.clientX - rect.left;
+          offsetY = touch.clientY - rect.top;
+          widget.style.transform = 'scale(0.75)';
+          widget.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('touchmove', function (e) {
+          if (!isDragging) return;
+          e.preventDefault();
+          var touch = e.touches[0];
+          widget.style.top = (touch.clientY - offsetY) + 'px';
+          widget.style.left = (touch.clientX - offsetX) + 'px';
+          widget.style.right = 'auto';
+          widget.style.bottom = 'auto';
+        }, { passive: false });
+
+        document.addEventListener('touchend', function () {
+          isDragging = false;
+          widget.style.cursor = 'grab';
+        });
+
+        // Mouse drag (desktop)
+        widget.addEventListener('mousedown', function (e) {
+          isDragging = true;
+          var rect = widget.getBoundingClientRect();
+          offsetX = e.clientX - rect.left;
+          offsetY = e.clientY - rect.top;
+          widget.style.transform = 'scale(0.75)';
+          widget.style.cursor = 'grabbing';
+        });
+
+        document.addEventListener('mousemove', function (e) {
+          if (!isDragging) return;
+          widget.style.top = (e.clientY - offsetY) + 'px';
+          widget.style.left = (e.clientX - offsetX) + 'px';
+          widget.style.right = 'auto';
+          widget.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', function () {
+          isDragging = false;
+          widget.style.cursor = 'grab';
+        });
       }
-      .popup-title {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 17px;
-        font-weight: 700;
-        color: #e8d8ff;
-        letter-spacing: 0.5px;
-        display: block;
-      }
-      .popup-subtitle {
-        font-size: 9px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: #8a5cf6;
-        opacity: 0.8;
-        margin-top: 2px;
-        display: block;
-      }
+    }, 500);
+  });
+</script>
 
-      /* ── Agent Card ── */
-      .agent-card {
-        background: rgba(138,92,246,0.05);
-        border: 1px solid rgba(138,92,246,0.15);
-        border-radius: 14px;
-        padding: 14px;
-        display: flex;
-        align-items: center;
-        gap: 13px;
-        margin-bottom: 14px;
-        position: relative;
-        overflow: hidden;
-        transition: border-color 0.2s;
-      }
-      .agent-card::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(135deg, rgba(138,92,246,0.06) 0%, transparent 60%);
-        pointer-events: none;
-      }
-      .agent-card:hover { border-color: rgba(138,92,246,0.38); }
-
-      .agent-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        border: 1.5px solid rgba(138,92,246,0.6);
-        flex-shrink: 0;
-        background: #1a1230;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 0 0 3px rgba(138,92,246,0.1);
-      }
-      .agent-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%;
-        display: none;
-        position: absolute;
-        inset: 0;
-      }
-      .agent-avatar img.loaded { display: block; }
-
-      .agent-info { flex: 1; min-width: 0; }
-      .agent-name {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 15px;
-        font-weight: 600;
-        color: #e8d8ff;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.2;
-      }
-      .agent-role {
-        font-size: 9.5px;
-        color: #6b4fa0;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-        margin-top: 2px;
-      }
-
-      .agent-status-wrap {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        flex-shrink: 0;
-      }
-      .agent-status {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #4ade80;
-        box-shadow: 0 0 8px rgba(74,222,128,0.8);
-      }
-      .agent-status-text {
-        font-size: 7px;
-        color: #4ade80;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-      }
-
-      /* ── Navigation ── */
-      .nav-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
-        padding: 0 2px;
-      }
-      .nav-arrow {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
-        background: rgba(138,92,246,0.1);
-        border: 1px solid rgba(138,92,246,0.28);
-        color: #a78bfa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        font-size: 13px;
-        transition: background 0.2s, border-color 0.2s;
-        user-select: none;
-      }
-      .nav-arrow:hover {
-        background: rgba(138,92,246,0.22);
-        border-color: rgba(138,92,246,0.55);
-      }
-      .nav-dots {
-        display: flex;
-        gap: 5px;
-        align-items: center;
-      }
-      .nav-dot {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: rgba(138,92,246,0.3);
-        cursor: pointer;
-        transition: background 0.2s, transform 0.2s;
-      }
-      .nav-dot.active {
-        background: #8a5cf6;
-        transform: scale(1.5);
-      }
-
-      /* ── CTA Button ── */
-      .chat-cta {
-        width: 100%;
-        padding: 11px;
-        background: linear-gradient(135deg, #130e22 0%, #1e1438 100%);
-        border: 1px solid rgba(138,92,246,0.5);
-        border-radius: 10px;
-        color: #a78bfa;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-        transition: border-color 0.2s, color 0.2s;
-      }
-      .chat-cta::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(135deg, rgba(138,92,246,0.15), transparent);
-        opacity: 0;
-        transition: opacity 0.2s;
-      }
-      .chat-cta:hover {
-        border-color: rgba(138,92,246,0.8);
-        color: #c4b5fd;
-      }
-      .chat-cta:hover::before { opacity: 1; }
-
-      /* divider */
-      .divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(138,92,246,0.2), transparent);
-        margin-bottom: 14px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/main.jsx"></script>
-
-    <!--Start of Tawk.to Script-->
-    <script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    (function(){
-    var s1=document.createElement("script"),
-    s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='YOUR_TAWK_SRC_HERE';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    Tawk_API.onLoad=function(){ Tawk_API.hideWidget(); };
-    })();
-    </script>
-    <!--End of Tawk.to Script-->
-
-    <!-- ── Agent Popup ── -->
-    <div id="agent-popup">
-      <div class="popup-header">
-        <span class="popup-title">Our Concierge</span>
-        <span class="popup-subtitle">Premium Support</span>
-      </div>
-
-      <div class="nav-row">
-        <div class="nav-arrow" id="prev-btn">&#8592;</div>
-        <div class="nav-dots" id="nav-dots"></div>
-        <div class="nav-arrow" id="next-btn">&#8594;</div>
-      </div>
-
-      <div class="agent-card">
-        <div class="agent-avatar" id="agent-avatar">
-          <span id="agent-emoji">😊</span>
-          <img id="agent-img" src="" alt="agent" />
-        </div>
-        <div class="agent-info">
-          <div class="agent-name" id="agent-name">Sarah K.</div>
-          <div class="agent-role" id="agent-role">Client Relations</div>
-        </div>
-        <div class="agent-status-wrap">
-          <div class="agent-status"></div>
-          <span class="agent-status-text">Live</span>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-      <button class="chat-cta" id="chat-cta-btn">Begin Conversation</button>
-    </div>
-
-    <!-- ── Purple Oval Chat Bubble Button ── -->
-    <div id="support-btn">
-      <!-- Oval speech bubble matching the reference image -->
-      <svg class="bubble-shape" viewBox="0 0 70 62" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="bubbleGrad" x1="0" y1="0" x2="70" y2="62" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#9b6dff"/>
-            <stop offset="100%" stop-color="#7c3aed"/>
-          </linearGradient>
-          <linearGradient id="purpleBorder" x1="0" y1="0" x2="70" y2="62" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#c4b5fd"/>
-            <stop offset="50%" stop-color="#8a5cf6"/>
-            <stop offset="100%" stop-color="#6d28d9"/>
-          </linearGradient>
-          <linearGradient id="iconGrad" x1="10" y1="20" x2="60" y2="45" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stop-color="#ede9fe"/>
-            <stop offset="100%" stop-color="#c4b5fd"/>
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
-            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-          </filter>
-        </defs>
-        <!-- Oval body with bottom-left tail, matching reference image -->
-        <path d="M35 4 C16 4 4 14 4 26 C4 38 16 48 35 48 C44 48 52 45.5 57.5 41 L62 54 L50 44 C55 40.5 66 34 66 26 C66 14 54 4 35 4 Z"
-              fill="url(#bubbleGrad)" stroke="url(#purpleBorder)" stroke-width="0.8"/>
-        <!-- Subtle shine on top -->
-        <ellipse cx="35" cy="14" rx="18" ry="4" fill="rgba(255,255,255,0.12)"/>
-        <!-- Chat dots icon -->
-        <circle cx="24" cy="26" r="2.8" fill="url(#iconGrad)"/>
-        <circle cx="35" cy="26" r="2.8" fill="url(#iconGrad)"/>
-        <circle cx="46" cy="26" r="2.8" fill="url(#iconGrad)"/>
-      </svg>
-      <span class="btn-label">Support</span>
-    </div>
-
-    <script>
-    // ── Agent Data ──
-    const agents = [
-      { name: 'Sarah K.',   role: 'Client Relations',  emoji: '👑', photoUrl: '' },
-      { name: 'James O.',   role: 'Technical Advisor',  emoji: '⚡', photoUrl: '' },
-      { name: 'Amina T.',   role: 'Billing & Accounts', emoji: '💎', photoUrl: '' },
-    ];
-
-    let current = 0;
-    let popupOpen = false;
-    let isDragging = false;
-
-    const popup    = document.getElementById('agent-popup');
-    const nameEl   = document.getElementById('agent-name');
-    const roleEl   = document.getElementById('agent-role');
-    const emojiEl  = document.getElementById('agent-emoji');
-    const imgEl    = document.getElementById('agent-img');
-    const dotsEl   = document.getElementById('nav-dots');
-    const btn      = document.getElementById('support-btn');
-    const chatBtn  = document.getElementById('chat-cta-btn');
-
-    // Build dots
-    agents.forEach((_, i) => {
-      const d = document.createElement('div');
-      d.className = 'nav-dot' + (i === 0 ? ' active' : '');
-      d.addEventListener('click', () => goTo(i));
-      dotsEl.appendChild(d);
-    });
-
-    function goTo(idx) {
-      current = (idx + agents.length) % agents.length;
-      const a = agents[current];
-      nameEl.textContent = a.name;
-      roleEl.textContent = a.role;
-      emojiEl.textContent = a.emoji;
-      if (a.photoUrl) {
-        imgEl.src = a.photoUrl;
-        imgEl.onload  = () => { imgEl.classList.add('loaded'); emojiEl.style.display='none'; };
-        imgEl.onerror = () => { imgEl.classList.remove('loaded'); emojiEl.style.display=''; };
-      } else {
-        imgEl.classList.remove('loaded');
-        emojiEl.style.display = '';
-      }
-      document.querySelectorAll('.nav-dot').forEach((d, i) =>
-        d.classList.toggle('active', i === current));
-    }
-
-    document.getElementById('prev-btn').addEventListener('click', () => goTo(current - 1));
-    document.getElementById('next-btn').addEventListener('click', () => goTo(current + 1));
-
-    // Toggle popup
-    btn.addEventListener('click', () => {
-      if (isDragging) return;
-      popupOpen = !popupOpen;
-      popup.classList.toggle('open', popupOpen);
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!popup.contains(e.target) && !btn.contains(e.target)) {
-        popupOpen = false;
-        popup.classList.remove('open');
-      }
-    });
-
-    chatBtn.addEventListener('click', () => {
-      if (typeof Tawk_API !== 'undefined') Tawk_API.toggle();
-    });
-
-    // ── Draggable ──
-    let startX, startY, btnX, btnY;
-
-    function getPos() {
-      const r = btn.getBoundingClientRect();
-      return { x: r.left, y: r.top };
-    }
-    function applyPos(x, y) {
-      const W = window.innerWidth, H = window.innerHeight;
-      const bw = btn.offsetWidth, bh = btn.offsetHeight;
-      x = Math.max(8, Math.min(x, W - bw - 8));
-      y = Math.max(8, Math.min(y, H - bh - 28));
-      btn.style.left = x + 'px';
-      btn.style.top  = y + 'px';
-      btn.style.right  = 'auto';
-      btn.style.bottom = 'auto';
-      btn.style.transform = 'none';
-      const onRight = x > W / 2;
-      if (onRight) {
-        popup.style.left  = 'auto';
-        popup.style.right = (W - x + 10) + 'px';
-      } else {
-        popup.style.right = 'auto';
-        popup.style.left  = (x + bw + 10) + 'px';
-      }
-      popup.style.top       = y + 'px';
-      popup.style.transform = 'none';
-    }
-
-    // Mouse drag
-    btn.addEventListener('mousedown', (e) => {
-      isDragging = false;
-      const p = getPos(); btnX = p.x; btnY = p.y;
-      startX = e.clientX; startY = e.clientY;
-      btn.classList.add('dragging');
-      const onMove = (e) => {
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) isDragging = true;
-        if (isDragging) applyPos(btnX + dx, btnY + dy);
-      };
-      const onUp = () => {
-        setTimeout(() => { isDragging = false; }, 50);
-        btn.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-
-    // Touch drag
-    btn.addEventListener('touchstart', (e) => {
-      isDragging = false;
-      const t = e.touches[0];
-      const p = getPos(); btnX = p.x; btnY = p.y;
-      startX = t.clientX; startY = t.clientY;
-      btn.classList.add('dragging');
-      const onMove = (e) => {
-        const t = e.touches[0];
-        const dx = t.clientX - startX, dy = t.clientY - startY;
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) isDragging = true;
-        if (isDragging) applyPos(btnX + dx, btnY + dy);
-      };
-      const onEnd = () => {
-        setTimeout(() => { isDragging = false; }, 50);
-        btn.classList.remove('dragging');
-        btn.removeEventListener('touchmove', onMove);
-        btn.removeEventListener('touchend', onEnd);
-      };
-      btn.addEventListener('touchmove', onMove, { passive: true });
-      btn.addEventListener('touchend', onEnd);
-    }, { passive: true });
-    </script>
-  </body>
-</html>
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);
+})();
+</script>
+<!--End of Tawk.to Script-->
