@@ -890,9 +890,10 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.2 }}>GOLDEN VAULT <span style={{ color: "#ef4444" }}>XM</span></div>
-          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 400, fontSize: 10, color: "#e69d00", marginTop: -2, lineHeight: 1.2 }}>Expert automated trading</div>
-        </div>
+          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
+  <span style={{ color: C.text }}>GOLDEN VAULT </span>
+  <span style={{ color: "#ef4444" }}>XM</span>
+</div>
       </div>
 
       {/* Right controls */}
