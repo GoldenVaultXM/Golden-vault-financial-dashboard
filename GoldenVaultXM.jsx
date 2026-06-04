@@ -1395,8 +1395,7 @@ function NewsPage() {
     setError(null);
     try {
       const q = encodeURIComponent(buildQuery(cat));
-      const url = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI`;
-const res = await fetch(url, {
+      const url = `https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=${q}`;const res = await fetch(url, {
   headers: {
     Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI`,
     "Content-Type": "application/json",
@@ -1405,7 +1404,7 @@ const res = await fetch(url, {
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
       if (json.status !== "ok") throw new Error(json.message || "API returned error");
-      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      const items = (json.articles || []).filter(a => a.title);
       if (isRefresh) {
         const newIds = new Set(items.map(a => a.url));
         const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
