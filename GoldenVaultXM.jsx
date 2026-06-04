@@ -1594,7 +1594,7 @@ function AppShell({ page, setPage }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [newsCount, setNewsCount] = useState(0);
   const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
-  const { isAuthenticated, requireAuth } = useAuth();
+  const { isAuthenticated, requireAuth, user } = useAuth();
   const { prices, flash } = useLivePrices();
   const { mode, width } = useLayout();
 
