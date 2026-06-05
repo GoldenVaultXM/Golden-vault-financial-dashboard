@@ -33,13 +33,13 @@ import {
    Design tokens
 ───────────────────────────────────────────────────────────────────────── */
 const C = {
-  bg: "#07050f",
-  bgMid: "#0e0a1c",
-  card: "#110d20",
-  card2: "#160f28",
-  card3: "#1c1430",
-  border: "#2a1f4a",
-  border2: "#352860",
+  bg: "#000000",
+  bgMid: "#050505",
+  card: "#0a0a0a",
+  card2: "#0d0d0d",
+  card3: "#111111",
+  border: "#1e1e1e",
+  border2: "#2a2a2a",
   gold: "#d97706",
   gold2: "#f59e0b",
   gold3: "#fbbf24",
@@ -148,117 +148,54 @@ const SWAP_TOKENS = [
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Coin Bag SVG Icon (inline, no external asset required)
-   Renders a stylised money-bag with gold coins bursting out
+   GoldenVault Coin – uses the real branded coin image.
+   Falls back to a gold ring if the image fails to load.
+   Image: https://ibb.co/27YhZPHt  (direct CDN link)
 ───────────────────────────────────────────────────────────────────────── */
-function CoinBagIcon({ size = 200, exhausted = false, popping = false }) {
-  const bagColor    = exhausted ? "#2a2040"  : "#8B5E3C";
-  const bagShadow   = exhausted ? "#1a1030"  : "#6B4226";
-  const bagHighlight= exhausted ? "#3d3060"  : "#A0714F";
-  const coinColor   = exhausted ? "#3d2f5c"  : "#F5C518";
-  const coinEdge    = exhausted ? "#2a1f4a"  : "#D4A017";
-  const zapColor    = exhausted ? "#3d2f5c"  : "#FFFFFF";
+const COIN_IMG_URL = "https://i.ibb.co/27YhZPHt/GoldenVaultCoins.jpg";
 
+function CoinBagIcon({ size = 200, exhausted = false }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 200 200" style={{ overflow: "visible" }}>
-      <defs>
-        <radialGradient id="bagGrad" cx="38%" cy="30%" r="65%">
-          <stop offset="0%"   stopColor={bagHighlight} />
-          <stop offset="45%"  stopColor={bagColor} />
-          <stop offset="100%" stopColor={bagShadow} />
-        </radialGradient>
-        <radialGradient id="coinGrad" cx="35%" cy="28%" r="65%">
-          <stop offset="0%"   stopColor={exhausted ? "#4a3a6a" : "#FFE566"} />
-          <stop offset="50%"  stopColor={coinColor} />
-          <stop offset="100%" stopColor={coinEdge} />
-        </radialGradient>
-        <filter id="bagGlow">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-
-      {/* Bag body */}
-      <ellipse cx="100" cy="130" rx="68" ry="58" fill="url(#bagGrad)" />
-
-      {/* Bag highlight / sheen */}
-      {!exhausted && (
-        <ellipse cx="80" cy="108" rx="22" ry="28" fill="#ffffff18" />
-      )}
-
-      {/* Bag neck / tie */}
-      <rect x="76" y="70" width="48" height="28" rx="12" fill={bagColor} />
-      <rect x="82" y="72" width="36" height="8" rx="4" fill={bagShadow} />
-
-      {/* Drawstring knot */}
-      <ellipse cx="100" cy="72" rx="14" ry="7" fill={bagShadow} />
-      <ellipse cx="100" cy="72" rx="10" ry="5" fill={bagColor} />
-
-      {/* Bag top opening */}
-      <ellipse cx="100" cy="60" rx="30" ry="14" fill={bagColor} />
-      <ellipse cx="100" cy="58" rx="25" ry="9"  fill={bagHighlight} />
-
-      {/* Coins at top of bag */}
-      {!exhausted && [
-        { cx: 84,  cy: 52, rx: 11, ry: 5 },
-        { cx: 100, cy: 48, rx: 12, ry: 5.5 },
-        { cx: 116, cy: 52, rx: 11, ry: 5 },
-      ].map((c, i) => (
-        <g key={i}>
-          <ellipse cx={c.cx} cy={c.cy + 2} rx={c.rx} ry={c.ry - 1} fill={coinEdge} />
-          <ellipse cx={c.cx} cy={c.cy}     rx={c.rx} ry={c.ry}     fill="url(#coinGrad)" />
-        </g>
-      ))}
-
-      {/* Scattered coins at base */}
-      {!exhausted && [
-        { cx: 52,  cy: 174, rx: 14, ry: 6 },
-        { cx: 76,  cy: 182, rx: 13, ry: 5.5 },
-        { cx: 100, cy: 186, rx: 14, ry: 6 },
-        { cx: 124, cy: 182, rx: 13, ry: 5.5 },
-        { cx: 148, cy: 174, rx: 14, ry: 6 },
-        { cx: 64,  cy: 186, rx: 10, ry: 4 },
-        { cx: 136, cy: 186, rx: 10, ry: 4 },
-      ].map((c, i) => (
-        <g key={i}>
-          <ellipse cx={c.cx} cy={c.cy + 2} rx={c.rx} ry={c.ry - 1} fill={coinEdge} />
-          <ellipse cx={c.cx} cy={c.cy}     rx={c.rx} ry={c.ry}     fill="url(#coinGrad)" />
-          <ellipse cx={c.cx - 3} cy={c.cy - 1} rx={c.rx * 0.35} ry={c.ry * 0.45} fill="#ffffff30" />
-        </g>
-      ))}
-
-      {/* ⚡ Lightning bolt centrepiece */}
-      <text
-        x="100" y="146"
-        textAnchor="middle"
-        fontSize="44"
-        fill={zapColor}
-        style={{ filter: exhausted ? "none" : `drop-shadow(0 0 8px ${C.gold3}cc)` }}
-      >
-        ⚡
-      </text>
-
-      {/* "vault Token" label underneath bolt */}
-      <text
-        x="100" y="162"
-        textAnchor="middle"
-        fontSize="10"
-        fontWeight="bold"
-        fill={exhausted ? C.text4 : "#00000099"}
-        letterSpacing="1"
-      >
-        vault Token
-      </text>
-
-      {/* Side coin tag */}
-      {!exhausted && (
-        <g>
-          <ellipse cx="152" cy="130" rx="10" ry="10" fill={coinEdge} />
-          <ellipse cx="152" cy="128" rx="10" ry="10" fill="url(#coinGrad)" />
-          <text x="152" y="132" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#8B5E3C">V</text>
-        </g>
-      )}
-    </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        position: "relative",
+        overflow: "hidden",
+        /* Exhausted: desaturate + darken */
+        filter: exhausted
+          ? "grayscale(0.85) brightness(0.4) contrast(0.8)"
+          : "drop-shadow(0 0 28px #c8891faa) drop-shadow(0 0 8px #f59e0b66)",
+        transition: "filter 0.4s",
+        /* Subtle gold rim */
+        boxShadow: exhausted
+          ? "0 0 0 3px #2a1f4a"
+          : `0 0 0 3px #c8891f88, 0 8px 40px #c8891f55, 0 2px 0 #fff3 inset`,
+        flexShrink: 0,
+      }}
+    >
+      <img
+        src={COIN_IMG_URL}
+        alt="GoldenVault Coin"
+        draggable={false}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          /* Coin image has black bg — zoom slightly to crop it */
+          transform: "scale(1.08)",
+          display: "block",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          pointerEvents: "none",
+        }}
+        onError={e => {
+          /* Fallback: hide broken image, show parent gold ring */
+          e.target.style.display = "none";
+        }}
+      />
+    </div>
   );
 }
 
@@ -443,7 +380,7 @@ function TapBag({ pair, onTap, exhausted, upgradeLevel }) {
         style={{
           position: "absolute", top: "8%", left: "50%", transform: "translateX(-50%)",
           width: "86%", height: "68%", borderRadius: "50%",
-          background: `radial-gradient(ellipse, ${C.gold}30 0%, ${C.purpleGlow}18 45%, transparent 70%)`,
+          background: `radial-gradient(ellipse, ${C.gold}38 0%, #c8891f18 45%, transparent 70%)`,
           filter: "blur(36px)", pointerEvents: "none",
         }}
       />
@@ -1280,7 +1217,7 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
 
   return (
     <div style={{
-      background: `linear-gradient(160deg, #0d0818 0%, #07050f 40%, #0a0618 70%, #06040e 100%)`,
+      background: "#000000",
       minHeight: "100vh",
       display: "flex", flexDirection: "column", gap: 0,
       fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -1289,11 +1226,11 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
       {/* ── Background orbs ── */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         {[
-          { t: "-10%", l: "-15%", w: 320, h: 320, c: "#7c3aed22" },
-          { t:  "5%",  r: "-10%", w: 260, h: 260, c: "#a855f718" },
-          { t:  "25%", cx: true,  w: 400, h: 400, c: "#6d28d912" },
-          { b:  "8%",  r:  "10%", w: 200, h: 200, c: "#ec489914" },
-          { t:  "50%", l:  "20%", w: 160, h: 160, c: "#f59e0b14" },
+          { t: "-10%", l: "-15%", w: 320, h: 320, c: "#c8891f14" },
+          { t:  "5%",  r: "-10%", w: 260, h: 260, c: "#f59e0b0e" },
+          { t:  "25%", cx: true,  w: 400, h: 400, c: "#c8891f0a" },
+          { b:  "8%",  r:  "10%", w: 200, h: 200, c: "#f59e0b0c" },
+          { t:  "50%", l:  "20%", w: 160, h: 160, c: "#c8891f10" },
         ].map((o, i) => (
           <div key={i} style={{
             position: "absolute",
@@ -1310,7 +1247,7 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
       <div style={{
         padding: "18px 16px 14px",
         borderBottom: `1px solid ${C.border}`,
-        background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`,
+        background: `linear-gradient(180deg, #000000, #000000ee)`,
         position: "relative", zIndex: 1,
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
