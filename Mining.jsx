@@ -1189,3 +1189,290 @@ function AuthGate({ onSignUp, onSignIn }) {
     </div>
   );
 }
+>
+            CREATE FREE ACCOUNT
+            <ChevronRight size={16} />
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onSignIn}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: 14,
+              border: `1px solid ${C.border2}`,
+              background: C.card2,
+              color: C.text2,
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+            }}
+          >
+            Already have an account? Sign In
+          </motion.button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Main Mining component
+   Props:
+     user               – { email } | null
+     onNavigateSignUp   – () => void  navigate to register screen
+     onNavigateSignIn   – () => void  navigate to login screen
+───────────────────────────────────────────────────────────────────────── */
+export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
+  const [selectedPair, setSelectedPair] = useState(MINING_PAIRS[0]);
+  const [balance, setBalance] = useState(0);
+  const [energy, setEnergy] = useState(MAX_ENERGY);
+  const [sessionEarned, setSessionEarned] = useState(0);
+  const [tapCount, setTapCount] = useState(0);
+  const [particles, setParticles] = useState([]);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+
+  const balanceRef = useRef(0);
+  const debounceTimer = useRef(null);
+  const particleId = useRef(0);
+
+  const isGuest = !user?.email;
+
+  /* Load persisted balance */
+  useEffect(() => {
+    if (!user?.email) return;
+    (async () => {
+      const { data } = await supabase
+        .from("mining")
+        .select("balance")
+        .eq("user_email", user.email)
+        .single();
+      if (data?.balance != null) {
+        setBalance(data.balance);
+        balanceRef.current = data.balance;
+      }
+    })();
+  }, [user?.email]);
+
+  /* Energy regeneration */
+  useEffect(() => {
+    const id = setInterval(() => {
+      setEnergy((e) => Math.min(MAX_ENERGY, e + REGEN_RATE));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* Debounced Supabase upsert */
+  const syncToSupabase = useCallback(
+    (newBalance) => {
+      if (!user?.email) return;
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(async () => {
+        await supabase.from("mining").upsert(
+          { user_email: user.email, balance: newBalance, updated_at: new Date().toISOString() },
+          { onConflict: "user_email" }
+        );
+      }, SUPABASE_DEBOUNCE_MS);
+    },
+    [user?.email]
+  );
+
+  /* Tap handler – intercepts unauthenticated users */
+  const handleTap = useCallback(
+    (e) => {
+      if (isGuest) {
+        setShowAuthGate(true);
+        return;
+      }
+
+      if (energy < ENERGY_COST) return;
+
+      const earned = selectedPair.rate;
+      const newBalance = balanceRef.current + earned;
+      balanceRef.current = newBalance;
+
+      setBalance(newBalance);
+      setEnergy((en) => Math.max(0, en - ENERGY_COST));
+      setSessionEarned((s) => s + earned);
+      setTapCount((t) => t + 1);
+
+      syncToSupabase(newBalance);
+
+      const rect = e.currentTarget
+        ? e.currentTarget.getBoundingClientRect()
+        : { left: 0, top: 0, width: 0, height: 0 };
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const spread = 40;
+      const px = cx + (Math.random() - 0.5) * spread;
+      const py = cy + (Math.random() - 0.5) * spread;
+
+      const id = particleId.current++;
+      setParticles((prev) => [...prev, { id, x: px, y: py, amount: earned }]);
+    },
+    [isGuest, energy, selectedPair, syncToSupabase]
+  );
+
+  const removeParticle = useCallback((id) => {
+    setParticles((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  /* Auth gate navigation handlers */
+  const handleNavigate = useCallback((route) => {
+    setShowAuthGate(false);
+    if (route === "register") onNavigateSignUp?.();
+    else onNavigateSignIn?.();
+  }, [onNavigateSignUp, onNavigateSignIn]);
+
+  const exhausted = !isGuest && energy < ENERGY_COST;
+
+  return (
+    <div
+      style={{
+        background: `linear-gradient(160deg, #0d0818 0%, #07050f 40%, #0a0618 70%, #06040e 100%)`,
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        gap: 0,
+        fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        paddingBottom: 100,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Purple mesh background orbs ── */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+        <div style={{
+          position: "absolute", top: "-10%", left: "-15%",
+          width: 320, height: 320, borderRadius: "50%",
+          background: "radial-gradient(circle, #7c3aed22 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+        <div style={{
+          position: "absolute", top: "5%", right: "-10%",
+          width: 260, height: 260, borderRadius: "50%",
+          background: "radial-gradient(circle, #a855f718 0%, transparent 70%)",
+          filter: "blur(50px)",
+        }} />
+        <div style={{
+          position: "absolute", top: "25%", left: "50%",
+          transform: "translateX(-50%)",
+          width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, #6d28d912 0%, transparent 65%)",
+          filter: "blur(60px)",
+        }} />
+        <div style={{
+          position: "absolute", bottom: "8%", right: "10%",
+          width: 200, height: 200, borderRadius: "50%",
+          background: "radial-gradient(circle, #ec489914 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+      </div>
+
+      {/* ── Header ── */}
+      <div
+        style={{
+          padding: "18px 16px 14px",
+          borderBottom: `1px solid ${C.border}`,
+          background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`,
+          position: "relative", zIndex: 1,
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 24,
+            fontWeight: 900,
+            color: C.text,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Tap{" "}
+          <span style={{ color: C.gold2, textShadow: `0 0 20px ${C.gold}66` }}>
+            Mining
+          </span>
+        </h1>
+      </div>
+
+      {/* ── Asset Selection ── */}
+      <div style={{ paddingTop: 16, paddingBottom: 12 }}>
+        <PairSelector
+          pairs={MINING_PAIRS}
+          selected={selectedPair}
+          onSelect={setSelectedPair}
+        />
+      </div>
+
+      {/* ── Large Floating Vault Coin ── */}
+      <div style={{ paddingTop: 8, paddingBottom: 0, position: "relative" }}>
+        <TapCoin
+          pair={selectedPair}
+          onTap={handleTap}
+          exhausted={exhausted}
+        />
+
+        {isGuest && (
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 24,
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              background: "#0f0f0fcc",
+              border: `1px solid ${C.border2}`,
+              borderRadius: 20,
+              padding: "5px 10px",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            <Lock size={11} color={C.gold2} strokeWidth={2.5} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.gold2, letterSpacing: "0.08em" }}>
+              SIGN IN TO MINE
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Balance | Session | Taps ── */}
+      <StatsStrip balance={balance} sessionEarned={sessionEarned} taps={tapCount} />
+
+      {/* ── Asset Info ── */}
+      <div style={{ paddingTop: 20, paddingBottom: 0 }}>
+        <AssetInfo pair={selectedPair} />
+      </div>
+
+      {/* ── Energy Bar ── */}
+      <div style={{ paddingTop: 12 }}>
+        <EnergyBar energy={energy} max={MAX_ENERGY} />
+      </div>
+
+      {/* ── Floating particles ── */}
+      <AnimatePresence>
+        {particles.map((p) => (
+          <TapParticle
+            key={p.id}
+            x={p.x}
+            y={p.y}
+            amount={p.amount}
+            onDone={() => removeParticle(p.id)}
+          />
+        ))}
+      </AnimatePresence>
+
+      {/* ── Auth gate modal ── */}
+      <AnimatePresence>
+        {showAuthGate && (
+          <AuthGateModal
+            pair={selectedPair}
+            onClose={() => setShowAuthGate(false)}
+            onNavigate={handleNavigate}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+     }
