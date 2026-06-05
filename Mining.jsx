@@ -1197,6 +1197,10 @@ function AuthGate({ onSignUp, onSignIn }) {
      onNavigateSignIn   – () => void  navigate to login screen
 ───────────────────────────────────────────────────────────────────────── */
 export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
+</div>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    Main Mining component
    Props:
@@ -1204,6 +1208,7 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
      onNavigateSignUp   – () => void  navigate to register screen
      onNavigateSignIn   – () => void  navigate to login screen
 ───────────────────────────────────────────────────────────────────────── */
+export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
 export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
   const [selectedPair, setSelectedPair] = useState(MINING_PAIRS[0]);
   const [balance, setBalance] = useState(0);
