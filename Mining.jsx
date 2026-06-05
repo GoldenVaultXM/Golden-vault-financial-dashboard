@@ -25,8 +25,8 @@ import { ChevronRight, X, UserPlus, LogIn, Rocket, Trophy } from "lucide-react";
 ───────────────────────────────────────────────────────────────────────── */
 const GLOBAL_CSS = `
   @keyframes moonSpin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from { transform: translateX(0%); }
+    to   { transform: translateX(-50%); }
   }
   @keyframes haloSpin {
     from { transform: rotate(0deg); }
@@ -284,21 +284,32 @@ function MoonFace({ exhausted }) {
      * The SVG inside is static — no JS animation on this element at all.
      * This means no Framer Motion layout thrash during rapid taps.
      */
+    /* Outer clip holds the circular mask; inner strip is 200% wide and scrolls */
     <div
       style={{
         width: "100%",
         height: "100%",
         borderRadius: "50%",
         overflow: "hidden",
-        animation: "moonSpin 28s linear infinite",
-        willChange: "transform",
+        position: "relative",
       }}
     >
+      {/* Double-wide surface strip — scrolls left continuously, simulating globe rotation */}
+      <div
+        style={{
+          width: "200%",
+          height: "100%",
+          display: "flex",
+          animation: "moonSpin 32s linear infinite",
+          willChange: "transform",
+        }}
+      >
+      {/* Left tile */}
       <svg
         viewBox="0 0 200 200"
-        width="100%"
+        width="50%"
         height="100%"
-        style={{ display: "block" }}
+        style={{ display: "block", flexShrink: 0 }}
       >
         <defs>
           {/* Lit surface — warm grey-white highlight */}
@@ -401,6 +412,73 @@ function MoonFace({ exhausted }) {
           strokeDashoffset="-55"
         />
       </svg>
+      {/* Right tile — identical, seamless loop */}
+      <svg
+        viewBox="0 0 200 200"
+        width="50%"
+        height="100%"
+        style={{ display: "block", flexShrink: 0 }}
+      >
+        <defs>
+          <radialGradient id="mSurf2" cx="36%" cy="30%" r="72%">
+            <stop offset="0%"  stopColor="#f2ede4" />
+            <stop offset="25%" stopColor="#d8d0bc" />
+            <stop offset="60%" stopColor="#b0a48a" />
+            <stop offset="100%" stopColor="#736050" />
+          </radialGradient>
+          <radialGradient id="mVig2" cx="50%" cy="50%" r="50%">
+            <stop offset="65%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.55)" />
+          </radialGradient>
+          <radialGradient id="mShad2" cx="68%" cy="50%" r="52%">
+            <stop offset="0%"  stopColor="rgba(0,0,0,0)" />
+            <stop offset="55%" stopColor="rgba(0,0,0,0.5)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.92)" />
+          </radialGradient>
+          <radialGradient id="mEarth2" cx="72%" cy="50%" r="38%">
+            <stop offset="0%"  stopColor="rgba(60,90,170,0.20)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </radialGradient>
+          <radialGradient id="mRim2" cx="50%" cy="50%" r="50%">
+            <stop offset="84%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="96%" stopColor="rgba(210,225,255,0.10)" />
+            <stop offset="100%" stopColor="rgba(210,225,255,0.20)" />
+          </radialGradient>
+          <clipPath id="mClip2">
+            <circle cx="100" cy="100" r="100" />
+          </clipPath>
+        </defs>
+        <circle cx="100" cy="100" r="100" fill="#04050e" />
+        <g clipPath="url(#mClip2)">
+          <circle cx="100" cy="100" r="100" fill="url(#mSurf2)" />
+          <ellipse cx="70"  cy="66"  rx="27" ry="22" fill="rgba(70,60,48,0.58)" />
+          <ellipse cx="110" cy="70"  rx="19" ry="16" fill="rgba(70,60,48,0.48)" />
+          <ellipse cx="120" cy="96"  rx="21" ry="14" fill="rgba(68,58,46,0.52)" />
+          <ellipse cx="140" cy="74"  rx="13" ry="11" fill="rgba(65,56,44,0.54)" />
+          <ellipse cx="127" cy="120" rx="12" ry="9"  fill="rgba(66,57,45,0.46)" />
+          <ellipse cx="76"  cy="130" rx="14" ry="10" fill="rgba(72,62,50,0.44)" />
+          <ellipse cx="95"  cy="134" rx="17" ry="11" fill="rgba(70,61,48,0.42)" />
+          <ellipse cx="58"  cy="102" rx="23" ry="40" fill="rgba(68,59,46,0.36)" />
+          <circle cx="96"  cy="152" r="5.5" fill="rgba(185,175,158,0.65)" />
+          <circle cx="96"  cy="152" r="3"   fill="rgba(228,222,208,0.88)" />
+          <circle cx="76"  cy="108" r="6.5" fill="rgba(175,165,148,0.60)" />
+          <circle cx="76"  cy="108" r="3.5" fill="rgba(215,208,192,0.82)" />
+          <circle cx="86"  cy="50"  r="5"   fill="rgba(58,50,40,0.55)" />
+          <circle cx="148" cy="99"  r="5.5" fill="rgba(56,48,38,0.50)" />
+          <circle cx="54"  cy="142" r="3.5" fill="rgba(58,50,40,0.46)" />
+          <circle cx="114" cy="150" r="4"   fill="rgba(56,48,38,0.42)" />
+          <circle cx="60"  cy="56"  r="3"   fill="rgba(58,50,40,0.42)" />
+          <circle cx="142" cy="132" r="3.5" fill="rgba(58,50,40,0.40)" />
+          <ellipse cx="52" cy="62" rx="20" ry="14" fill="rgba(255,250,238,0.06)" />
+          <circle cx="158" cy="100" r="115" fill="rgba(0,0,0,0.88)" />
+          <circle cx="100" cy="100" r="100" fill="url(#mEarth2)" />
+          <circle cx="100" cy="100" r="100" fill="url(#mShad2)" />
+          <circle cx="100" cy="100" r="100" fill="url(#mVig2)" />
+        </g>
+        <circle cx="100" cy="100" r="100" fill="url(#mRim2)" />
+        <circle cx="100" cy="100" r="97" fill="none" stroke="rgba(238,232,218,0.22)" strokeWidth="2.5" strokeDasharray="190 240" strokeDashoffset="-55" />
+      </svg>
+      </div>
     </div>
   );
 }
