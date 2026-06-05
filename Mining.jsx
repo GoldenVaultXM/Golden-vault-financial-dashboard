@@ -1185,6 +1185,18 @@ function AuthGate({ onSignUp, onSignIn }) {
     Already have an account? Sign In
   </motion.button>
 </div>
+    </div>
+  );
+}  
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Main Mining component
+   Props:
+     user               – { email } | null
+     onNavigateSignUp   – () => void  navigate to register screen
+     onNavigateSignIn   – () => void  navigate to login screen
+───────────────────────────────────────────────────────────────────────── */
+export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
 /* ─────────────────────────────────────────────────────────────────────────
    Main Mining component
    Props:
