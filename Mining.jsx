@@ -1074,43 +1074,8 @@ function AuthGate({ onSignUp, onSignIn }) {
               borderRadius: 14,
               padding: "10px 20px",
             }}
-          >
-            <Lock size={16} color={C.gold2} />
-            <span
-              style={{ fontSize: 11, fontWeight: 800, color: C.gold2, letterSpacing: "0.1em" }}
-            >
-              SECURE VAULT ACCESS
-            </span>
-          </div>
-        </div>
-
-        <h2
-          style={{
-            margin: "0 0 10px",
-            fontSize: 20,
-            fontWeight: 900,
-            color: C.text,
-            textAlign: "center",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Sign up to start mining
-        </h2>
-
-        <p
-          style={{
-            margin: "0 0 28px",
-            fontSize: 13,
-            color: C.text2,
-            textAlign: "center",
-            lineHeight: 1.6,
-          }}
-        >
-          Create your free account to access Tap Mining, track your balance, and earn rewards
-          across BTC, ETH, SOL & Gold.
-        </p>
-
-        {/* Perks list */}
+         > 
+             {/* Perks list */}
         {[
           "Persistent balance saved to your account",
           "Mine BTC, ETH, SOL & Gold Spot",
@@ -1140,75 +1105,56 @@ function AuthGate({ onSignUp, onSignIn }) {
         ))}
 
         {/* CTA buttons */}
-<div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-  <motion.button
-    whileTap={{ scale: 0.97 }}
-    onClick={onSignUp}
-    style={{
-      width: "100%",
-      padding: "15px",
-      borderRadius: 14,
-      border: "none",
-      background: `linear-gradient(135deg, ${C.gold}, ${C.gold2})`,
-      color: "#000",
-      fontSize: 14,
-      fontWeight: 900,
-      letterSpacing: "0.06em",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      boxShadow: `0 4px 20px ${C.gold}55`,
-    }}
-  >
-    CREATE FREE ACCOUNT
-    <ChevronRight size={16} />
-  </motion.button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onSignUp}
+            style={{
+              width: "100%",
+              padding: "15px",
+              borderRadius: 14,
+              border: "none",
+              background: `linear-gradient(135deg, ${C.gold}, ${C.gold2})`,
+              color: "#000",
+              fontSize: 14,
+              fontWeight: 900,
+              letterSpacing: "0.06em",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              boxShadow: `0 4px 20px ${C.gold}55`,
+            }}
+          >
+            CREATE FREE ACCOUNT
+            <ChevronRight size={16} />
+          </motion.button>
 
-  <motion.button
-    whileTap={{ scale: 0.97 }}
-    onClick={onSignIn}
-    style={{
-      width: "100%",
-      padding: "14px",
-      borderRadius: 14,
-      border: `1px solid ${C.border2}`,
-      background: C.card2,
-      color: C.text2,
-      fontSize: 13,
-      fontWeight: 700,
-      letterSpacing: "0.04em",
-      cursor: "pointer",
-    }}
-  >
-    Already have an account? Sign In
-  </motion.button>
-</div>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onSignIn}
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: 14,
+              border: `1px solid ${C.border2}`,
+              background: C.card2,
+              color: C.text2,
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+            }}
+          >
+            Already have an account? Sign In
+          </motion.button>
+        </div>
+      </div>
     </div>
-  );
-}  
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Main Mining component
-   Props:
-     user               – { email } | null
-     onNavigateSignUp   – () => void  navigate to register screen
-     onNavigateSignIn   – () => void  navigate to login screen
-───────────────────────────────────────────────────────────────────────── */
-export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
-</div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Main Mining component
-   Props:
-     user               – { email } | null
-     onNavigateSignUp   – () => void  navigate to register screen
-     onNavigateSignIn   – () => void  navigate to login screen
-───────────────────────────────────────────────────────────────────────── */
-export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
 export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
   const [selectedPair, setSelectedPair] = useState(MINING_PAIRS[0]);
   const [balance, setBalance] = useState(0);
@@ -1224,7 +1170,6 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
 
   const isGuest = !user?.email;
 
-  /* Load persisted balance */
   useEffect(() => {
     if (!user?.email) return;
     (async () => {
@@ -1240,7 +1185,6 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
     })();
   }, [user?.email]);
 
-  /* Energy regeneration */
   useEffect(() => {
     const id = setInterval(() => {
       setEnergy((e) => Math.min(MAX_ENERGY, e + REGEN_RATE));
@@ -1248,7 +1192,6 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
     return () => clearInterval(id);
   }, []);
 
-  /* Debounced Supabase upsert */
   const syncToSupabase = useCallback(
     (newBalance) => {
       if (!user?.email) return;
@@ -1263,14 +1206,12 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
     [user?.email]
   );
 
-  /* Tap handler – intercepts unauthenticated users */
   const handleTap = useCallback(
     (e) => {
       if (isGuest) {
         setShowAuthGate(true);
         return;
       }
-
       if (energy < ENERGY_COST) return;
 
       const earned = selectedPair.rate;
@@ -1303,7 +1244,6 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
     setParticles((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
-  /* Auth gate navigation handlers */
   const handleNavigate = useCallback((route) => {
     setShowAuthGate(false);
     if (route === "register") onNavigateSignUp?.();
@@ -1319,135 +1259,56 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        gap: 0,
         fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
         paddingBottom: 100,
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* ── Purple mesh background orbs ── */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-        <div style={{
-          position: "absolute", top: "-10%", left: "-15%",
-          width: 320, height: 320, borderRadius: "50%",
-          background: "radial-gradient(circle, #7c3aed22 0%, transparent 70%)",
-          filter: "blur(40px)",
-        }} />
-        <div style={{
-          position: "absolute", top: "5%", right: "-10%",
-          width: 260, height: 260, borderRadius: "50%",
-          background: "radial-gradient(circle, #a855f718 0%, transparent 70%)",
-          filter: "blur(50px)",
-        }} />
-        <div style={{
-          position: "absolute", top: "25%", left: "50%",
-          transform: "translateX(-50%)",
-          width: 400, height: 400, borderRadius: "50%",
-          background: "radial-gradient(circle, #6d28d912 0%, transparent 65%)",
-          filter: "blur(60px)",
-        }} />
-        <div style={{
-          position: "absolute", bottom: "8%", right: "10%",
-          width: 200, height: 200, borderRadius: "50%",
-          background: "radial-gradient(circle, #ec489914 0%, transparent 70%)",
-          filter: "blur(40px)",
-        }} />
+        <div style={{ position: "absolute", top: "-10%", left: "-15%", width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, #7c3aed22 0%, transparent 70%)", filter: "blur(40px)" }} />
+        <div style={{ position: "absolute", top: "5%", right: "-10%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, #a855f718 0%, transparent 70%)", filter: "blur(50px)" }} />
+        <div style={{ position: "absolute", top: "25%", left: "50%", transform: "translateX(-50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, #6d28d912 0%, transparent 65%)", filter: "blur(60px)" }} />
+        <div style={{ position: "absolute", bottom: "8%", right: "10%", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, #ec489914 0%, transparent 70%)", filter: "blur(40px)" }} />
       </div>
 
-      {/* ── Header ── */}
-      <div
-        style={{
-          padding: "18px 16px 14px",
-          borderBottom: `1px solid ${C.border}`,
-          background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`,
-          position: "relative", zIndex: 1,
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 24,
-            fontWeight: 900,
-            color: C.text,
-            letterSpacing: "-0.02em",
-          }}
-        >
+      <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${C.border}`, background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`, position: "relative", zIndex: 1 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: C.text, letterSpacing: "-0.02em" }}>
           Tap{" "}
-          <span style={{ color: C.gold2, textShadow: `0 0 20px ${C.gold}66` }}>
-            Mining
-          </span>
+          <span style={{ color: C.gold2, textShadow: `0 0 20px ${C.gold}66` }}>Mining</span>
         </h1>
       </div>
 
-      {/* ── Asset Selection ── */}
       <div style={{ paddingTop: 16, paddingBottom: 12 }}>
-        <PairSelector
-          pairs={MINING_PAIRS}
-          selected={selectedPair}
-          onSelect={setSelectedPair}
-        />
+        <PairSelector pairs={MINING_PAIRS} selected={selectedPair} onSelect={setSelectedPair} />
       </div>
 
-      {/* ── Large Floating Vault Coin ── */}
       <div style={{ paddingTop: 8, paddingBottom: 0, position: "relative" }}>
-        <TapCoin
-          pair={selectedPair}
-          onTap={handleTap}
-          exhausted={exhausted}
-        />
-
+        <TapCoin pair={selectedPair} onTap={handleTap} exhausted={exhausted} />
         {isGuest && (
-          <div
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 24,
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              background: "#0f0f0fcc",
-              border: `1px solid ${C.border2}`,
-              borderRadius: 20,
-              padding: "5px 10px",
-              backdropFilter: "blur(8px)",
-            }}
-          >
+          <div style={{ position: "absolute", top: 12, right: 24, display: "flex", alignItems: "center", gap: 5, background: "#0f0f0fcc", border: `1px solid ${C.border2}`, borderRadius: 20, padding: "5px 10px", backdropFilter: "blur(8px)" }}>
             <Lock size={11} color={C.gold2} strokeWidth={2.5} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: C.gold2, letterSpacing: "0.08em" }}>
-              SIGN IN TO MINE
-            </span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.gold2, letterSpacing: "0.08em" }}>SIGN IN TO MINE</span>
           </div>
         )}
       </div>
 
-      {/* ── Balance | Session | Taps ── */}
       <StatsStrip balance={balance} sessionEarned={sessionEarned} taps={tapCount} />
 
-      {/* ── Asset Info ── */}
-      <div style={{ paddingTop: 20, paddingBottom: 0 }}>
+      <div style={{ paddingTop: 20 }}>
         <AssetInfo pair={selectedPair} />
       </div>
 
-      {/* ── Energy Bar ── */}
       <div style={{ paddingTop: 12 }}>
         <EnergyBar energy={energy} max={MAX_ENERGY} />
       </div>
 
-      {/* ── Floating particles ── */}
       <AnimatePresence>
         {particles.map((p) => (
-          <TapParticle
-            key={p.id}
-            x={p.x}
-            y={p.y}
-            amount={p.amount}
-            onDone={() => removeParticle(p.id)}
-          />
+          <TapParticle key={p.id} x={p.x} y={p.y} amount={p.amount} onDone={() => removeParticle(p.id)} />
         ))}
       </AnimatePresence>
 
-      {/* ── Auth gate modal ── */}
       <AnimatePresence>
         {showAuthGate && (
           <AuthGateModal
@@ -1459,4 +1320,5 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
       </AnimatePresence>
     </div>
   );
-     }
+}
+           
