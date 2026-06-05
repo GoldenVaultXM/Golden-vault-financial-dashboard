@@ -1140,84 +1140,51 @@ function AuthGate({ onSignUp, onSignIn }) {
         ))}
 
         {/* CTA buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onSignUp}
-            style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: 14,
-              border: "none",
-              background: `linear-gradient(135deg, ${C.gold}, ${C.gold2})`,
-              color: "#000",
-              fontSize: 14,
-              fontWeight: 900,
-              letterSpacing: "0.06em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: `0 4px 20px ${C.gold}55`,
-            }}
-          >
-            CREATE FREE ACCOUNT
-            <ChevronRight size={16} />
-          </motion.button>
+<div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
+  <motion.button
+    whileTap={{ scale: 0.97 }}
+    onClick={onSignUp}
+    style={{
+      width: "100%",
+      padding: "15px",
+      borderRadius: 14,
+      border: "none",
+      background: `linear-gradient(135deg, ${C.gold}, ${C.gold2})`,
+      color: "#000",
+      fontSize: 14,
+      fontWeight: 900,
+      letterSpacing: "0.06em",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      boxShadow: `0 4px 20px ${C.gold}55`,
+    }}
+  >
+    CREATE FREE ACCOUNT
+    <ChevronRight size={16} />
+  </motion.button>
 
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onSignIn}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 14,
-              border: `1px solid ${C.border2}`,
-              background: C.card2,
-              color: C.text2,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              cursor: "pointer",
-            }}
-          >
-            Already have an account? Sign In
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
-}
->
-            CREATE FREE ACCOUNT
-            <ChevronRight size={16} />
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onSignIn}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 14,
-              border: `1px solid ${C.border2}`,
-              background: C.card2,
-              color: C.text2,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              cursor: "pointer",
-            }}
-          >
-            Already have an account? Sign In
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+  <motion.button
+    whileTap={{ scale: 0.97 }}
+    onClick={onSignIn}
+    style={{
+      width: "100%",
+      padding: "14px",
+      borderRadius: 14,
+      border: `1px solid ${C.border2}`,
+      background: C.card2,
+      color: C.text2,
+      fontSize: 13,
+      fontWeight: 700,
+      letterSpacing: "0.04em",
+      cursor: "pointer",
+    }}
+  >
+    Already have an account? Sign In
+  </motion.button>
+</div>
 /* ─────────────────────────────────────────────────────────────────────────
    Main Mining component
    Props:
