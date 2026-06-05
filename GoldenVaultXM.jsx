@@ -1005,13 +1005,11 @@ function BottomNav({ page, setPage, newsCount }) {
             <div style={{ width: active ? 36 : 28, height: active ? 36 : 28, borderRadius: active ? 10 : 8, background: active ? `${C.gold}22` : "transparent", display: "grid", placeItems: "center", transition: "all .2s", position: "relative" }}><t.icon size={18} color={active ? C.gold : C.text4} /> {locked && (<div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, background: C.card, borderRadius: "50%", display: "grid", placeItems: "center" }}><Lock size={6} color={C.text3} /></div>)}</div>
             <span style={{ fontSize: 10, fontWeight: 800, color: active ? C.gold : C.text4, letterSpacing: "0.04em" }}>{t.label}</span>
           {t.id === "news" && newsCount > 0 && (
-  <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: C.gold }} />
-)}
+            <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: C.gold }} />
+          )}
           </button>
+        );
       })}
-    </nav>
-  );
-}
 
 /* ─── PAGES (Modified TradePage) ────────────────────────────────────────── */
 function HomePage({ setPage }) {
