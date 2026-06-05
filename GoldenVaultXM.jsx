@@ -1008,7 +1008,6 @@ function BottomNav({ page, setPage, newsCount }) {
   <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: C.gold }} />
 )}
           </button>
-        );
       })}
     </nav>
   );
