@@ -439,7 +439,7 @@ function SmokePuff({ id, onDone }) {
 
 // Golden Vault coin – embedded as a data URI so it renders instantly even
 // on the slowest network connection, with zero external requests.
-const GOLDEN_VAULT_COIN_SRC = https://imgur.com/a/3sU6u43
+const GOLDEN_VAULT_COIN_SRC = "https://imgur.com/a/3sU6u43.png";
    /* ─────────────────────────────────────────────────────────────────────────
    Large floating vault coin – Priority 1 visual
    Uses the real Golden Vault PNG image (embedded as data URI for instant
