@@ -18,6 +18,26 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   FIX: MENU / DRAWER — Ensure fixed overlays are never clipped
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Prevent any ancestor from clipping fixed-position menus */
+html, body, #gvxm-root, .gvxm-shell {
+  overflow-x: hidden;
+  /* Do NOT use overflow: hidden on these — it breaks position: fixed */
+}
+
+/* Ensure fixed overlays always sit on top and are fully visible */
+[role="dialog"],
+[data-menu],
+[data-drawer],
+[style*="position: fixed"],
+[style*="position:fixed"] {
+  z-index: 9999 !important;
+  overflow-y: auto !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    1. VOID-BLACK FOUNDATION
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -73,7 +93,7 @@ body,
    2. CINEMATIC GOLD — Headers & Values
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Typography: Playfair Display for headings */
+/* Typography: Playfair Display for headings ONLY */
 h1, h2, h3, h4,
 [style*="fontWeight: 900"],
 [style*="font-weight: 900"],
@@ -82,12 +102,11 @@ h1, h2, h3, h4,
   font-family: 'Playfair Display', Georgia, serif !important;
 }
 
-/* Typography: Inter for UI data */
+/* Typography: Inter for UI — scoped to avoid overriding layout on div */
 body,
 input,
 button,
 span,
-div,
 p {
   font-family: 'Inter', system-ui, sans-serif;
 }
