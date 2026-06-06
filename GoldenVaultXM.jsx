@@ -1560,4 +1560,66 @@ function NewsPage() {
           >
             <Bell size={17} />
             {newStoryCount > 0 && (
-              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 9, background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", p
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 9, background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", padding: "0 3px", lineHeight: 1 }}>
+                {newStoryCount > 9 ? "9+" : newStoryCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{ position: "absolute", top: 46, right: 0, width: "min(320px, 88vw)", maxHeight: "60vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 14, boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: C.text }}>News Alerts</span>
+                <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={15} /></button>
+              </div>
+              {newsBellAlerts.length === 0 ? (
+                <div style={{ padding: "28px 14px", textAlign: "center", color: C.text3, fontSize: 13 }}>No new alerts yet</div>
+              ) : (
+                newsBellAlerts.map((a, i) => (
+                  <div key={i} style={{ padding: "11px 14px", borderBottom: i < newsBellAlerts.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, lineHeight: 1.4, marginBottom: 4 }}>{a.title}</div>
+                    <div style={{ fontSize: 10, color: C.text3 }}>{a.source} · {fmtRelTime(a.time)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+        </div>
+      </div>
+
+      {/* ── Category Tabs ── */}
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
+        {NEWS_CATEGORIES.map(cat => (
+          <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 20, border: "none", cursor: "pointer", transition: "all .15s", background: cat === category ? C.text : `${C.gold}14`, color: cat === category ? "#000" : C.text3, }}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* ── New Stories Banner ── */}
+      {newStoryCount > 0 && (
+        <button onClick={handleShowNew} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 20, cursor: "pointer", margin: "0 auto 12px", color: C.text, fontSize: 12, fontWeight: 700 }}>
+          <ChevronRight size={13} color={C.gold} style={{ transform: "rotate(-90deg)" }} />
+          {newStoryCount} new {newStoryCount === 1 ? "story" : "stories"}
+        </button>
+      )}
+
+      {/* ── Loading ── */}
+      {loading && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
+                <
+export default function GoldenVaultXM() {
+  const [page, setPage] = useState("home");
+  return (
+    <LayoutProvider>
+      <AuthProvider onLogin={() => setPage("trade")}>
+        <AppShell page={page} setPage={setPage} />
+      </AuthProvider>
+    </LayoutProvider>
+  );
+                }
