@@ -1543,7 +1543,7 @@ function NewsPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-      {/* ── Page Header with Notification Bell ── */}
+{/* ── Page Header with Notification Bell ── */}
       <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
@@ -1622,4 +1622,4 @@ export default function GoldenVaultXM() {
       </AuthProvider>
     </LayoutProvider>
   );
-                }
+          }
