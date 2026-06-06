@@ -617,7 +617,7 @@ function DepositModal({ onClose }) {
         }}>
           <span style={{ fontSize: 11, color: "#444" }}>
             Need help?{" "}
-            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.com</span>
+            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.live</span>
           </span>
           <button onClick={onClose} style={{
             background: "#111", border: "1px solid #2a2a2a",
