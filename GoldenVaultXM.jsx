@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu, ExternalLink, } from "lucide-react";
+import Mining from "./Mining";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
@@ -617,7 +618,7 @@ function DepositModal({ onClose }) {
         }}>
           <span style={{ fontSize: 11, color: "#444" }}>
             Need help?{" "}
-            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.live</span>
+            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.com</span>
           </span>
           <button onClick={onClose} style={{
             background: "#111", border: "1px solid #2a2a2a",
@@ -948,44 +949,50 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 
       {/* Hamburger drawer */}
       {open && (
-        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+        <>
+          {/* Backdrop */}
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 199, background: "rgba(0,0,0,0.5)" }} />
 
-          {/* Nav links */}
-          {NAV.map(n => (
-            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent" }}>
-              <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
-              <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
-              {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
-            </button>
-          ))}
+          {/* Drawer — no gvxm-shell class so overflow/maxWidth never clips it */}
+          <div style={{ position: "fixed", top: 58, left: 0, right: 0, bottom: 0, zIndex: 200, background: `${C.bg}f8`, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", padding: "20px 20px 100px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", WebkitOverflowScrolling: "touch", boxSizing: "border-box" }}>
 
-          {/* Quick Actions */}
-          <div style={{ marginTop: 16, marginBottom: 4 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {ACTIONS.map((a, i) => (
-                <button key={i} onClick={a.onClick}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <a.icon size={15} color={a.color} />
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
-                </button>
-              ))}
+            {/* Nav links */}
+            {NAV.map(n => (
+              <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", width: "100%", boxSizing: "border-box" }}>
+                <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
+                <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
+                {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
+              </button>
+            ))}
+
+            {/* Quick Actions */}
+            <div style={{ marginTop: 16, marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {ACTIONS.map((a, i) => (
+                  <button key={i} onClick={a.onClick}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s", width: "100%", boxSizing: "border-box" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                      <a.icon size={15} color={a.color} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sign out / in */}
+            <div style={{ marginTop: "auto", paddingTop: 12 }}>
+              <GoldLine />
+              {isAuthenticated
+                ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
+                : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+              }
             </div>
           </div>
-
-          {/* Sign out / in */}
-          <div style={{ marginTop: "auto", paddingTop: 12 }}>
-            <GoldLine />
-            {isAuthenticated
-              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
-              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
-            }
-          </div>
-        </div>
+        </>
       )}
     </header>
   );
@@ -995,7 +1002,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { width } = useLayout();
-  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "mining", icon: Cpu, label: "Mine" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
@@ -1517,26 +1524,26 @@ useEffect(() => {
       )}
 
       {/* ── Error / No Key ── */}
-{!loading && error && (
-  error === "__NO_KEY__" ? (
-    <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
-      <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
-      <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
-      <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
-        Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
-      </div>
-    </div>
-  ) : (
-    <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
-      <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
-      <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
-      <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
-      <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
-        <RefreshCw size={13} /> Retry
-      </Btn>
-    </div>
-  )
-)}
+      {!loading && error && (
+        error === "__NO_KEY__" ? (
+          <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
+            <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+              Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+            <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
+            <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
+            <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
+              <RefreshCw size={13} /> Retry
+            </Btn>
+          </div>
+        )
+      )}
 
       {/* ── Articles ── */}
       {!loading && !error && (
@@ -1552,7 +1559,6 @@ useEffect(() => {
               rel="noopener noreferrer"
               style={{ display: "block", textDecoration: "none", padding: "16px 0", borderBottom: i < articles.length - 1 ? `1px solid ${C.border}` : "none" }}
             >
-              {/* Source row */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}44`, display: "grid", placeItems: "center" }}>
                   <Newspaper size={10} color={C.gold} />
@@ -1564,11 +1570,9 @@ useEffect(() => {
                 <span style={{ fontSize: 11, color: C.text3 }}>{fmtRelTime(article.publishedAt)}</span>
                 <ExternalLink size={10} color={C.text4} style={{ marginLeft: "auto", flexShrink: 0 }} />
               </div>
-              {/* Headline */}
               <div style={{ fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.4, letterSpacing: "-0.01em" }}>
                 {article.title}
               </div>
-              {/* Description */}
               {article.description && (
                 <div style={{ fontSize: 13, color: C.text2, marginTop: 6, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                   {article.description}
@@ -1605,23 +1609,19 @@ function AppShell({ page, setPage }) {
   const renderPage = () => {
     switch (page) {
       case "home":     return <HomePage setPage={handleSetPage} />;
-case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-case "trade":    return <TradePage prices={prices} />;
-case "mining":   return <Mining user={user} />;
-case "news":     return <NewsPage onNewsCount={setNewsCount} />;
-case "settings": return <SettingsPage />;
-default:         return <HomePage setPage={handleSetPage} />;
+      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+      case "trade":    return <TradePage prices={prices} />;
+      case "mining":   return <Mining user={user} />;
+      case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+      case "settings": return <SettingsPage />;
+      default:         return <HomePage setPage={handleSetPage} />;
     }
   };
 
   return (
     <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
-        *, *::before, *::after {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
         scrollbar-width: none;
         input, button, select, textarea { font-family: inherit; }
@@ -1655,4 +1655,4 @@ export default function GoldenVaultXM() {
       </ThemeProvider>
     </LayoutProvider>
   );
-}
+                  }
