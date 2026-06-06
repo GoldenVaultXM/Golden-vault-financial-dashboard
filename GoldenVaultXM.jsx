@@ -1674,4 +1674,4 @@ export default function GoldenVaultXM() {
       </ThemeProvider>
     </LayoutProvider>
   );
-          }
+}
