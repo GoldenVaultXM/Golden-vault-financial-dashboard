@@ -1,32 +1,27 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
-import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, ExternalLink, } from "lucide-react";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu, ExternalLink, } from "lucide-react";
+import Mining from "./Mining";
 import { supabase } from './supabaseClient';
 
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
-const C = {
-  bg: "#000000",
-  card: "#000000",
-  card2: "#050505",
-  card3: "#0a0a0a",
-  border: "rgba(191,149,63,0.3)",
-  border2: "rgba(191,149,63,0.2)",
-  gold: "#BF953F",
-  gold2: "#FCF6BA",
-  gold3: "#FBF5B7",
-  goldDim: "#AA771C",
-  green: "#22c55e",
-  red: "#ef4444",
-  purple: "#7c3aed",
-  blue: "#3b82f6",
-  text: "#ffffff",
-  text2: "#a3a3a3",
-  text3: "#525252",
-  text4: "#303030",
+const DARK_TOKENS = {
+  bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
+  border: "#222222", border2: "#2a2a2a",
+  gold: "#d97706", gold2: "#f59e0b", gold3: "#fbbf24", goldDim: "#92400e",
+  green: "#22c55e", red: "#ef4444", purple: "#7c3aed", blue: "#3b82f6",
+  text: "#ffffff", text2: "#a3a3a3", text3: "#525252", text4: "#303030",
 };
-
-/* ─── Luxury Gold CSS gradient (for backgrounds that support it via JS) ──── */
-const LUXURY_GOLD_GRADIENT = "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)";
+const LIGHT_TOKENS = {
+  bg: "#f5f1ea", card: "#ffffff", card2: "#faf7f2", card3: "#f0ebe0",
+  border: "#e2d9c8", border2: "#d4c9b4",
+  gold: "#b45309", gold2: "#d97706", gold3: "#f59e0b", goldDim: "#92400e",
+  green: "#15803d", red: "#dc2626", purple: "#6d28d9", blue: "#1d4ed8",
+  text: "#1a1008", text2: "#44403c", text3: "#78716c", text4: "#c8bfaf",
+};
+const C = { ...DARK_TOKENS };
+const ThemeContext = createContext(null);
+const useTheme = () => useContext(ThemeContext);
 
 /* ─── Auth Context ───────────────────────────────────────────────────────── */
 const AuthContext = createContext(null);
@@ -79,7 +74,58 @@ function LayoutProvider({ children }) {
     </LayoutContext.Provider>
   );
 }
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem("gvxm-theme") || "dark"; } catch { return "dark"; }
+  });
+  const [, tick] = useState(0);
+  const { mode } = useLayout();
 
+  useEffect(() => {
+    const tokens = theme === "light" ? LIGHT_TOKENS : DARK_TOKENS;
+    Object.assign(C, tokens);
+    applyLayoutCSS(mode, theme);
+    try { localStorage.setItem("gvxm-theme", theme); } catch {}
+    tick(n => n + 1);
+  }, [theme, mode]);
+
+  const toggle = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);
+  return (
+    <ThemeContext.Provider value={{ theme, toggle }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={toggle}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title={theme === "dark" ? "Switch to Light" : "Switch to Dark"}
+      style={{
+        background: hov ? C.card3 : C.card2,
+        border: `1.5px solid ${C.border2}`,
+        borderRadius: 20,
+        padding: "6px 12px",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        transition: "all .18s",
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: 15 }}>{theme === "dark" ? "☀️" : "🌒"}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: C.text2, letterSpacing: "0.03em" }}>
+        {theme === "dark" ? "Light" : "Dark"}
+      </span>
+    </button>
+  );
+}
 /* ─── Viewport + Base CSS — SYNCHRONOUS module-level execution ───────────────
  *
  * WHY THIS MUST RUN AT MODULE LOAD (not in useEffect):
@@ -109,134 +155,34 @@ function ensureViewportMeta() {
   meta.content = "width=device-width, initial-scale=1.0";
 }
 
-function applyLayoutCSS(mode) {
+function applyLayoutCSS(mode, theme = "dark") {
   const w = LAYOUT_WIDTHS[mode];
+  const bg = theme === "light" ? "#f5f1ea" : "#080808";
   const id = "gvxm-layout-lock";
   let tag = document.getElementById(id);
   if (!tag) {
     tag = document.createElement("style");
     tag.id = id;
-    /* Prepend to <head> so this beats every other stylesheet */
     document.head.insertBefore(tag, document.head.firstChild);
   }
   tag.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@500&display=swap');
-    html {
-      background: #000000 !important;
-      overflow-x: hidden !important;
-    }
+    html { background: ${bg} !important; overflow-x: hidden !important; }
     body {
-      background: #000000 !important;
-      font-family: 'Inter', sans-serif !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      /* FLUID — fills phone screen natively, no browser zoom triggered */
-      width: 100% !important;
-      min-width: 0 !important;
-      max-width: 100% !important;
+      background: ${bg} !important; margin: 0 !important; padding: 0 !important;
+      width: 100% !important; min-width: 0 !important; max-width: 100% !important;
       overflow-x: hidden !important;
-      -webkit-text-size-adjust: 100% !important;
-      text-size-adjust: 100% !important;
+      -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
     }
-    /* App shell is capped at chosen layout width, centred on wider screens */
     .gvxm-shell {
-      width: 100% !important;
-      max-width: ${w}px !important;
-      min-width: 0 !important;
-      margin: 0 auto !important;
-      overflow-x: hidden !important;
-      box-sizing: border-box !important;
+      width: 100% !important; max-width: ${w}px !important; min-width: 0 !important;
+      margin: 0 auto !important; overflow-x: hidden !important; box-sizing: border-box !important;
     }
-    #gvxm-root {
-      width: 100% !important;
-      max-width: 100% !important;
-      overflow-x: hidden !important;
-    }
+    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
   `;
 }
-
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
 ensureViewportMeta();
 applyLayoutCSS(window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile");
-
-/* ─── Luxury Aesthetic CSS Injection ────────────────────────────────────── */
-(function injectLuxuryCSS() {
-  const id = "gvxm-luxury-aesthetic";
-  if (document.getElementById(id)) return;
-  const style = document.createElement("style");
-  style.id = id;
-  style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
-
-    /* ── Global font base ── */
-    body, input, button, select, textarea {
-      font-family: 'Inter', sans-serif !important;
-    }
-
-    /* ── Playfair Display for headings ── */
-    h1, h2, h3, h4, h5, h6,
-    [data-heading="true"] {
-      font-family: 'Playfair Display', serif !important;
-      font-style: italic !important;
-      font-weight: 700 !important;
-    }
-
-    /* ── All dark/gray backgrounds → pure black ── */
-    .gvxm-shell,
-    header,
-    nav {
-      background-color: #000000 !important;
-    }
-
-    /* ── Gear glow in Trade section background: Tech-Green #00FF41 ── */
-    /* Targets SVG gear icons specifically inside the trade background area */
-    [data-section="trade-bg"] svg,
-    .trade-gear svg,
-    svg.gear-icon {
-      filter: drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 16px #00FF41aa) !important;
-      color: #00FF41 !important;
-    }
-
-    /* ── Container framing with luxury gold border ── */
-    [class*="card"],
-    [class*="Card"],
-    [data-card] {
-      border: 1px solid rgba(191,149,63,0.3) !important;
-    }
-
-    /* ── Recharts tooltip luxury styling ── */
-    .recharts-tooltip-wrapper .recharts-default-tooltip {
-      background: #000000 !important;
-      border: 1px solid rgba(191,149,63,0.3) !important;
-    }
-
-    /* ── Input fields ── */
-    input, select, textarea {
-      background: #050505 !important;
-      border-color: rgba(191,149,63,0.3) !important;
-    }
-    input::placeholder {
-      color: #525252 !important;
-    }
-    input:focus, select:focus {
-      box-shadow: 0 0 0 2px rgba(191,149,63,0.2) !important;
-    }
-
-    /* ── Scrollbar luxury styling ── */
-    ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #000000;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(191,149,63,0.4);
-      border-radius: 2px;
-    }
-  `;
-  document.head.appendChild(style);
-})();
 
 /* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
@@ -371,8 +317,8 @@ const fmtPct = p => p == null ? "—" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
 const catColor = cat => ({ Crypto: "#f59e0b", Forex: "#3b82f6", Stocks: "#22c55e", Indices: "#a78bfa", Commodities: "#fbbf24", Futures: "#ef4444", Bonds: "#94a3b8" }[cat] || C.text3);
 
 /* ─── Shared UI Primitives ───────────────────────────────────────────────── */
-const GoldLine = () => (<div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.gold}66,transparent)` }} />);
-const Card = ({ children, style = {} }) => (<div style={{ background: "#000000", border: `1px solid rgba(191,149,63,0.3)`, borderRadius: 14, padding: "18px 16px", boxShadow: "0 2px 24px rgba(191,149,63,0.04)", ...style }}> {children} </div>);
+const GoldLine = () => (<div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.gold}33,transparent)` }} />);
+const Card = ({ children, style = {} }) => (<div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "18px 16px", ...style }}> {children} </div>);
 const Badge = ({ children, color }) => (<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", background: `${color}20`, color, borderRadius: 4, padding: "2px 7px", display: "inline-block", textTransform: "uppercase", }}>{children}</span>);
 const IconBox = ({ icon: Icon, color = C.gold, size = 16, boxSize = 36 }) => (<div style={{ width: boxSize, height: boxSize, borderRadius: 9, background: `${color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}> <Icon size={size} color={color} /> </div>);
 
@@ -381,7 +327,7 @@ function Btn({ children, onClick, variant = "gold", loading = false, disabled = 
   const [hov, setHov] = useState(false);
   const base = { border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900, fontSize: 13, cursor: disabled || loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .18s", letterSpacing: "0.04em", outline: "none", };
   const variants = {
-    gold: { background: disabled ? C.goldDim : hov ? "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)" : "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)", color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)", boxShadow: hov ? "0 4px 20px rgba(191,149,63,0.4)" : "none" },
+    gold: { background: disabled ? C.goldDim : hov ? C.gold2 : C.gold, color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)" },
     outline: { background: "transparent", color: hov ? C.gold2 : C.gold, border: `1.5px solid ${hov ? C.gold2 : C.gold}`, transform: hov ? "scale(1.01)" : "scale(1)" },
     ghost: { background: hov ? C.card3 : C.card2, color: C.text3, border: `1px solid ${C.border}` },
     danger: { background: hov ? "#b91c1c" : C.card, color: C.red, border: `1px solid ${C.border}` },
@@ -551,7 +497,7 @@ function DepositModal({ onClose }) {
     }}>
       <div style={{
         background: "#000000",
-        border: "1px solid rgba(191,149,63,0.3)",
+        border: "1px solid #222",
         borderRadius: 20,
         width: "100%", maxWidth: 440,
         maxHeight: "88vh",
@@ -562,7 +508,7 @@ function DepositModal({ onClose }) {
         {/* Header */}
         <div style={{
           padding: "20px 20px 16px",
-          borderBottom: "1px solid rgba(191,149,63,0.15)",
+          borderBottom: "1px solid #1a1a1a",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0,
         }}>
@@ -575,7 +521,7 @@ function DepositModal({ onClose }) {
             </div>
           </div>
           <button onClick={onClose} style={{
-            background: "#000", border: "1px solid rgba(191,149,63,0.3)", borderRadius: 8,
+            background: "#111", border: "1px solid #2a2a2a", borderRadius: 8,
             width: 32, height: 32, display: "grid", placeItems: "center",
             cursor: "pointer", color: "#666",
           }}>
@@ -590,8 +536,8 @@ function DepositModal({ onClose }) {
         }}>
           {CRYPTO_WALLETS.map((w) => (
             <div key={w.symbol} style={{
-              background: "#000000",
-              border: "1px solid rgba(191,149,63,0.2)",
+              background: "#0a0a0a",
+              border: "1px solid #1c1c1c",
               borderRadius: 14,
               padding: "14px 16px",
             }}>
@@ -623,8 +569,8 @@ function DepositModal({ onClose }) {
 
               {/* Address row */}
               <div style={{
-                background: "#000000",
-                border: "1px solid rgba(191,149,63,0.2)",
+                background: "#111",
+                border: "1px solid #222",
                 borderRadius: 10,
                 padding: "11px 12px",
                 display: "flex", alignItems: "center",
@@ -643,8 +589,8 @@ function DepositModal({ onClose }) {
                   onClick={() => handleCopy(w.address, w.symbol)}
                   style={{
                     flexShrink: 0,
-                    background: copied === w.symbol ? `${w.color}22` : "#050505",
-                    border: `1px solid ${copied === w.symbol ? w.color + "55" : "rgba(191,149,63,0.25)"}`,
+                    background: copied === w.symbol ? `${w.color}22` : "#1a1a1a",
+                    border: `1px solid ${copied === w.symbol ? w.color + "55" : "#2a2a2a"}`,
                     borderRadius: 8,
                     padding: "7px 13px",
                     cursor: "pointer",
@@ -664,18 +610,18 @@ function DepositModal({ onClose }) {
 
         {/* Footer */}
         <div style={{
-          borderTop: "1px solid rgba(191,149,63,0.15)",
+          borderTop: "1px solid #1a1a1a",
           padding: "12px 20px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0,
-          background: "#000000",
+          background: "#050505",
         }}>
           <span style={{ fontSize: 11, color: "#444" }}>
             Need help?{" "}
-            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.live</span>
+            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.com</span>
           </span>
           <button onClick={onClose} style={{
-            background: "#000", border: "1px solid rgba(191,149,63,0.3)",
+            background: "#111", border: "1px solid #2a2a2a",
             borderRadius: 8, padding: "8px 16px",
             color: "#888", fontSize: 12, fontWeight: 700,
             cursor: "pointer",
@@ -945,12 +891,11 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.2 }}>GOLDEN VAULT <span style={{ color: "#ef4444" }}>XM</span></div>
-          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 400, fontSize: 10, color: "#e69d00", marginTop: -2, lineHeight: 1.2 }}>Expert automated trading</div>
-        </div>
-      </div>
-
-      {/* Right controls */}
+       <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}><span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
+     </div>
+     </div>
+     </div>
+      
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 
         {/* Bell */}
@@ -1048,11 +993,10 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 }
 
 
-function BottomNav({ page, setPage }) {
+function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { width } = useLayout();
-  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];
-  return (
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "mining", icon: Cpu, label: "Mine" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
@@ -1060,6 +1004,9 @@ function BottomNav({ page, setPage }) {
           <button key={t.id} onClick={() => { if (locked) { requireAuth("signup"); return; } setPage(t.id); }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0", }}>
             <div style={{ width: active ? 36 : 28, height: active ? 36 : 28, borderRadius: active ? 10 : 8, background: active ? `${C.gold}22` : "transparent", display: "grid", placeItems: "center", transition: "all .2s", position: "relative" }}><t.icon size={18} color={active ? C.gold : C.text4} /> {locked && (<div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, background: C.card, borderRadius: "50%", display: "grid", placeItems: "center" }}><Lock size={6} color={C.text3} /></div>)}</div>
             <span style={{ fontSize: 10, fontWeight: 800, color: active ? C.gold : C.text4, letterSpacing: "0.04em" }}>{t.label}</span>
+          {t.id === "news" && newsCount > 0 && (
+  <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: C.gold }} />
+)}
           </button>
         );
       })}
@@ -1082,7 +1029,7 @@ function HomePage({ setPage }) {
       <div style={{ background: `linear-gradient(160deg,#1a0f00 0%,${C.bg} 65%)`, borderRadius: 16, border: `1px solid ${C.gold}22`, padding: "28px 20px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: `radial-gradient(${C.gold}18,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
         <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} /> System Online // Live Data </div>
-        <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18, fontFamily: "'Playfair Display', serif", fontStyle: "italic" }}><div style={{ color: C.text }}>PRECISION</div><div style={{ background: "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>VELOCITY</div><div style={{ color: C.text }}>INSIGHT.</div></div>
+        <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}><div style={{ color: C.text }}>PRECISION</div><div style={{ color: C.gold }}>VELOCITY</div><div style={{ color: C.text }}>INSIGHT.</div></div>
         <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
@@ -1160,19 +1107,19 @@ function TradingViewChart() {
           theme: "dark",
           style: "1",
           locale: "en",
-          toolbar_bg: "#000000",
+          toolbar_bg: "#0f0f0f",
           enable_publishing: false,
           allow_symbol_change: true,
           container_id: "tv_chart_container",
           hide_side_toolbar: true,
           studies: [],
           overrides: {
-            "paneProperties.background": "#000000",
-            "paneProperties.vertGridProperties.color": "#0f0f0f",
-            "paneProperties.horzGridProperties.color": "#0f0f0f",
+            "paneProperties.background": "#080808",
+            "paneProperties.vertGridProperties.color": "#1a1a1a",
+            "paneProperties.horzGridProperties.color": "#1a1a1a",
             "scalesProperties.textColor": "#a3a3a3",
           },
-          loading_screen: { backgroundColor: "#000000", foregroundColor: "#BF953F" },
+          loading_screen: { backgroundColor: "#080808", foregroundColor: "#d97706" },
         });
       }
     };
@@ -1229,7 +1176,7 @@ function TradingViewChart() {
       </div>
 
       {/* Chart Container */}
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#000000", border: `1px solid ${C.border}` }}>
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#080808", border: `1px solid ${C.border}` }}>
         <div
           style={{
             transformOrigin: "top left",
@@ -1292,6 +1239,7 @@ function TradePage({ prices }) {
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
+  const [isMasked, setIsMasked] = useState(true);
   
   // State for all 6 dashboard metrics
   const [totalInvested, setTotalInvested] = useState(0);
@@ -1333,62 +1281,40 @@ function TradePage({ prices }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
 
       {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
-      {/* Keyframes for counter-rotating gears */}
       <style>{`
-        @keyframes gearCW  { to { transform: rotate( 360deg); } }
-        @keyframes gearCCW { to { transform: rotate(-360deg); } }
-      `}</style>
-
-      {/* Full-page tinted background image — fixed so it covers whole Trade view */}
-      <div aria-hidden="true" style={{
-        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
-        backgroundImage: "url('/99298.jpg')",
-        backgroundSize: "cover", backgroundPosition: "center top",
-        opacity: 0.12,
-        WebkitMaskImage: "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
-        maskImage:        "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
-      }} />
-
-      {/* Gear ring — top-right, clockwise */}
-      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
-        position:"fixed", top:"6%", right:"-20%",
-        width:"65vw", maxWidth:320,
-        opacity:0.18, pointerEvents:"none", zIndex:0,
-        animation:"gearCW 30s linear infinite", transformOrigin:"50% 50%",
-        filter:"drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 20px #00FF4188)",
-      }}>
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#00FF41" strokeWidth="4" strokeDasharray="14 6"/>
-        <circle cx="100" cy="100" r="70" fill="none" stroke="#00FF41" strokeWidth="2" strokeDasharray="6 10"/>
-        <circle cx="100" cy="100" r="52" fill="none" stroke="#00FF41" strokeWidth="5" strokeDasharray="16 5"/>
-        {Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<line key={i} x1={100+60*Math.cos(a)} y1={100+60*Math.sin(a)} x2={100+88*Math.cos(a)} y2={100+88*Math.sin(a)} stroke="#00FF41" strokeWidth="2" opacity="0.6"/>);})}
-      </svg>
-
-      {/* Gear ring — bottom-left, counter-clockwise */}
-      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
-        position:"fixed", bottom:"8%", left:"-24%",
-        width:"70vw", maxWidth:350,
-        opacity:0.15, pointerEvents:"none", zIndex:0,
-        animation:"gearCCW 38s linear infinite", transformOrigin:"50% 50%",
-        filter:"drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 20px #00FF4188)",
-      }}>
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#00FF41" strokeWidth="4" strokeDasharray="10 8"/>
-        <circle cx="100" cy="100" r="68" fill="none" stroke="#00FF41" strokeWidth="2" strokeDasharray="5 12"/>
-        <circle cx="100" cy="100" r="50" fill="none" stroke="#00FF41" strokeWidth="5" strokeDasharray="14 6"/>
-        {Array.from({length:14},(_,i)=>{const a=i*(Math.PI*2/14);return(<line key={i} x1={100+57*Math.cos(a)} y1={100+57*Math.sin(a)} x2={100+86*Math.cos(a)} y2={100+86*Math.sin(a)} stroke="#00FF41" strokeWidth="2" opacity="0.6"/>);})}
-      </svg>
+  @keyframes gearCW  { to { transform: rotate( 360deg); } }
+  @keyframes gearCCW { to { transform: rotate(-360deg); } }
+`}</style>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", top:"-5%", right:"-18%", width:"62vw", maxWidth:300, opacity:0.13, pointerEvents:"none", zIndex:0, animation:"gearCW 22s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:16},(_,i)=>(<rect key={i} x={-4} y={-8} width={8} height={16} rx={2} fill="#00ff88" opacity="0.85" transform={`rotate(${i*(360/16)}) translate(77,0)`}/>))}<circle r="68" fill="none" stroke="#00ff88" strokeWidth="2.5"/><circle r="55" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="4 4"/><circle r="42" fill="none" stroke="#00ff88" strokeWidth="2"/><circle r="28" fill="none" stroke="#00cc66" strokeWidth="1"/><circle r="13" fill="#00ff8814" stroke="#00ff88" strokeWidth="2"/><circle r="5" fill="#00ff88" opacity="0.7"/>{Array.from({length:8},(_,i)=>{const a=i*(Math.PI*2/8);return(<line key={i} x1={0} y1={0} x2={40*Math.cos(a)} y2={40*Math.sin(a)} stroke="#00ff88" strokeWidth="1" opacity="0.35"/>);})}{Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<circle key={i} cx={55*Math.cos(a)} cy={55*Math.sin(a)} r="2.5" fill="#00ff88" opacity="0.5"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", bottom:"-8%", left:"-20%", width:"68vw", maxWidth:340, opacity:0.11, pointerEvents:"none", zIndex:0, animation:"gearCCW 28s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:18},(_,i)=>(<rect key={i} x={-3.5} y={-7.5} width={7} height={15} rx={2} fill="#00cc88" opacity="0.85" transform={`rotate(${i*(360/18)}) translate(74,0)`}/>))}<circle r="72" fill="none" stroke="#00cc88" strokeWidth="2.5"/><circle r="59" fill="none" stroke="#00ff88" strokeWidth="1.5" strokeDasharray="5 5"/><circle r="46" fill="none" stroke="#00cc66" strokeWidth="2"/><circle r="32" fill="none" stroke="#00cc88" strokeWidth="1"/><circle r="14" fill="#00cc8814" stroke="#00cc88" strokeWidth="2"/><circle r="5.5" fill="#00cc88" opacity="0.65"/>{Array.from({length:6},(_,i)=>{const a=i*(Math.PI*2/6);return(<line key={i} x1={0} y1={0} x2={44*Math.cos(a)} y2={44*Math.sin(a)} stroke="#00cc88" strokeWidth="1.5" opacity="0.3"/>);})}{Array.from({length:18},(_,i)=>{const a=i*(Math.PI*2/18);return(<circle key={i} cx={59*Math.cos(a)} cy={59*Math.sin(a)} r="2" fill="#00cc88" opacity="0.45"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", top:"16%", left:"-12%", width:"34vw", maxWidth:165, opacity:0.09, pointerEvents:"none", zIndex:0, animation:"gearCCW 16s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:12},(_,i)=>(<rect key={i} x={-3} y={-6} width={6} height={13} rx={1.5} fill="#00ff88" opacity="0.85" transform={`rotate(${i*(360/12)}) translate(62,0)`}/>))}<circle r="60" fill="none" stroke="#00ff88" strokeWidth="2"/><circle r="48" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="3 4"/><circle r="36" fill="none" stroke="#00ff88" strokeWidth="1.5"/><circle r="11" fill="#00ff8814" stroke="#00ff88" strokeWidth="1.5"/><circle r="4.5" fill="#00ff88" opacity="0.6"/>{Array.from({length:6},(_,i)=>{const a=i*(Math.PI*2/6);return(<line key={i} x1={0} y1={0} x2={34*Math.cos(a)} y2={34*Math.sin(a)} stroke="#00ff88" strokeWidth="1" opacity="0.3"/>);})}</g></svg>
+<svg aria-hidden="true" viewBox="0 0 200 200" style={{ position:"fixed", bottom:"22%", right:"-14%", width:"44vw", maxWidth:215, opacity:0.10, pointerEvents:"none", zIndex:0, animation:"gearCW 19s linear infinite", transformOrigin:"50% 50%" }}><g transform="translate(100,100)">{Array.from({length:14},(_,i)=>(<rect key={i} x={-3.5} y={-7} width={7} height={14} rx={2} fill="#00ee88" opacity="0.85" transform={`rotate(${i*(360/14)}) translate(66,0)`}/>))}<circle r="64" fill="none" stroke="#00ee88" strokeWidth="2.5"/><circle r="52" fill="none" stroke="#00cc66" strokeWidth="1.5" strokeDasharray="4 5"/><circle r="40" fill="none" stroke="#00ee88" strokeWidth="1.5"/><circle r="24" fill="none" stroke="#00cc88" strokeWidth="1"/><circle r="12" fill="#00ee8814" stroke="#00ee88" strokeWidth="1.5"/><circle r="5" fill="#00ee88" opacity="0.6"/>{Array.from({length:8},(_,i)=>{const a=i*(Math.PI*2/8);return(<line key={i} x1={0} y1={0} x2={38*Math.cos(a)} y2={38*Math.sin(a)} stroke="#00ee88" strokeWidth="1" opacity="0.3"/>);})}</g></svg>
+      
       {/* ── END GEAR BACKGROUND ──────────────────────────────────────────── */}
-
       {/* All content sits above background */}
-      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: `$${balance.toLocaleString()}`, badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: `${activePositions}`, badge: "+3", color: C.gold }, { icon: Target, label: "Signal Value", value: `${winRate.toFixed(1)}%`, badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
+      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}>
+  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+    <div>
+      <div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>Trading Overview</div>
+      <div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div>
+      <div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div>
+      <div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}>Here's your trading overview for today</div>
+    </div>
+    <button onClick={() => setIsMasked(m => !m)} style={{ background: isMasked ? `${C.gold}18` : C.card2, border: `1.5px solid ${isMasked ? C.gold : C.border2}`, borderRadius: 10, padding: "8px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, marginTop: 4, transition: "all .2s" }}>
+      {isMasked ? <EyeOff size={9} color={C.gold} /> : <Eye size={12} color={C.text} />}
+      <span style={{ fontSize: 10, fontWeight: 800, color: isMasked ? C.gold : C.text3, letterSpacing: "0.06em" }}>{isMasked ? "HIDDEN" : "VISIBLE"}</span>
+    </button>
+  </div>
+</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: `$${balance.toLocaleString()}`, badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: `${activePositions}`, badge: "+3", color: C.gold }, { icon: Target, label: "Signal Value", value: `${winRate.toFixed(1)}%`, badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{isMasked ? "••••••" : s.value}</div></div></Card>))}</div>
       <Card>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
         <ResponsiveContainer width="100%" height={148}>
           <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}><XAxis dataKey="day" hide /><YAxis hide domain={["dataMin - 500", "dataMax + 200"]} /><Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} /><Bar dataKey="value" radius={[3, 3, 0, 0]}>{data.map((e, i) => (<Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />))}</Bar></BarChart>
         </ResponsiveContainer>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div></div>
-          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div></div>
+          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>{isMasked ? "••••••" : `$${totalInvested.toLocaleString()}`}</div></div>
+          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>{isMasked ? "••••••" : `$${currentValue.toLocaleString()}`}</div></div>
         </div>
       </Card>
       <Card>
@@ -1404,43 +1330,23 @@ function TradePage({ prices }) {
           <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
       </Card>
-      <Card>
-        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
-        {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" },].map((row, i, arr) => (<div key={i}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}><span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span><Badge color={row.color}>{row.value}</Badge></div>{i < arr.length - 1 && <GoldLine />}</div>))}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
-        {HOLDINGS.map((h, i) => (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>))}
-      </Card>
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
-        <div style={{ textAlign: "center", marginBottom: 18 }}><div style={{ fontSize: 72, fontWeight: 900, color: C.red, lineHeight: 1, textShadow: `0 0 40px ${C.red}44` }}>24</div><div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.14em" }}>Fear</div></div>
-        <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}><div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} /><div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} /></div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span><span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>Bearish 24</span></div>
-        {showVote && (
-          <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
-            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
-            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}> How do you feel about the Market today? </div>
-            <div style={{ display: "flex", gap: 8 }}>{ [["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (<button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col, }}>{lbl}</button>))}</div>
-            {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}> ✓ Thanks — sentiment updated </div>}
-          </div>
-        )}
-      </Card>
-    </div>
+      </div>
   );
 }
-
 function SettingsPage() {
   const { isAuthenticated, logout, requireAuth } = useAuth();
   const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div><div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Manage your profile and settings</div></div>
+      <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+  <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
+  <ThemeToggle />
+</div>
       <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
         <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
         <GoldLine />
-        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.live"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
       </Card>
       {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
       {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
@@ -1450,11 +1356,9 @@ function SettingsPage() {
 }
 
 /* ─── News API Key ───────────────────────────────────────────────────────── */
-const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
-
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
-function NewsPage() {
+function NewsPage({ onNewsCount }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1464,37 +1368,44 @@ function NewsPage() {
   const [newsBellAlerts, setNewsBellAlerts] = useState([]);
   const prevArticleIds = useRef(new Set());
   const pollRef = useRef(null);
-
+  const [now, setNow] = useState(Date.now());
+useEffect(() => {
+  const t = setInterval(() => setNow(Date.now()), 30000);
+  return () => clearInterval(t);
+}, []);
   const buildQuery = (cat) => {
-    const queries = {
-      "All":         "finance OR markets OR stocks OR crypto OR forex",
-      "Top stories": "markets OR economy OR federal reserve OR inflation",
-      "Stocks":      "stocks OR equities OR S&P OR earnings",
-      "ETFs":        "ETF OR exchange traded fund",
-      "Crypto":      "bitcoin OR ethereum OR cryptocurrency OR crypto",
-      "Forex":       "forex OR currency OR dollar OR euro OR yen",
-      "Commodities": "gold OR oil OR commodities OR crude",
-    };
-    return queries[cat] || queries["All"];
+  const queries = {
+    "All":         "finance",
+    "Top stories": "markets",
+    "Stocks":      "stocks",
+    "ETFs":        "ETF",
+    "Crypto":      "bitcoin",
+    "Forex":       "forex",
+    "Commodities": "gold",
   };
-
+  return queries[cat] || "finance";
+};
   const fetchNews = useCallback(async (cat, isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     setError(null);
     try {
-      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
       const q = encodeURIComponent(buildQuery(cat));
-      const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
-      const res = await fetch(url);
+      const url = `https://vedrlsuqewykozjtnfis.supabase.co/functions/v1/dynamic-function?q=${q}`;const res = await fetch(url, {
+  headers: {
+    Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlZHJsc3VxZXd5a296anRuZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNDU2MzgsImV4cCI6MjA5NTYyMTYzOH0.Srsolx7egpGN-aFrbk1_kBuqijWyrkVVq5_A2_jAqCI`,
+    "Content-Type": "application/json",
+  },
+});
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const json = await res.json();
       if (json.status !== "ok") throw new Error(json.message || "API returned error");
-      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      const items = (json.articles || []).filter(a => a.title);
       if (isRefresh) {
         const newIds = new Set(items.map(a => a.url));
         const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
         if (fresh.length > 0) {
           setNewStoryCount(c => c + fresh.length);
+       if (onNewsCount) onNewsCount(fresh.length);
           setNewsBellAlerts(prev => [
             ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
             ...prev,
@@ -1526,9 +1437,9 @@ function NewsPage() {
     fetchNews(category);
   };
 
-  const fmtRelTime = (iso) => {
+  const fmtRelTime = (iso, now = Date.now()) => {
     if (!iso) return "";
-    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    const diff = (now - new Date(iso).getTime()) / 1000;
     if (diff < 60) return "just now";
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -1552,7 +1463,7 @@ function NewsPage() {
           <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
         </div>
 
-      {/* News Notification Bell */}
+        {/* News Notification Bell */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
@@ -1588,106 +1499,148 @@ function NewsPage() {
         </div>
       </div>
 
-      {/* ── Category Tabs ── */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 10, marginBottom: 4 }}>
-        {NEWS_CATEGORIES.map(cat => (
-          <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 20, border: "none", cursor: "pointer", transition: "all .15s", background: cat === category ? C.text : `${C.gold}14`, color: cat === category ? "#000" : C.text3, }}>
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* ── New Stories Banner ── */}
-      {newStoryCount > 0 && (
-        <button onClick={handleShowNew} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 20, cursor: "pointer", margin: "0 auto 12px", color: C.text, fontSize: 12, fontWeight: 700 }}>
-          <ChevronRight size={13} color={C.gold} style={{ transform: "rotate(-90deg)" }} />
-          {newStoryCount} new {newStoryCount === 1 ? "story" : "stories"}
-        </button>
-      )}
-
       {/* ── Loading ── */}
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />
-                ))}
+                {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 10, borderRadius: 6, background: C.card3, marginBottom: 6, width: "60%" }} />
+                  <div style={{ height: 8, borderRadius: 6, background: C.card3, width: "40%" }} />
+                </div>
               </div>
-              <div style={{ height: 12, background: C.card3, borderRadius: 6, marginBottom: 8 }} />
-              <div style={{ height: 10, background: C.card3, borderRadius: 6, width: "70%" }} />
+              <div style={{ height: 12, borderRadius: 6, background: C.card3, width: "90%", marginTop: 6 }} />
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Error ── */}
-      {error && !loading && (
-        <div style={{ background: C.card, border: `1px solid ${C.red}44`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
-          <AlertCircle size={28} color={C.red} style={{ marginBottom: 10 }} />
-          <div style={{ fontSize: 13, color: C.red, marginBottom: 12 }}>{error}</div>
-          <button onClick={() => fetchNews(category)} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 18px", color: C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <RefreshCw size={13} /> Retry
-          </button>
-        </div>
-      )}
+      {/* ── Error / No Key ── */}
+{!loading && error && (
+  error === "__NO_KEY__" ? (
+    <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
+      <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
+      <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+        Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
+      </div>
+    </div>
+  ) : (
+    <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+      <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
+      <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
+      <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
+      <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
+        <RefreshCw size={13} /> Retry
+      </Btn>
+    </div>
+  )
+)}
 
       {/* ── Articles ── */}
       {!loading && !error && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {articles.map((a, i) => (
-            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, letterSpacing: "0.08em", textTransform: "uppercase" }}>{a.source?.name}</span>
-                  <span style={{ fontSize: 10, color: C.text3 }}>{fmtRelTime(a.publishedAt)}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {articles.length === 0 && (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: C.text3, fontSize: 13 }}>No articles found for this category.</div>
+          )}
+          {articles.map((article, i) => (
+            <a
+              key={article.url}
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "block", textDecoration: "none", padding: "16px 0", borderBottom: i < articles.length - 1 ? `1px solid ${C.border}` : "none" }}
+            >
+              {/* Source row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}44`, display: "grid", placeItems: "center" }}>
+                  <Newspaper size={10} color={C.gold} />
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.5 }}>{a.title}</div>
-                {a.description && (
-                  <div style={{ fontSize: 11, color: C.text2, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{a.description}</div>
-                )}
-                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                  <ExternalLink size={10} color={C.text3} />
-                  <span style={{ fontSize: 10, color: C.text3 }}>Read full article</span>
-                </div>
+                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>{article.source?.name || "Unknown"}</span>
+                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
+                <span style={{ fontSize: 11, color: C.text3 }}>{fmtTime(article.publishedAt)}</span>
+                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
+                <span style={{ fontSize: 11, color: C.text3 }}>{fmtRelTime(article.publishedAt)}</span>
+                <ExternalLink size={10} color={C.text4} style={{ marginLeft: "auto", flexShrink: 0 }} />
               </div>
+              {/* Headline */}
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.4, letterSpacing: "-0.01em" }}>
+                {article.title}
+              </div>
+              {/* Description */}
+              {article.description && (
+                <div style={{ fontSize: 13, color: C.text2, marginTop: 6, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {article.description}
+                </div>
+              )}
             </a>
           ))}
-          {articles.length === 0 && (
-            <div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>No articles found for this category.</div>
-          )}
         </div>
       )}
 
+      {/* ── Footer attribution ── */}
+      {!loading && !error && articles.length > 0 && (
+        <div style={{ textAlign: "center", padding: "16px 0 4px", fontSize: 10, color: C.text4 }}>
+          Powered by <span style={{ color: C.gold, fontWeight: 700 }}>NewsAPI</span>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ─── App Shell ──────────────────────────────────────────────────────────── */
 function AppShell({ page, setPage }) {
-  const { prices, flash } = useLivePrices();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const { width } = useLayout();
+  const [newsCount, setNewsCount] = useState(0);
+  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
+  const { isAuthenticated, requireAuth, user } = useAuth();
+  const { prices, flash } = useLivePrices();
+  const { mode, width } = useLayout();
+
+  const handleSetPage = useCallback((p) => {
+    if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
+    setPage(p);
+  }, [isAuthenticated, requireAuth, setPage]);
+
+  const renderPage = () => {
+    switch (page) {
+      case "home":     return <HomePage setPage={handleSetPage} />;
+case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+case "trade":    return <TradePage prices={prices} />;
+case "mining":   return <Mining user={user} />;
+case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+case "settings": return <SettingsPage />;
+default:         return <HomePage setPage={handleSetPage} />;
+    }
+  };
 
   return (
-    <div id="gvxm-root">
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
+        *, *::before, *::after {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        ::-webkit-scrollbar { display: none; }
+        scrollbar-width: none;
+        input, button, select, textarea { font-family: inherit; }
+        input::placeholder { color: #404040; }
+        img, svg { display: block; max-width: 100%; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin  { to{transform:rotate(360deg)} }
-        @keyframes shimmer { 0%,100%{opacity:.6} 50%{opacity:1} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
       `}</style>
-      <Nav page={page} setPage={setPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setShowDepositModal(true)} />
-      {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
-      <main className="gvxm-shell" style={{ padding: "0 16px 100px", boxSizing: "border-box" }}>
-        {page === "home"     && <HomePage     setPage={setPage} />}
-        {page === "markets"  && <MarketsPage  prices={prices} flash={flash} />}
-        {page === "trade"    && <TradePage    prices={prices} />}
-        {page === "news"     && <NewsPage />}
-        {page === "settings" && <SettingsPage />}
-      </main>
-      <BottomNav page={page} setPage={setPage} />
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
+      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
+        <main style={{ padding: "0 16px 100px" }}>
+          {renderPage()}
+        </main>
+        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
+      </div>
     </div>
   );
 }
@@ -1696,9 +1649,11 @@ export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
     <LayoutProvider>
-      <AuthProvider onLogin={() => setPage("trade")}>
-        <AppShell page={page} setPage={setPage} />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider onLogin={() => setPage("trade")}>
+          <AppShell page={page} setPage={setPage} />
+        </AuthProvider>
+      </ThemeProvider>
     </LayoutProvider>
   );
-                                               }
+}
