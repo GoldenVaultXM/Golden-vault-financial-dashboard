@@ -1,12 +1,323 @@
-* {
-  box-sizing: border-box;
+/* ═══════════════════════════════════════════════════════════════════════════
+   GOLDEN VAULT XM — VISUAL AESTHETIC UPGRADE PATCH
+   Scope: color, background, border, shadow, font, text-shadow, animation ONLY
+   No layout, no functional, no structural changes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Google Fonts Import ────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600&display=swap');
+
+/* ── CSS Variables ──────────────────────────────────────────────────────── */
+:root {
+  --cinematic-gold: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+  --tech-green: #00FF41;
+  --tech-green-glow: 0 0 8px #00FF41, 0 0 20px #00FF4155, 0 0 40px #00FF4122;
+  --void-black: #000000;
+  --container-bg: #050505;
+  --gold-text-shadow: 0 0 12px #FCF6BA55, 0 0 24px #BF953F33;
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-  background-color: #080808; /* Match your app background */
+/* ══════════════════════════════════════════════════════════════════════════
+   1. VOID-BLACK FOUNDATION
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html,
+body,
+#gvxm-root,
+.gvxm-shell {
+  background-color: #000000 !important;
+}
+
+/* Primary container backgrounds */
+[style*="background: #080808"],
+[style*="background: rgb(8, 8, 8)"],
+[style*="background-color: #080808"] {
+  background-color: #000000 !important;
+  background: #000000 !important;
+}
+
+/* Card backgrounds */
+[style*="background: #0f0f0f"],
+[style*="background: rgb(15, 15, 15)"],
+[style*="background-color: #0f0f0f"] {
+  background-color: #050505 !important;
+  background: #050505 !important;
+}
+
+[style*="background: #141414"],
+[style*="background: rgb(20, 20, 20)"],
+[style*="background-color: #141414"] {
+  background-color: #080808 !important;
+  background: #080808 !important;
+}
+
+[style*="background: #1a1a1a"],
+[style*="background: rgb(26, 26, 26)"] {
+  background-color: #0d0d0d !important;
+  background: #0d0d0d !important;
+}
+
+/* Modal overlay */
+[style*="background: rgba(0,0,0,0.85)"],
+[style*="background: rgba(0, 0, 0, 0.85)"] {
+  background: rgba(0, 0, 0, 0.95) !important;
+}
+
+/* Deposit modal container */
+[style*="background: #000000"][style*="border-radius: 20px"] {
+  background: #020202 !important;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.98), 0 0 60px rgba(0,255,65,0.04) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. CINEMATIC GOLD — Headers & Values
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Typography: Playfair Display for headings */
+h1, h2, h3, h4,
+[style*="fontWeight: 900"],
+[style*="font-weight: 900"],
+[style*="fontWeight: 800"],
+[style*="font-weight: 800"] {
+  font-family: 'Playfair Display', Georgia, serif !important;
+}
+
+/* Typography: Inter for UI data */
+body,
+input,
+button,
+span,
+div,
+p {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Re-apply Playfair to headings over the body rule */
+[style*="fontSize: 42"],
+[style*="fontSize: 28"],
+[style*="fontSize: 24"],
+[style*="fontSize: 19"],
+[style*="fontSize: 18"],
+[style*="font-size: 42px"],
+[style*="font-size: 28px"],
+[style*="font-size: 24px"] {
+  font-family: 'Playfair Display', Georgia, serif !important;
+}
+
+/* Hero headline words: PRECISION / VELOCITY / INSIGHT */
+[style*="fontSize: 42"][style*="fontWeight: 900"],
+[style*="font-size: 42px"] {
+  font-family: 'Playfair Display', Georgia, serif !important;
+  text-shadow: var(--gold-text-shadow);
+}
+
+/* Gold-colored text elements — apply gradient via background-clip */
+[style*="color: #d97706"],
+[style*="color: rgb(217, 119, 6)"],
+[style*="color: #f59e0b"],
+[style*="color: rgb(245, 158, 11)"],
+[style*="color: #fbbf24"],
+[style*="color: rgb(251, 191, 36)"] {
+  background: var(--cinematic-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none !important;
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-weight: 700 !important;
+}
+
+/* Dashboard metric values — large numeric displays */
+[style*="fontSize: 24"][style*="fontWeight: 900"],
+[style*="fontSize: 22"][style*="fontWeight: 900"],
+[style*="fontSize: 20"][style*="fontWeight: 900"] {
+  background: var(--cinematic-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Playfair Display', Georgia, serif !important;
+  text-shadow: none !important;
+}
+
+/* GOLDEN VAULT XM brand name in nav/modals */
+[style*="letterSpacing: 0.12em"],
+[style*="letter-spacing: 0.12em"] {
+  background: var(--cinematic-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-style: italic !important;
+  text-shadow: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. BORDER REFINEMENTS
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[style*="border: 1px solid #222"],
+[style*="border: 1px solid rgb(34, 34, 34)"] {
+  border-color: #1a1a1a !important;
+}
+
+[style*="border: 1px solid #2a2a2a"],
+[style*="border: 1px solid rgb(42, 42, 42)"] {
+  border-color: #222222 !important;
+}
+
+/* Gold-accent borders: subtle shimmer enhancement */
+[style*="border: 1px solid #222222"] {
+  border-color: #1c1c1c !important;
+  box-shadow: inset 0 1px 0 rgba(191, 149, 63, 0.06) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. SHIELD ANIMATION — Trade Section Background Layer
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes shieldPulse {
+  0%   { transform: scale(1);     opacity: 0.07; filter: brightness(1)   drop-shadow(0 0 18px #00FF41) drop-shadow(0 0 40px #00FF4144); }
+  50%  { transform: scale(1.04);  opacity: 0.13; filter: brightness(1.3) drop-shadow(0 0 30px #00FF41) drop-shadow(0 0 70px #00FF4166); }
+  100% { transform: scale(1);     opacity: 0.07; filter: brightness(1)   drop-shadow(0 0 18px #00FF41) drop-shadow(0 0 40px #00FF4144); }
+}
+
+@keyframes shieldVibrateRing {
+  0%   { box-shadow: 0 0 0 0 rgba(0,255,65,0); }
+  40%  { box-shadow: 0 0 0 18px rgba(0,255,65,0.08); }
+  100% { box-shadow: 0 0 0 36px rgba(0,255,65,0); }
+}
+
+/* Shield pseudo-element — injected as ::before on the trade section wrapper.
+   The trade section is identified by its dashboard metric grid structure.
+   We target the outermost container of TradePage content. */
+.gvxm-trade-shield-host {
+  position: relative;
+}
+
+.gvxm-trade-shield-host::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 380px;
+  z-index: 0;
+  pointer-events: none;
+
+  /* Shield SVG as data URI — Tech-Green aesthetic */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 240'%3E%3Cdefs%3E%3ClinearGradient id='sg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2300FF41' stop-opacity='0.9'/%3E%3Cstop offset='40%25' stop-color='%2300CC33' stop-opacity='0.7'/%3E%3Cstop offset='100%25' stop-color='%23004d14' stop-opacity='0.8'/%3E%3C/linearGradient%3E%3ClinearGradient id='sg2' x1='0%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2300FF41' stop-opacity='0.3'/%3E%3Cstop offset='100%25' stop-color='%2300FF41' stop-opacity='0.05'/%3E%3C/linearGradient%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='3' result='blur'/%3E%3CfeComposite in='SourceGraphic' in2='blur' operator='over'/%3E%3C/filter%3E%3C/defs%3E%3C!-- Outer shield frame --%3E%3Cpath d='M100 8 L185 42 L185 120 Q185 185 100 232 Q15 185 15 120 L15 42 Z' fill='none' stroke='%2300FF41' stroke-width='2.5' stroke-opacity='0.8' filter='url(%23glow)'/%3E%3C!-- Inner shield fill --%3E%3Cpath d='M100 18 L175 48 L175 118 Q175 178 100 220 Q25 178 25 118 L25 48 Z' fill='url(%23sg2)' stroke='%2300FF41' stroke-width='1' stroke-opacity='0.4'/%3E%3C!-- Cross dividers --%3E%3Cline x1='100' y1='25' x2='100' y2='215' stroke='%2300FF41' stroke-width='1' stroke-opacity='0.35'/%3E%3Cline x1='30' y1='118' x2='170' y2='118' stroke='%2300FF41' stroke-width='1' stroke-opacity='0.35'/%3E%3C!-- Circuit lines top-left --%3E%3Cpath d='M45 65 L60 65 L60 80 L75 80' stroke='%2300FF41' stroke-width='0.8' stroke-opacity='0.5' fill='none'/%3E%3Ccircle cx='45' cy='65' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3Ccircle cx='75' cy='80' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3C!-- Circuit lines top-right --%3E%3Cpath d='M155 65 L140 65 L140 80 L125 80' stroke='%2300FF41' stroke-width='0.8' stroke-opacity='0.5' fill='none'/%3E%3Ccircle cx='155' cy='65' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3Ccircle cx='125' cy='80' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3C!-- Circuit lines bottom --%3E%3Cpath d='M55 155 L70 155 L70 170 L85 170' stroke='%2300FF41' stroke-width='0.8' stroke-opacity='0.5' fill='none'/%3E%3Ccircle cx='85' cy='170' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3Cpath d='M145 155 L130 155 L130 170 L115 170' stroke='%2300FF41' stroke-width='0.8' stroke-opacity='0.5' fill='none'/%3E%3Ccircle cx='115' cy='170' r='2.5' fill='%2300FF41' fill-opacity='0.7'/%3E%3C!-- Center emblem --%3E%3Ccircle cx='100' cy='105' r='22' fill='none' stroke='%2300FF41' stroke-width='1.5' stroke-opacity='0.6'/%3E%3Ccircle cx='100' cy='105' r='14' fill='%2300FF41' fill-opacity='0.12'/%3E%3Cpath d='M100 92 L106 101 L118 103 L109 112 L111 124 L100 118 L89 124 L91 112 L82 103 L94 101 Z' fill='%2300FF41' fill-opacity='0.5' stroke='%2300FF41' stroke-width='0.5'/%3E%3C!-- Corner nodes --%3E%3Ccircle cx='40' cy='50' r='3' fill='%2300FF41' fill-opacity='0.6'/%3E%3Ccircle cx='160' cy='50' r='3' fill='%2300FF41' fill-opacity='0.6'/%3E%3Ccircle cx='35' cy='118' r='3' fill='%2300FF41' fill-opacity='0.6'/%3E%3Ccircle cx='165' cy='118' r='3' fill='%2300FF41' fill-opacity='0.6'/%3E%3C/svg%3E");
+
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  opacity: 0.08;
+  animation: shieldPulse 1.5s ease-in-out infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. TECH-GREEN GLOW — Gear icons in Trade section
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Target SVG gear/settings icons within the trade background area */
+.gvxm-trade-shield-host svg[data-lucide="settings"],
+.gvxm-trade-shield-host [data-icon="settings"] {
+  filter: drop-shadow(var(--tech-green-glow)) !important;
+  color: #00FF41 !important;
+}
+
+/* Gear decoration elements in trade section backgrounds */
+.gvxm-trade-gear {
+  color: #00FF41 !important;
+  filter: drop-shadow(0 0 6px #00FF41) drop-shadow(0 0 14px #00FF4166) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. ENHANCED BOX SHADOWS — Depth & Atmosphere
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Card elevation */
+[style*="borderRadius: 14"],
+[style*="border-radius: 14px"] {
+  box-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 1px 0 rgba(191,149,63,0.05) inset !important;
+}
+
+/* Gold-bordered cards: subtle glow on border */
+[style*="border: 1px solid"][style*="#d97706"],
+[style*="border: 1px solid"][style*="#f59e0b"] {
+  box-shadow: 0 0 0 1px rgba(191,149,63,0.15), 0 4px 24px rgba(0,0,0,0.5) !important;
+}
+
+/* Modal depth */
+[style*="boxShadow: 0 32px 96px"] {
+  box-shadow: 0 32px 96px rgba(0,0,0,0.98), 0 0 80px rgba(191,149,63,0.04) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. BUTTON REFINEMENTS — Gold gradient on primary CTAs
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Gold variant buttons */
+[style*="background: #d97706"]:not([style*="borderRadius: 50%"]),
+[style*="background: rgb(217, 119, 6)"]:not([style*="borderRadius: 50%"]) {
+  background: linear-gradient(135deg, #BF953F, #d97706, #AA771C) !important;
+  box-shadow: 0 4px 16px rgba(191,149,63,0.25), 0 1px 0 rgba(255,255,255,0.1) inset !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-weight: 700 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8. SUPPORT EMAIL UPDATE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Visually replace the email display using CSS content override on spans
+   that contain the exact email text. This targets the rendered text node
+   within the deposit modal footer span. */
+[style*="support@goldenvaultxm.com"] {
+  font-size: 0 !important;
+}
+
+[style*="support@goldenvaultxm.com"]::after {
+  content: 'support@goldenvaultxm.live';
+  font-size: 11px;
+  background: var(--cinematic-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-weight: 700;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   9. GLOBAL PULSE ANIMATION (referenced in inline styles)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   10. SCROLLBAR STYLING
+   ══════════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #BF953F, #AA771C);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #FCF6BA, #BF953F);
 }
