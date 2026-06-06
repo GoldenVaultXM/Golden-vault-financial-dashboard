@@ -1,1871 +1,1563 @@
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
+import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, ExternalLink, } from "lucide-react";
+import { supabase } from './supabaseClient';
 
-/**
- * ╔══════════════════════════════════════════════════════════════════════════╗
- * ║  GOLDENVAULTXM — CINEMATIC REDESIGN                                    ║
- * ║  "Void-Black Foundation" · "Cinematic Gold" · Institutional Luxury      ║
- * ╚══════════════════════════════════════════════════════════════════════════╝
- *
- * SCOPE: Visual design, color grading, and aesthetic styling ONLY.
- * All existing features, logic, layout structure, and data flows preserved.
- * Only the visual presentation layer is upgraded.
- */
-
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  Tooltip, ResponsiveContainer, Cell, ReferenceLine,
-} from "recharts";
-import {
-  Wallet, TrendingUp, Activity, Target, BarChart2,
-  Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine,
-  FileBarChart, CheckCircle2, Menu, X, ChevronRight,
-  Bell, Settings, LogOut, Home, Search, Lock, Award,
-  BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus,
-  LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu,
-  ExternalLink,
-} from "lucide-react";
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §1  CINEMATIC DESIGN TOKENS — "Void-Black Foundation"
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-const VOID = {
-  /* Backgrounds */
-  bg:         "#000000",
-  surface:    "#050505",
-  card:       "#080808",
-  card2:      "#0a0a0a",
-  card3:      "#0e0e0e",
-  card4:      "#111111",
-  /* Borders — 1px gold-tinted at low opacity */
-  border:     "rgba(191,149,63,0.13)",
-  border2:    "rgba(191,149,63,0.22)",
-  borderHot:  "rgba(252,246,186,0.35)",
-  /* Luxury Gold Gradient stops */
-  gold:       "#BF953F",
-  gold2:      "#FCF6BA",
-  gold3:      "#B38728",
-  gold4:      "#FBF5B7",
-  gold5:      "#AA771C",
-  goldMid:    "#D4AF37",
-  goldDim:    "#5a420a",
-  /* Semantic colors */
-  green:      "#22c55e",
-  greenDim:   "#14532d",
-  red:        "#ef4444",
-  redDim:     "#7f1d1d",
-  blue:       "#3b82f6",
-  purple:     "#7c3aed",
-  /* Typography */
-  text:       "#F5F0E8",
-  text2:      "#9A8F7A",
-  text3:      "#4A4035",
-  text4:      "#1E1A14",
-  /* Tech-Green for gear FX (Trade section only) */
-  techGreen:  "#00FF41",
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+const C = {
+  bg: "#000000",
+  card: "#000000",
+  card2: "#050505",
+  card3: "#0a0a0a",
+  border: "rgba(191,149,63,0.3)",
+  border2: "rgba(191,149,63,0.2)",
+  gold: "#BF953F",
+  gold2: "#FCF6BA",
+  gold3: "#FBF5B7",
+  goldDim: "#AA771C",
+  green: "#22c55e",
+  red: "#ef4444",
+  purple: "#7c3aed",
+  blue: "#3b82f6",
+  text: "#ffffff",
+  text2: "#a3a3a3",
+  text3: "#525252",
+  text4: "#303030",
 };
 
-/* Luxury Gold gradient string — used everywhere on headings/metrics */
-const GOLD_GRADIENT = "linear-gradient(135deg, #BF953F 0%, #FCF6BA 30%, #B38728 55%, #FBF5B7 75%, #AA771C 100%)";
+/* ─── Luxury Gold CSS gradient (for backgrounds that support it via JS) ──── */
+const LUXURY_GOLD_GRADIENT = "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)";
 
-/* Gold text via background-clip trick (inline style helper) */
-const goldText = (extra = {}) => ({
-  background: GOLD_GRADIENT,
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-  backgroundClip: "text",
-  textShadow: "none", // can't combine with bg-clip; shadow applied to wrapper
-  ...extra,
-});
+/* ─── Auth Context ───────────────────────────────────────────────────────── */
+const AuthContext = createContext(null);
+const useAuth = () => useContext(AuthContext);
 
-/* Physical "pressed" text shadow for non-gradient text */
-const pressedShadow = { textShadow: "0 2px 4px rgba(0,0,0,0.5)" };
+/* ─── Layout Context ─────────────────────────────────────────────────────── */
+/*
+ * Responds automatically to the browser's built-in "Desktop site / Mobile site"
+ * toggle. When the browser switches to desktop mode it removes viewport
+ * shrink-to-fit and reports a wide window.innerWidth (typically 980px+).
+ * When it switches back to mobile it reports the real device pixel width.
+ *
+ * Rules:
+ *  • "desktop" when window.innerWidth >= 768 (browser desktop-site mode)
+ *  • "mobile"  when window.innerWidth <  768 (browser mobile-site mode)
+ *  • Recalculated on every resize event so the switch is instant.
+ *  • No localStorage, no manual toggle — the browser switch is the ONLY trigger.
+ */
+const LAYOUT_BREAKPOINT = 768;
+const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
 
-/* Deep box-shadow for all cards */
-const cardShadow = "0 8px 40px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(191,149,63,0.07)";
-const cardShadowHover = "0 16px 60px rgba(0,0,0,0.95), 0 4px 16px rgba(191,149,63,0.08), inset 0 1px 0 rgba(252,246,186,0.1)";
+const LayoutContext = createContext(null);
+const useLayout = () => useContext(LayoutContext);
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §2  GLOBAL CSS INJECTION  (fonts + keyframes + body reset)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
-  /* ── Reset ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: #000000 !important;
-    color: #F5F0E8;
-    font-family: 'Inter', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
-
-  /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: #050505; }
-  ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #BF953F, #5a420a);
-    border-radius: 10px;
-  }
-
-  /* ── Keyframes ── */
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @keyframes gearSpin  { to { transform: rotate(360deg); } }
-  @keyframes gearSpinR { to { transform: rotate(-360deg); } }
-
-  @keyframes goldPulse {
-    0%, 100% { opacity: 0.7; }
-    50%       { opacity: 1; }
-  }
-
-  @keyframes scanLine {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(100vh); }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(18px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes shimmer {
-    0%   { background-position: -200% center; }
-    100% { background-position: 200% center; }
-  }
-
-  @keyframes flashUp { 0%,100%{background:transparent} 50%{background:rgba(34,197,94,.12)} }
-  @keyframes flashDn { 0%,100%{background:transparent} 50%{background:rgba(239,68,68,.12)} }
-
-  /* ── Flash helpers ── */
-  .flash-up { animation: flashUp 0.6s ease; }
-  .flash-dn { animation: flashDn 0.6s ease; }
-
-  /* ── Gold shimmer text utility ── */
-  .gold-shimmer {
-    background: linear-gradient(90deg, #BF953F 0%, #FCF6BA 30%, #B38728 55%, #FBF5B7 75%, #AA771C 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmer 4s linear infinite;
-  }
-
-  /* ── Gear container (Trade section only) ── */
-  .gear-bg-container {
-    position: absolute; inset: 0; overflow: hidden;
-    pointer-events: none; z-index: 0;
-  }
-  .gear-svg { position: absolute; }
-  .gear-spin  { animation: gearSpin  18s linear infinite; }
-  .gear-spinR { animation: gearSpinR 14s linear infinite; }
-
-  /* ── Card hover transition ── */
-  .gvxm-card {
-    transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
-  }
-  .gvxm-card:hover {
-    transform: translateY(-2px);
-  }
-
-  /* ── Scan-line overlay (subtle CRT atmosphere) ── */
-  .scan-overlay {
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.03) 2px,
-      rgba(0,0,0,0.03) 4px
-    );
-    pointer-events: none; z-index: 9999;
-  }
-
-  /* ── Input reset ── */
-  input, select, textarea {
-    font-family: 'Inter', sans-serif;
-    background: #0a0a0a;
-    border: 1px solid rgba(191,149,63,0.18);
-    color: #F5F0E8;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, select:focus {
-    border-color: rgba(252,246,186,0.4);
-    box-shadow: 0 0 0 3px rgba(191,149,63,0.08);
-  }
-  input::placeholder { color: #4A4035; }
-
-  /* ── Tab / Nav active state ── */
-  .nav-active {
-    background: linear-gradient(135deg, rgba(191,149,63,0.15), rgba(179,135,40,0.08)) !important;
-    border-color: rgba(191,149,63,0.35) !important;
-  }
-`;
-
-/* Inject once */
-if (!document.getElementById("gvxm-cinema-css")) {
-  const s = document.createElement("style");
-  s.id = "gvxm-cinema-css";
-  s.textContent = GLOBAL_CSS;
-  document.head.appendChild(s);
+function getMode() {
+  return window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile";
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §3  CINEMATIC PRIMITIVES
-   ═══════════════════════════════════════════════════════════════════════════ */
+function LayoutProvider({ children }) {
+  const [mode, setMode] = useState(getMode);
 
-/** Photorealistic gear SVG — Tech-Green glow, metallic linework */
-function GearIcon({ size = 120, speed = "gear-spin", style = {}, opacity = 0.18 }) {
-  const c = VOID.techGreen;
-  const r = size / 2;
-  const teeth = 12;
-  const innerR = r * 0.58;
-  const outerR = r * 0.88;
-  const holeR  = r * 0.24;
-  const toothW = (2 * Math.PI) / teeth;
+  useEffect(() => {
+    const onResize = () => {
+      const next = getMode();
+      setMode(prev => prev !== next ? next : prev);
+    };
+    window.addEventListener("resize", onResize);
+    applyLayoutCSS(getMode());
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
-  let path = "M";
-  for (let i = 0; i < teeth; i++) {
-    const a0 = i * toothW - toothW * 0.25;
-    const a1 = i * toothW + toothW * 0.25;
-    const a2 = i * toothW + toothW * 0.55;
-    const a3 = i * toothW + toothW * 0.75;
-    const pts = [
-      [innerR * Math.cos(a0) + r, innerR * Math.sin(a0) + r],
-      [outerR * Math.cos(a1) + r, outerR * Math.sin(a1) + r],
-      [outerR * Math.cos(a2) + r, outerR * Math.sin(a2) + r],
-      [innerR * Math.cos(a3) + r, innerR * Math.sin(a3) + r],
-    ];
-    pts.forEach((p, j) => { path += `${j === 0 && i === 0 ? "" : " L"}${p[0].toFixed(2)},${p[1].toFixed(2)}`; });
-  }
-  path += " Z";
+  useEffect(() => {
+    applyLayoutCSS(mode);
+  }, [mode]);
 
+  const width = LAYOUT_WIDTHS[mode];
   return (
-    <svg
-      width={size} height={size} viewBox={`0 0 ${size} ${size}`}
-      className={speed}
-      style={{
-        filter: `drop-shadow(0 0 6px ${c}) drop-shadow(0 0 14px ${c}88)`,
-        opacity,
-        ...style,
-      }}
-    >
-      <defs>
-        <linearGradient id={`gearGrad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor="#1a1a1a" />
-          <stop offset="40%"  stopColor="#2a2a2a" />
-          <stop offset="100%" stopColor="#0a0a0a" />
-        </linearGradient>
-        <linearGradient id={`gearStroke-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stopColor={c} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={c} stopOpacity="0.4" />
-        </linearGradient>
-      </defs>
-      <path d={path} fill={`url(#gearGrad-${size})`} stroke={`url(#gearStroke-${size})`} strokeWidth="1.2" />
-      <circle cx={r} cy={r} r={innerR * 0.82}
-        fill="#050505" stroke={c} strokeWidth="0.8" strokeOpacity="0.5" />
-      <circle cx={r} cy={r} r={holeR}
-        fill="#000" stroke={c} strokeWidth="1" strokeOpacity="0.7" />
-      {/* Hub spokes */}
-      {[0, 60, 120, 180, 240, 300].map(deg => {
-        const rad = (deg * Math.PI) / 180;
-        return (
-          <line key={deg}
-            x1={r + holeR * Math.cos(rad)} y1={r + holeR * Math.sin(rad)}
-            x2={r + innerR * 0.72 * Math.cos(rad)} y2={r + innerR * 0.72 * Math.sin(rad)}
-            stroke={c} strokeWidth="0.7" strokeOpacity="0.5"
-          />
-        );
-      })}
-    </svg>
-  );
-}
-
-/** CRT scan-line atmosphere overlay */
-const ScanOverlay = () => <div className="scan-overlay" />;
-
-/** Luxury gold 1px rule */
-const GoldRule = ({ opacity = 0.3 }) => (
-  <div style={{
-    height: 1,
-    background: `linear-gradient(90deg, transparent, rgba(191,149,63,${opacity}), rgba(252,246,186,${opacity * 1.5}), rgba(191,149,63,${opacity}), transparent)`,
-    margin: "2px 0",
-  }} />
-);
-
-/** Institution-grade card */
-function VaultCard({ children, style = {}, hover = true, gearBg = false }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <div
-      className={hover ? "gvxm-card" : ""}
-      onMouseEnter={() => hover && setHov(true)}
-      onMouseLeave={() => hover && setHov(false)}
-      style={{
-        position: "relative",
-        background: `linear-gradient(145deg, ${VOID.card} 0%, ${VOID.surface} 100%)`,
-        border: `1px solid ${hov ? VOID.borderHot : VOID.border}`,
-        borderRadius: 14,
-        padding: "18px 16px",
-        boxShadow: hov ? cardShadowHover : cardShadow,
-        overflow: gearBg ? "hidden" : "visible",
-        ...style,
-      }}
-    >
-      {gearBg && (
-        <div className="gear-bg-container">
-          <GearIcon size={220} speed="gear-spin"  opacity={0.09} style={{ top: -40, right: -40 }} />
-          <GearIcon size={130} speed="gear-spinR" opacity={0.07} style={{ bottom: 10, left: -20 }} />
-          <GearIcon size={80}  speed="gear-spin"  opacity={0.06} style={{ top: "40%", left: "30%" }} />
-          {/* Tech-green grid lines */}
-          <div style={{
-            position: "absolute", inset: 0,
-            backgroundImage: `
-              linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: "32px 32px",
-          }} />
-        </div>
-      )}
-      <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
-    </div>
-  );
-}
-
-/** Playfair Display heading with gold gradient */
-function VaultHeading({ children, size = 22, italic = false, style = {} }) {
-  return (
-    <h2 style={{
-      fontFamily: "'Playfair Display', Georgia, serif",
-      fontWeight: 700,
-      fontStyle: italic ? "italic" : "normal",
-      fontSize: size,
-      letterSpacing: "0.05em",
-      lineHeight: 1.2,
-      background: GOLD_GRADIENT,
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      backgroundClip: "text",
-      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-      ...style,
-    }}>
+    <LayoutContext.Provider value={{ mode, width }}>
       {children}
-    </h2>
+    </LayoutContext.Provider>
   );
 }
 
-/** Metric value with gold gradient */
-function GoldMetric({ value, size = 28, style = {} }) {
-  return (
-    <span style={{
-      fontFamily: "'Inter', sans-serif",
-      fontWeight: 800,
-      fontSize: size,
-      letterSpacing: "-0.01em",
-      background: GOLD_GRADIENT,
-      WebkitBackgroundClip: "text",
-      WebkitTextFillColor: "transparent",
-      backgroundClip: "text",
-      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-      ...style,
-    }}>
-      {value}
-    </span>
-  );
+/* ─── Viewport + Base CSS — SYNCHRONOUS module-level execution ───────────────
+ *
+ * WHY THIS MUST RUN AT MODULE LOAD (not in useEffect):
+ *   The browser calculates the initial viewport scale BEFORE React hydrates.
+ *   If <meta viewport> is missing or wrong at parse time, the browser zooms
+ *   the page to fit a "desktop" width onto the phone screen — and that zoom
+ *   is locked in for the first paint. A useEffect fix arrives too late.
+ *
+ *   Solution: call both functions synchronously here, at the top level of the
+ *   module. They run the moment the JS bundle is evaluated — before the first
+ *   ReactDOM.render / createRoot call, before any component mounts.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+function ensureViewportMeta() {
+  /* Find or create the <meta name="viewport"> tag */
+  let meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "viewport";
+    /* Prepend to <head> so it takes effect before any stylesheet */
+    document.head.insertBefore(meta, document.head.firstChild);
+  }
+  /*
+   * width=device-width  → use real phone pixel width, no shrink-to-fit
+   * initial-scale=1.0   → start at 1:1, never zoomed in on load
+   */
+  meta.content = "width=device-width, initial-scale=1.0";
 }
 
-/** Badge — institutional style */
-function VaultBadge({ children, color = VOID.gold }) {
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
-      background: `${color}18`, color,
-      border: `1px solid ${color}33`,
-      borderRadius: 4, padding: "2px 8px",
-      display: "inline-block", textTransform: "uppercase",
-      textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-      fontFamily: "'Inter', sans-serif",
-    }}>
-      {children}
-    </span>
-  );
+function applyLayoutCSS(mode) {
+  const w = LAYOUT_WIDTHS[mode];
+  const id = "gvxm-layout-lock";
+  let tag = document.getElementById(id);
+  if (!tag) {
+    tag = document.createElement("style");
+    tag.id = id;
+    /* Prepend to <head> so this beats every other stylesheet */
+    document.head.insertBefore(tag, document.head.firstChild);
+  }
+  tag.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@500&display=swap');
+    html {
+      background: #000000 !important;
+      overflow-x: hidden !important;
+    }
+    body {
+      background: #000000 !important;
+      font-family: 'Inter', sans-serif !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      /* FLUID — fills phone screen natively, no browser zoom triggered */
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+    /* App shell is capped at chosen layout width, centred on wider screens */
+    .gvxm-shell {
+      width: 100% !important;
+      max-width: ${w}px !important;
+      min-width: 0 !important;
+      margin: 0 auto !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+    #gvxm-root {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+  `;
 }
 
-/** Icon box */
-function VaultIconBox({ icon: Icon, color = VOID.goldMid, size = 16, boxSize = 36 }) {
-  return (
-    <div style={{
-      width: boxSize, height: boxSize, borderRadius: 9, flexShrink: 0,
-      background: `radial-gradient(circle at 30% 30%, ${color}28, ${color}0a)`,
-      border: `1px solid ${color}30`,
-      boxShadow: `inset 0 1px 0 ${color}20, 0 2px 8px rgba(0,0,0,0.4)`,
-      display: "grid", placeItems: "center",
-    }}>
-      <Icon size={size} color={color} />
-    </div>
-  );
-}
+/* ── Run SYNCHRONOUSLY at module evaluation time ── */
+ensureViewportMeta();
+applyLayoutCSS(window.innerWidth >= LAYOUT_BREAKPOINT ? "desktop" : "mobile");
 
-/** Cinematic button */
-function VaultBtn({ children, onClick, variant = "gold", loading = false, disabled = false, style = {} }) {
-  const [hov, setHov] = useState(false);
+/* ─── Luxury Aesthetic CSS Injection ────────────────────────────────────── */
+(function injectLuxuryCSS() {
+  const id = "gvxm-luxury-aesthetic";
+  if (document.getElementById(id)) return;
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
 
-  const variants = {
-    gold: {
-      background: hov
-        ? "linear-gradient(135deg, #FCF6BA, #D4AF37, #B38728)"
-        : "linear-gradient(135deg, #BF953F, #D4AF37, #AA771C)",
-      color: "#000",
-      border: "1px solid rgba(252,246,186,0.4)",
-      boxShadow: hov
-        ? "0 0 20px rgba(191,149,63,0.4), 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)"
-        : "0 0 10px rgba(191,149,63,0.2), 0 2px 8px rgba(0,0,0,0.5)",
-      transform: hov && !disabled ? "scale(1.015)" : "scale(1)",
-    },
-    outline: {
-      background: hov ? "rgba(191,149,63,0.08)" : "transparent",
-      color: hov ? VOID.gold2 : VOID.gold,
-      border: `1px solid ${hov ? VOID.gold2 : VOID.gold}`,
-      boxShadow: hov ? `0 0 12px rgba(191,149,63,0.15)` : "none",
-      transform: hov ? "scale(1.015)" : "scale(1)",
-    },
-    ghost: {
-      background: hov ? VOID.card3 : VOID.card2,
-      color: VOID.text2, border: `1px solid ${VOID.border}`,
-      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-    },
-    danger: {
-      background: hov ? "#2a0808" : VOID.card,
-      color: VOID.red, border: `1px solid ${VOID.border}`,
-    },
-    green: {
-      background: hov
-        ? "linear-gradient(135deg, #16a34a, #15803d)"
-        : "linear-gradient(135deg, #22c55e, #16a34a)",
-      color: "#000",
-      border: "1px solid rgba(34,197,94,0.4)",
-      boxShadow: hov ? "0 0 16px rgba(34,197,94,0.25)" : "none",
-      transform: hov ? "scale(1.015)" : "scale(1)",
-    },
-    red: {
-      background: hov
-        ? "linear-gradient(135deg, #b91c1c, #991b1b)"
-        : "linear-gradient(135deg, #ef4444, #b91c1c)",
-      color: "#fff",
-      border: "1px solid rgba(239,68,68,0.4)",
-      boxShadow: hov ? "0 0 16px rgba(239,68,68,0.25)" : "none",
-      transform: hov ? "scale(1.015)" : "scale(1)",
-    },
-  };
+    /* ── Global font base ── */
+    body, input, button, select, textarea {
+      font-family: 'Inter', sans-serif !important;
+    }
 
-  const v = variants[variant] || variants.gold;
+    /* ── Playfair Display for headings ── */
+    h1, h2, h3, h4, h5, h6,
+    [data-heading="true"] {
+      font-family: 'Playfair Display', serif !important;
+      font-style: italic !important;
+      font-weight: 700 !important;
+    }
 
-  return (
-    <button
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      onClick={!disabled && !loading ? onClick : undefined}
-      style={{
-        border: "none", borderRadius: 10, padding: "13px 16px",
-        fontFamily: "'Inter', sans-serif",
-        fontWeight: 900, fontSize: 13, letterSpacing: "0.05em",
-        cursor: disabled || loading ? "not-allowed" : "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-        transition: "all 0.2s ease",
-        outline: "none", opacity: loading || disabled ? 0.65 : 1,
-        ...v, ...style,
-      }}
-    >
-      {loading
-        ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</>
-        : children}
-    </button>
-  );
-}
+    /* ── All dark/gray backgrounds → pure black ── */
+    .gvxm-shell,
+    header,
+    nav {
+      background-color: #000000 !important;
+    }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §4  MARKET DATA DEFINITIONS  (unchanged from original)
-   ═══════════════════════════════════════════════════════════════════════════ */
+    /* ── Gear glow in Trade section background: Tech-Green #00FF41 ── */
+    /* Targets SVG gear icons specifically inside the trade background area */
+    [data-section="trade-bg"] svg,
+    .trade-gear svg,
+    svg.gear-icon {
+      filter: drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 16px #00FF41aa) !important;
+      color: #00FF41 !important;
+    }
 
+    /* ── Container framing with luxury gold border ── */
+    [class*="card"],
+    [class*="Card"],
+    [data-card] {
+      border: 1px solid rgba(191,149,63,0.3) !important;
+    }
+
+    /* ── Recharts tooltip luxury styling ── */
+    .recharts-tooltip-wrapper .recharts-default-tooltip {
+      background: #000000 !important;
+      border: 1px solid rgba(191,149,63,0.3) !important;
+    }
+
+    /* ── Input fields ── */
+    input, select, textarea {
+      background: #050505 !important;
+      border-color: rgba(191,149,63,0.3) !important;
+    }
+    input::placeholder {
+      color: #525252 !important;
+    }
+    input:focus, select:focus {
+      box-shadow: 0 0 0 2px rgba(191,149,63,0.2) !important;
+    }
+
+    /* ── Scrollbar luxury styling ── */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #000000;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(191,149,63,0.4);
+      border-radius: 2px;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+/* ─── Market Instrument Definitions ─────────────────────────────────────── */
 const INSTRUMENT_DEFS = [
-  { pair: "BTC/USDT",  name: "Bitcoin",           cat: "Crypto",      base: 67800,    step: 0.0003 },
-  { pair: "ETH/USDT",  name: "Ethereum",           cat: "Crypto",      base: 3520,     step: 0.0003 },
-  { pair: "SOL/USDT",  name: "Solana",             cat: "Crypto",      base: 178,      step: 0.0004 },
-  { pair: "XRP/USDT",  name: "XRP",                cat: "Crypto",      base: 0.5821,   step: 0.0005 },
-  { pair: "BNB/USDT",  name: "BNB",                cat: "Crypto",      base: 612,      step: 0.0003 },
-  { pair: "EUR/USD",   name: "Euro / US Dollar",   cat: "Forex",       base: 1.08432,  step: 0.00008 },
-  { pair: "GBP/USD",   name: "British Pound / USD",cat: "Forex",       base: 1.27180,  step: 0.00008 },
-  { pair: "USD/JPY",   name: "US Dollar / Yen",    cat: "Forex",       base: 156.84,   step: 0.00006 },
-  { pair: "AAPL",      name: "Apple Inc.",          cat: "Stocks",      base: 189.30,   step: 0.0002 },
-  { pair: "NVDA",      name: "NVIDIA Corporation",  cat: "Stocks",      base: 875.40,   step: 0.0002 },
-  { pair: "TSLA",      name: "Tesla Inc.",           cat: "Stocks",      base: 248.60,   step: 0.0003 },
-  { pair: "SPX",       name: "S&P 500 Index",       cat: "Indices",     base: 5218.0,   step: 0.0001 },
-  { pair: "NDX",       name: "NASDAQ 100",          cat: "Indices",     base: 18320.0,  step: 0.0001 },
-  { pair: "XAU/USD",   name: "Gold Spot",           cat: "Commodities", base: 2342.0,   step: 0.0001 },
-  { pair: "XAG/USD",   name: "Silver Spot",         cat: "Commodities", base: 29.82,    step: 0.0002 },
-  { pair: "XTI/USD",   name: "Crude Oil WTI",       cat: "Commodities", base: 77.40,    step: 0.0002 },
-  { pair: "US10Y",     name: "US 10-Year Treasury", cat: "Bonds",       base: 4.281,    step: 0.0001 },
-  { pair: "ES",        name: "S&P 500 E-mini",      cat: "Futures",     base: 5220.0,   step: 0.0001 },
+  { pair: "BTC/USDT", name: "Bitcoin", cat: "Crypto", base: 67800, step: 0.0003 },
+  { pair: "ETH/USDT", name: "Ethereum", cat: "Crypto", base: 3520, step: 0.0003 },
+  { pair: "SOL/USDT", name: "Solana", cat: "Crypto", base: 178, step: 0.0004 },
+  { pair: "XRP/USDT", name: "XRP", cat: "Crypto", base: 0.5821, step: 0.0005 },
+  { pair: "BNB/USDT", name: "BNB", cat: "Crypto", base: 612, step: 0.0003 },
+  { pair: "ADA/USDT", name: "Cardano", cat: "Crypto", base: 0.4412, step: 0.0004 },
+  { pair: "AVAX/USDT", name: "Avalanche", cat: "Crypto", base: 38.5, step: 0.0004 },
+  { pair: "DOGE/USDT", name: "Dogecoin", cat: "Crypto", base: 0.1634, step: 0.0005 },
+  { pair: "MATIC/USDT", name: "Polygon", cat: "Crypto", base: 0.8821, step: 0.0004 },
+  { pair: "LINK/USDT", name: "Chainlink", cat: "Crypto", base: 18.42, step: 0.0004 },
+  { pair: "UNI/USDT", name: "Uniswap", cat: "Crypto", base: 10.34, step: 0.0004 },
+  { pair: "LTC/USDT", name: "Litecoin", cat: "Crypto", base: 86.5, step: 0.0003 },
+  { pair: "DOT/USDT", name: "Polkadot", cat: "Crypto", base: 7.82, step: 0.0004 },
+  { pair: "SHIB/USDT", name: "Shiba Inu", cat: "Crypto", base: 0.0000248, step: 0.0005 },
+  { pair: "ATOM/USDT", name: "Cosmos", cat: "Crypto", base: 9.41, step: 0.0004 },
+  { pair: "EUR/USD", name: "Euro / US Dollar", cat: "Forex", base: 1.08432, step: 0.00008 },
+  { pair: "GBP/USD", name: "British Pound / USD", cat: "Forex", base: 1.27180, step: 0.00008 },
+  { pair: "USD/JPY", name: "US Dollar / Japanese Yen", cat: "Forex", base: 156.84, step: 0.00006 },
+  { pair: "AUD/USD", name: "Australian Dollar / USD", cat: "Forex", base: 0.65820, step: 0.00007 },
+  { pair: "USD/CHF", name: "US Dollar / Swiss Franc", cat: "Forex", base: 0.91240, step: 0.00007 },
+  { pair: "USD/CAD", name: "US Dollar / Canadian Dollar", cat: "Forex", base: 1.36420, step: 0.00007 },
+  { pair: "NZD/USD", name: "New Zealand Dollar / USD", cat: "Forex", base: 0.60150, step: 0.00008 },
+  { pair: "EUR/GBP", name: "Euro / British Pound", cat: "Forex", base: 0.85210, step: 0.00006 },
+  { pair: "EUR/JPY", name: "Euro / Japanese Yen", cat: "Forex", base: 169.82, step: 0.00006 },
+  { pair: "GBP/JPY", name: "British Pound / Yen", cat: "Forex", base: 199.41, step: 0.00006 },
+  { pair: "EUR/CHF", name: "Euro / Swiss Franc", cat: "Forex", base: 0.98740, step: 0.00007 },
+  { pair: "AUD/JPY", name: "Australian Dollar / Yen", cat: "Forex", base: 103.21, step: 0.00006 },
+  { pair: "USD/MXN", name: "US Dollar / Mexican Peso", cat: "Forex", base: 17.2410, step: 0.00007 },
+  { pair: "USD/SGD", name: "US Dollar / Singapore Dollar", cat: "Forex", base: 1.3562, step: 0.00007 },
+  { pair: "USD/ZAR", name: "US Dollar / South African Rand", cat: "Forex", base: 18.621, step: 0.00007 },
+  { pair: "AAPL", name: "Apple Inc.", cat: "Stocks", base: 189.30, step: 0.0002 },
+  { pair: "NVDA", name: "NVIDIA Corporation", cat: "Stocks", base: 875.40, step: 0.0002 },
+  { pair: "TSLA", name: "Tesla Inc.", cat: "Stocks", base: 248.60, step: 0.0003 },
+  { pair: "AMZN", name: "Amazon.com Inc.", cat: "Stocks", base: 186.80, step: 0.0002 },
+  { pair: "MSFT", name: "Microsoft Corporation", cat: "Stocks", base: 420.50, step: 0.0002 },
+  { pair: "GOOGL", name: "Alphabet Inc.", cat: "Stocks", base: 175.20, step: 0.0002 },
+  { pair: "META", name: "Meta Platforms Inc.", cat: "Stocks", base: 508.40, step: 0.0002 },
+  { pair: "JPM", name: "JPMorgan Chase", cat: "Stocks", base: 199.60, step: 0.0002 },
+  { pair: "V", name: "Visa Inc.", cat: "Stocks", base: 278.30, step: 0.0002 },
+  { pair: "WMT", name: "Walmart Inc.", cat: "Stocks", base: 67.82, step: 0.0002 },
+  { pair: "NFLX", name: "Netflix Inc.", cat: "Stocks", base: 627.40, step: 0.0003 },
+  { pair: "AMD", name: "Advanced Micro Devices", cat: "Stocks", base: 162.80, step: 0.0003 },
+  { pair: "COIN", name: "Coinbase Global", cat: "Stocks", base: 214.30, step: 0.0003 },
+  { pair: "PLTR", name: "Palantir Technologies", cat: "Stocks", base: 22.40, step: 0.0003 },
+  { pair: "SPX", name: "S&P 500 Index", cat: "Indices", base: 5218.0, step: 0.0001 },
+  { pair: "NDX", name: "NASDAQ 100", cat: "Indices", base: 18320.0, step: 0.0001 },
+  { pair: "DJIA", name: "Dow Jones Industrial", cat: "Indices", base: 39200.0, step: 0.0001 },
+  { pair: "RUT", name: "Russell 2000", cat: "Indices", base: 2082.0, step: 0.0001 },
+  { pair: "VIX", name: "CBOE Volatility Index", cat: "Indices", base: 14.82, step: 0.0002 },
+  { pair: "FTSE", name: "FTSE 100", cat: "Indices", base: 8180.0, step: 0.0001 },
+  { pair: "DAX", name: "DAX 40", cat: "Indices", base: 18640.0, step: 0.0001 },
+  { pair: "N225", name: "Nikkei 225", cat: "Indices", base: 38820.0, step: 0.0001 },
+  { pair: "XAU/USD", name: "Gold Spot", cat: "Commodities", base: 2342.0, step: 0.0001 },
+  { pair: "XAG/USD", name: "Silver Spot", cat: "Commodities", base: 29.82, step: 0.0002 },
+  { pair: "XTI/USD", name: "Crude Oil WTI", cat: "Commodities", base: 77.40, step: 0.0002 },
+  { pair: "BRENT", name: "Crude Oil Brent", cat: "Commodities", base: 81.60, step: 0.0002 },
+  { pair: "NATGAS", name: "Natural Gas", cat: "Commodities", base: 2.418, step: 0.0003 },
+  { pair: "COPPER", name: "Copper", cat: "Commodities", base: 4.612, step: 0.0002 },
+  { pair: "ES", name: "S&P 500 E-mini Futures", cat: "Futures", base: 5220.0, step: 0.0001 },
+  { pair: "NQ", name: "NASDAQ 100 Futures", cat: "Futures", base: 18340.0, step: 0.0001 },
+  { pair: "YM", name: "Dow Jones Futures", cat: "Futures", base: 39180.0, step: 0.0001 },
+  { pair: "GC", name: "Gold Futures", cat: "Futures", base: 2350.0, step: 0.0001 },
+  { pair: "CL", name: "Crude Oil Futures", cat: "Futures", base: 77.60, step: 0.0002 },
+  { pair: "ZN", name: "10-Year T-Note Futures", cat: "Futures", base: 109.12, step: 0.0001 },
+  { pair: "US02Y", name: "US 2-Year Treasury", cat: "Bonds", base: 4.921, step: 0.0001 },
+  { pair: "US05Y", name: "US 5-Year Treasury", cat: "Bonds", base: 4.412, step: 0.0001 },
+  { pair: "US10Y", name: "US 10-Year Treasury", cat: "Bonds", base: 4.281, step: 0.0001 },
+  { pair: "US30Y", name: "US 30-Year Treasury", cat: "Bonds", base: 4.480, step: 0.0001 },
+  { pair: "TLT", name: "20+ Year T-Bond ETF", cat: "Bonds", base: 91.42, step: 0.0001 },
 ];
+const CATS = ["All", "Crypto", "Forex", "Stocks", "Indices", "Commodities", "Futures", "Bonds"];
 
-const CATS = ["All","Crypto","Forex","Stocks","Indices","Commodities","Futures","Bonds"];
+/* ─── Price simulator hook ───────────────────────────────────────────────── */
+function useLivePrices() {
+  const initPrices = () => {
+    const m = {};
+    INSTRUMENT_DEFS.forEach(d => {
+      m[d.pair] = { price: d.base, pct24h: (Math.random() - 0.45) * 4, prevDay: d.base * (1 - (Math.random() - 0.45) * 0.04), up: Math.random() > 0.45, };
+    });
+    return m;
+  };
+  const [prices, setPrices] = useState(initPrices);
+  const [flash, setFlash] = useState({});
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // BUG 1 FIX: flashNext collected outside the updater so setFlash is
+      // never called from inside another setState updater (React anti-pattern).
+      const flashNext = {};
+      setPrices(prev => {
+        const next = { ...prev };
+        const toUpdate = INSTRUMENT_DEFS.filter(() => Math.random() < 0.30).map(d => d.pair);
+        toUpdate.forEach(pair => {
+          const def = INSTRUMENT_DEFS.find(d => d.pair === pair);
+          const cur = prev[pair];
+          const sign = Math.random() > 0.5 ? 1 : -1;
+          const mag = def.step * (0.5 + Math.random()) * def.base;
+          const newPrice = Math.max(cur.price + sign * mag, def.base * 0.7);
+          const newPct24h = ((newPrice - cur.prevDay) / cur.prevDay) * 100;
+          next[pair] = { price: newPrice, pct24h: newPct24h, prevDay: cur.prevDay, up: sign === 1, };
+          flashNext[pair] = sign === 1 ? "up" : "dn";
+        });
+        return next;
+      });
+      // setFlash called AFTER setPrices, never inside its updater
+      setFlash(flashNext);
+      setTimeout(() => setFlash({}), 600);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+  return { prices, flash };
+}
 
+/* ─── Price formatting ───────────────────────────────────────────────────── */
 const fmtPrice = (price, cat) => {
   if (!price) return "—";
   if (cat === "Crypto") {
     if (price < 0.00001) return price.toFixed(8);
-    if (price < 0.001)   return price.toFixed(6);
-    if (price < 1)       return price.toFixed(4);
-    if (price < 10)      return price.toFixed(3);
+    if (price < 0.001) return price.toFixed(6);
+    if (price < 1) return price.toFixed(4);
+    if (price < 10) return price.toFixed(3);
     return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
-  if (cat === "Forex")  return price > 50 ? price.toFixed(3) : price.toFixed(4);
-  if (cat === "Bonds")  return price.toFixed(3) + "%";
-  if (price > 10000)    return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (cat === "Forex") return price > 50 ? price.toFixed(3) : price.toFixed(4);
+  if (cat === "Bonds") return price.toFixed(3) + "%";
+  if (price > 10000) return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return price.toFixed(2);
 };
-
 const fmtPct = p => p == null ? "—" : `${p >= 0 ? "+" : ""}${p.toFixed(2)}%`;
+const catColor = cat => ({ Crypto: "#f59e0b", Forex: "#3b82f6", Stocks: "#22c55e", Indices: "#a78bfa", Commodities: "#fbbf24", Futures: "#ef4444", Bonds: "#94a3b8" }[cat] || C.text3);
 
-const catColor = cat => ({
-  Crypto:      "#f59e0b",
-  Forex:       "#3b82f6",
-  Stocks:      "#22c55e",
-  Indices:     "#a78bfa",
-  Commodities: "#FCF6BA",
-  Futures:     "#ef4444",
-  Bonds:       "#94a3b8",
-}[cat] || VOID.text3);
+/* ─── Shared UI Primitives ───────────────────────────────────────────────── */
+const GoldLine = () => (<div style={{ height: 1, background: `linear-gradient(90deg,transparent,${C.gold}66,transparent)` }} />);
+const Card = ({ children, style = {} }) => (<div style={{ background: "#000000", border: `1px solid rgba(191,149,63,0.3)`, borderRadius: 14, padding: "18px 16px", boxShadow: "0 2px 24px rgba(191,149,63,0.04)", ...style }}> {children} </div>);
+const Badge = ({ children, color }) => (<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", background: `${color}20`, color, borderRadius: 4, padding: "2px 7px", display: "inline-block", textTransform: "uppercase", }}>{children}</span>);
+const IconBox = ({ icon: Icon, color = C.gold, size = 16, boxSize = 36 }) => (<div style={{ width: boxSize, height: boxSize, borderRadius: 9, background: `${color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}> <Icon size={size} color={color} /> </div>);
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §5  PRICE SIMULATOR  (logic unchanged, cosmetically consumed)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function useLivePrices() {
-  const init = () => {
-    const m = {};
-    INSTRUMENT_DEFS.forEach(d => {
-      m[d.pair] = {
-        price: d.base,
-        pct24h: (Math.random() - 0.45) * 4,
-        prevDay: d.base * (1 - (Math.random() - 0.45) * 0.04),
-        up: Math.random() > 0.45,
-      };
-    });
-    return m;
+/* ─── Hover-aware button ─────────────────────────────────────────────────── */
+function Btn({ children, onClick, variant = "gold", loading = false, disabled = false, style = {} }) {
+  const [hov, setHov] = useState(false);
+  const base = { border: "none", borderRadius: 10, padding: "13px 16px", fontWeight: 900, fontSize: 13, cursor: disabled || loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .18s", letterSpacing: "0.04em", outline: "none", };
+  const variants = {
+    gold: { background: disabled ? C.goldDim : hov ? "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)" : "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)", color: "#000", transform: hov && !disabled ? "scale(1.01)" : "scale(1)", boxShadow: hov ? "0 4px 20px rgba(191,149,63,0.4)" : "none" },
+    outline: { background: "transparent", color: hov ? C.gold2 : C.gold, border: `1.5px solid ${hov ? C.gold2 : C.gold}`, transform: hov ? "scale(1.01)" : "scale(1)" },
+    ghost: { background: hov ? C.card3 : C.card2, color: C.text3, border: `1px solid ${C.border}` },
+    danger: { background: hov ? "#b91c1c" : C.card, color: C.red, border: `1px solid ${C.border}` },
+    purple: { background: hov ? "#6d28d9" : C.purple, color: "#fff", transform: hov ? "scale(1.01)" : "scale(1)" },
+    white: { background: hov ? "#e5e7eb" : C.text, color: "#000", transform: hov ? "scale(1.01)" : "scale(1)" },
   };
-  const [prices, setPrices] = useState(init);
-  const [flash, setFlash] = useState({});
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      const flashNext = {};
-      setPrices(prev => {
-        const next = { ...prev };
-        INSTRUMENT_DEFS.filter(() => Math.random() < 0.3).forEach(d => {
-          const cur = prev[d.pair];
-          const sign = Math.random() > 0.5 ? 1 : -1;
-          const mag = d.step * (0.5 + Math.random()) * d.base;
-          const newPrice = Math.max(cur.price + sign * mag, d.base * 0.7);
-          next[d.pair] = {
-            price: newPrice,
-            pct24h: ((newPrice - cur.prevDay) / cur.prevDay) * 100,
-            prevDay: cur.prevDay,
-            up: sign === 1,
-          };
-          flashNext[d.pair] = sign === 1 ? "up" : "dn";
-        });
-        return next;
-      });
-      setFlash(flashNext);
-      setTimeout(() => setFlash({}), 600);
-    }, 2000);
-    return () => clearInterval(id);
-  }, []);
-
-  return { prices, flash };
+  return (<button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={!disabled && !loading ? onClick : undefined} style={{ ...base, ...variants[variant], opacity: loading || disabled ? 0.7 : 1, ...style }} > {loading ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Processing…</> : children} </button>);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §6  MINI SPARK CHART
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ─── Auth Context / Modals / Nav / ... (Remained same) ──────────────────── */
+/* ── Google "G" SVG logo ─────────────────────────────────────────────────── */
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    <path fill="none" d="M0 0h48v48H0z"/>
+  </svg>
+);
 
-function SparkChart({ pair, up }) {
-  const [data] = useState(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      v: 50 + Math.sin(i * 0.5) * 12 + (Math.random() - 0.5) * 8,
-    }))
-  );
-  const color = up ? VOID.green : VOID.red;
-  return (
-    <ResponsiveContainer width={80} height={36}>
-      <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
-        <defs>
-          <linearGradient id={`sg-${pair}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor={color} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area type="monotone" dataKey="v"
-          stroke={color} strokeWidth={1.5}
-          fill={`url(#sg-${pair})`} dot={false} />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
-}
+/* ─── Crypto Deposit Modal ───────────────────────────────────────────────── */
+const CRYPTO_WALLETS = [
+  {
+    symbol: "BTC",
+    name: "Bitcoin",
+    address: "bc1q5quw6afn6y4050mysfjycj04f0hdzq83u4gpmw",
+    color: "#F7931A",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#F7931A"/>
+        <path d="M22.1 13.8c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6-1.3-.3.7-2.6-1.6-.4-.7 2.7-1-.3-2.2-.5-.4 1.7s1.2.3 1.1.3c.6.2.7.6.7.9l-1.7 6.8c-.1.2-.3.5-.8.4 0 0-1.1-.3-1.1-.3l-.8 1.9 2.1.5 1.1.3-.7 2.7 1.6.4.7-2.7 1.3.3-.7 2.7 1.6.4.7-2.7c2.8.5 4.8.3 5.7-2.2.7-2-.03-3.2-1.5-3.9 1.1-.25 1.9-1 2.1-2.4zm-3.8 5.3c-.5 2-3.9.9-5 .6l.9-3.5c1.1.3 4.7.9 4.1 2.9zm.5-5.3c-.5 1.8-3.3.9-4.2.7l.8-3.2c.9.2 3.9.7 3.4 2.5z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "ETH",
+    name: "Ethereum",
+    address: "0xBecefd477aDC233d96f9c06F029a25B43d995139",
+    color: "#627EEA",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#627EEA"/>
+        <path d="M16 5.5L9.5 16.3 16 19.8l6.5-3.5L16 5.5z" fill="white" opacity="0.8"/>
+        <path d="M9.5 16.3L16 19.8v-7.3L9.5 16.3z" fill="white" opacity="0.6"/>
+        <path d="M16 12.5v7.3l6.5-3.5L16 12.5z" fill="white"/>
+        <path d="M16 21.2l-6.5-3.6L16 26.5l6.5-8.9L16 21.2z" fill="white" opacity="0.6"/>
+        <path d="M16 21.2v5.3l6.5-8.9L16 21.2z" fill="white" opacity="0.8"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "USDT",
+    name: "USDT (ERC-20)",
+    address: "0xBecefd477aDC233d96f9c06F029a25B43d995139",
+    color: "#26A17B",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#26A17B"/>
+        <path d="M17.8 17.3v-.02c-.1.01-1 .06-2 .06-1 0-1.9-.05-2-.06v.02c-3.5-.15-6.1-.77-6.1-1.52 0-.74 2.6-1.36 6.1-1.51v2.4c.1.01 1 .07 2.02.07 1.23 0 1.85-.07 1.98-.07v-2.4c3.5.15 6.1.77 6.1 1.51 0 .75-2.6 1.37-6.1 1.52zm0-3.29v-2.14h4.88V9.5H9.32v2.37H14.2v2.14c-4 .18-7 .97-7 1.91s3 1.73 7 1.91v6.42h3.6v-6.42c4-.18 7-.97 7-1.91s-3-1.73-7-1.91z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "BNB",
+    name: "BNB",
+    address: "0x704A9F1CabaFD3AFdF1963A890F580D477d5870E",
+    color: "#F3BA2F",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#F3BA2F"/>
+        <path d="M12.1 16l-1.8-1.8-1.8 1.8 1.8 1.8L12.1 16zm3.9-3.9l3.2 3.2 1.8-1.8L16 9.3l-5 5 1.8 1.8L16 12.1zm5.7 2.1L20 15.9l1.8 1.8 1.7-1.7-1.8-1.8zm-5.7 5.7l-3.2-3.2-1.8 1.8 5 5 5-5-1.8-1.8-3.2 3.2zM16 17.8L14.2 16l1.8-1.8 1.8 1.8L16 17.8z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "TRX",
+    name: "Tron",
+    address: "TM9FGDVqFV6zsZwNPRxtEnBY1tZKtV89d4",
+    color: "#EF0027",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#EF0027"/>
+        <path d="M22.8 12.2L9.5 8l3.8 13.8 3.4-4.6 4.2 4.3 1.9-9.3zm-6 7.1l-2.6-2.7-1.6 2.1-1.7-6.3 7.8 2.3-1.9 4.6z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "BCH",
+    name: "Bitcoin Cash",
+    address: "qr95lcna5t6vdghe5dm00kzkewekljjlgsayd0yj5n",
+    color: "#8DC351",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#8DC351"/>
+        <path d="M20.5 14.2c.2-1.5-1-2.3-2.6-2.8l.5-2.1-1.3-.3-.5 2-1-.3.5-2-1.3-.3-.5 2.1-.8-.2-1.7-.4-.3 1.4s.9.2.9.2c.5.1.6.5.5.7l-1.3 5.3c-.1.2-.2.4-.6.3 0 0-.9-.2-.9-.2l-.6 1.5 1.6.4.9.2-.5 2.1 1.3.3.5-2.1 1 .3-.5 2.1 1.3.3.5-2.1c2.2.4 3.8.2 4.4-1.7.5-1.5 0-2.4-1.1-3 .8-.2 1.5-.8 1.6-1.9zm-3 4.1c-.4 1.6-3 .7-3.9.5l.7-2.7c.9.2 3.7.7 3.2 2.2zm.4-4.1c-.3 1.4-2.5.7-3.2.5l.6-2.5c.8.2 3.1.5 2.6 2z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "ZEC",
+    name: "Zcash",
+    address: "t1fkc3qALWZ52Jq7cnupWeRdcZ9Y9CHj74p",
+    color: "#F4B728",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#F4B728"/>
+        <path d="M16 6C10.5 6 6 10.5 6 16s4.5 10 10 10 10-4.5 10-10S21.5 6 16 6zm4.5 14.5h-9v-2.2l5.4-6.8h-5.1V9.5h8.7v2.2l-5.4 6.8h5.4v2z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "LTC",
+    name: "Litecoin",
+    address: "ltc1qak6tptl3t5zh9u96gcwtrp874qrqr8nyy0w957",
+    color: "#345D9D",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#345D9D"/>
+        <path d="M16.5 7.5l-3.8 9.2-1.5.5.5 1.8 1-.3-1 2.3H21l.7-2.6H14l.8-2 1.5-.5-.5-1.8-1 .3 2.5-6.9h-1z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "XRP",
+    name: "XRP",
+    address: "rBSziSwqzGkJgp6bQ7DXVTq5k2vkvxZLJ6",
+    color: "#346AA9",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#346AA9"/>
+        <path d="M22 8h2.4l-5.3 5.1c-1.7 1.6-4.5 1.6-6.2 0L7.6 8H10l4 3.9c1.1 1 2.9 1 4 0L22 8zM10 24H7.6l5.3-5.1c1.7-1.6 4.5-1.6 6.2 0L24.4 24H22l-4-3.9c-1.1-1-2.9-1-4 0L10 24z" fill="white"/>
+      </svg>
+    ),
+  },
+  {
+    symbol: "SOL",
+    name: "Solana",
+    address: "ESSb8XzPu7SpJGwdFssup6Cjy1F2E3WhNLo1SfRiULN",
+    color: "#9945FF",
+    logo: (
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="16" fill="#9945FF"/>
+        <path d="M10 20.5h12.5l-2 2H8l2-2zm0-5.5h12.5l-2 2H8l2-2zm10.5-7.5L18.5 9.5H8l2-2h10.5z" fill="white"/>
+      </svg>
+    ),
+  },
+];
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §7  MARKET TICKER ROW  (top scrolling tape)
-   ═══════════════════════════════════════════════════════════════════════════ */
+function DepositModal({ onClose }) {
+  const [copied, setCopied] = useState(null);
 
-function MarketTicker({ prices }) {
-  const items = INSTRUMENT_DEFS.slice(0, 10);
+  const handleCopy = (address, symbol) => {
+    navigator.clipboard?.writeText(address).catch(() => {});
+    setCopied(symbol);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   return (
     <div style={{
-      background: VOID.surface,
-      borderBottom: `1px solid ${VOID.border}`,
-      overflow: "hidden", whiteSpace: "nowrap",
-      padding: "7px 0",
-      position: "relative",
+      position: "fixed", inset: 0,
+      background: "rgba(0,0,0,0.85)",
+      backdropFilter: "blur(12px)",
+      zIndex: 1000,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "16px",
     }}>
-      {/* Gold rule accent */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
-        background: `linear-gradient(90deg, transparent, ${VOID.gold}44, transparent)`,
-      }} />
-      <div style={{
-        display: "inline-flex", gap: 40, paddingLeft: "100%",
-        animation: "tickerScroll 40s linear infinite",
+        background: "#000000",
+        border: "1px solid rgba(191,149,63,0.3)",
+        borderRadius: 20,
+        width: "100%", maxWidth: 440,
+        maxHeight: "88vh",
+        display: "flex", flexDirection: "column",
+        boxShadow: "0 40px 120px rgba(0,0,0,0.9)",
+        overflow: "hidden",
       }}>
-        {[...items, ...items].map((d, i) => {
-          const p = prices[d.pair];
-          if (!p) return null;
-          const up = p.pct24h >= 0;
-          return (
-            <span key={i} style={{
-              display: "inline-flex", alignItems: "center", gap: 10,
-              fontSize: 12, fontFamily: "'Inter', sans-serif",
+        {/* Header */}
+        <div style={{
+          padding: "20px 20px 16px",
+          borderBottom: "1px solid rgba(191,149,63,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: "#fff", letterSpacing: "-0.01em" }}>
+              Deposit Crypto
+            </div>
+            <div style={{ fontSize: 12, color: "#555", marginTop: 3 }}>
+              Select a wallet to copy address
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "#000", border: "1px solid rgba(191,149,63,0.3)", borderRadius: 8,
+            width: 32, height: 32, display: "grid", placeItems: "center",
+            cursor: "pointer", color: "#666",
+          }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Scrollable wallet list */}
+        <div style={{
+          overflowY: "auto", padding: "12px 16px 20px",
+          display: "flex", flexDirection: "column", gap: 10,
+        }}>
+          {CRYPTO_WALLETS.map((w) => (
+            <div key={w.symbol} style={{
+              background: "#000000",
+              border: "1px solid rgba(191,149,63,0.2)",
+              borderRadius: 14,
+              padding: "14px 16px",
             }}>
-              <span style={{ color: VOID.text2, fontWeight: 600, letterSpacing: "0.04em" }}>{d.pair}</span>
-              <span style={{ color: up ? VOID.green : VOID.red, fontWeight: 700 }}>
-                {fmtPrice(p.price, d.cat)}
-              </span>
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: up ? VOID.green : VOID.red,
-                background: up ? `${VOID.green}15` : `${VOID.red}15`,
-                borderRadius: 4, padding: "1px 5px",
+              {/* Coin header row */}
+              <div style={{
+                display: "flex", alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 11,
               }}>
-                {fmtPct(p.pct24h)}
-              </span>
-            </span>
-          );
-        })}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ flexShrink: 0, borderRadius: "50%", overflow: "hidden" }}>
+                    {w.logo}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>{w.name}</div>
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 800,
+                  background: `${w.color}22`,
+                  color: w.color,
+                  borderRadius: 5,
+                  padding: "3px 8px",
+                  letterSpacing: "0.06em",
+                }}>
+                  {w.symbol}
+                </span>
+              </div>
+
+              {/* Address row */}
+              <div style={{
+                background: "#000000",
+                border: "1px solid rgba(191,149,63,0.2)",
+                borderRadius: 10,
+                padding: "11px 12px",
+                display: "flex", alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}>
+                <span style={{
+                  fontSize: 12, color: "#555",
+                  fontFamily: "monospace",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  flex: 1,
+                }}>
+                  {w.address}
+                </span>
+                <button
+                  onClick={() => handleCopy(w.address, w.symbol)}
+                  style={{
+                    flexShrink: 0,
+                    background: copied === w.symbol ? `${w.color}22` : "#050505",
+                    border: `1px solid ${copied === w.symbol ? w.color + "55" : "rgba(191,149,63,0.25)"}`,
+                    borderRadius: 8,
+                    padding: "7px 13px",
+                    cursor: "pointer",
+                    color: copied === w.symbol ? w.color : "#888",
+                    fontSize: 12, fontWeight: 700,
+                    display: "flex", alignItems: "center", gap: 5,
+                    transition: "all .2s",
+                  }}
+                >
+                  <Globe size={12} />
+                  {copied === w.symbol ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          borderTop: "1px solid rgba(191,149,63,0.15)",
+          padding: "12px 20px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+          background: "#000000",
+        }}>
+          <span style={{ fontSize: 11, color: "#444" }}>
+            Need help?{" "}
+            <span style={{ color: C.gold, fontWeight: 700 }}>support@goldenvaultxm.live</span>
+          </span>
+          <button onClick={onClose} style={{
+            background: "#000", border: "1px solid rgba(191,149,63,0.3)",
+            borderRadius: 8, padding: "8px 16px",
+            color: "#888", fontSize: 12, fontWeight: 700,
+            cursor: "pointer",
+          }}>Close</button>
+        </div>
       </div>
-      <style>{`@keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §8  NAV BAR
-   ═══════════════════════════════════════════════════════════════════════════ */
+function AuthModal({ onClose, initialMode = "signup" }) {
+  const { login } = useAuth();
+  // BUG 3 FIX: renamed `mode`→`authMode` to avoid shadowing LayoutProvider's `mode`
+  const [authMode, setAuthMode] = useState(initialMode);
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
 
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard",  icon: Home },
-  { id: "markets",   label: "Markets",    icon: BarChart2 },
-  { id: "trade",     label: "Trade",      icon: Zap },
-  { id: "portfolio", label: "Portfolio",  icon: Wallet },
-  { id: "analytics", label: "Analytics",  icon: TrendingUp },
-  { id: "news",      label: "News",       icon: Newspaper },
-  { id: "mining",    label: "Mining",     icon: Cpu },
-  { id: "support",   label: "Support",    icon: Shield },
-];
+  /* ── Google OAuth ── */
+  const handleGoogle = async () => {
+    setError("");
+    setGoogleLoading(true);
+    // BUG 2 FIX: subscribe BEFORE calling signInWithOAuth so the listener
+    // exists when the browser returns from the OAuth redirect. Subscribing
+    // after the call means the component unmounts on redirect, destroying
+    // the listener before it can ever fire.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        subscription.unsubscribe();
+        login({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        setGoogleLoading(false);
+        onClose();
+      }
+    });
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (oauthError) {
+      subscription.unsubscribe(); // clean up if the OAuth call itself failed
+      setError(oauthError.message);
+      setGoogleLoading(false);
+    }
+  };
 
-function NavBar({ active, onNav }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  /* ── Email / password ── */
+  const handle = async () => {
+    setError("");
+    if (authMode === "signup" && !agreed) { setError("Please confirm you are 18 or older and agree to the Terms."); return; }
+    setLoading(true);
+    let authError = null;
+    if (authMode === "signup") {
+      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.name } } });
+      authError = error;
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+      authError = error;
+    }
+    if (authError) { setError(authError.message); setLoading(false); return; }
+    login({ name: form.name || form.email.split("@")[0], email: form.email });
+    setLoading(false);
+    onClose();
+  };
 
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", fn);
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
+  const inp = { width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "13px 14px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" };
 
   return (
-    <>
-      <nav style={{
-        position: "sticky", top: 0, zIndex: 100,
-        background: scrolled
-          ? "rgba(0,0,0,0.97)"
-          : "linear-gradient(180deg, #000000 0%, rgba(0,0,0,0.98) 100%)",
-        borderBottom: `1px solid ${VOID.border}`,
-        backdropFilter: "blur(20px)",
-        boxShadow: scrolled ? "0 4px 30px rgba(0,0,0,0.8)" : "none",
-        transition: "all 0.3s ease",
-      }}>
-        {/* Gold accent line at top */}
-        <div style={{
-          height: 2,
-          background: GOLD_GRADIENT,
-          opacity: 0.7,
-        }} />
+    <div style={{ position: "fixed", inset: 0, background: "#000000cc", backdropFilter: "blur(14px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "28px 24px 24px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 32px 96px #000c" }}>
 
-        <div style={{
-          maxWidth: 1440, margin: "0 auto",
-          display: "flex", alignItems: "center",
-          padding: "0 20px", gap: 8, height: 58,
-        }}>
-          {/* LOGO — UNTOUCHED, just repositioned in flow */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <div style={{
-              width: 36, height: 36,
-              background: GOLD_GRADIENT,
-              borderRadius: 9,
-              display: "grid", placeItems: "center",
-              boxShadow: "0 0 16px rgba(191,149,63,0.4), 0 2px 8px rgba(0,0,0,0.6)",
-              fontSize: 18, fontWeight: 900, color: "#000",
-            }}>G</div>
-            <div>
-              <div style={{
-                fontFamily: "'Playfair Display', serif",
-                fontWeight: 700, fontSize: 15,
-                background: GOLD_GRADIENT,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                letterSpacing: "0.05em",
-                lineHeight: 1.1,
-              }}>
-                GoldenVaultXM
-              </div>
-              <div style={{ fontSize: 9, color: VOID.text3, letterSpacing: "0.12em", fontWeight: 600 }}>
-                INSTITUTIONAL TRADING
-              </div>
-            </div>
-          </div>
+        {/* Close */}
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.text3, padding: 4 }}><X size={18} /></button>
 
-          {/* Desktop nav */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 2,
-            flex: 1, justifyContent: "center", overflow: "hidden",
-          }}>
-            {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
-              const isActive = active === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => onNav(id)}
-                  className={isActive ? "nav-active" : ""}
-                  style={{
-                    background: isActive
-                      ? "linear-gradient(135deg, rgba(191,149,63,0.15), rgba(179,135,40,0.05))"
-                      : "transparent",
-                    border: `1px solid ${isActive ? VOID.border2 : "transparent"}`,
-                    borderRadius: 8,
-                    padding: "7px 12px",
-                    display: "flex", alignItems: "center", gap: 6,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = "rgba(191,149,63,0.06)";
-                      e.currentTarget.style.borderColor = VOID.border;
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.borderColor = "transparent";
-                    }
-                  }}
-                >
-                  <Icon size={14} color={isActive ? VOID.goldMid : VOID.text3} />
-                  <span style={{
-                    fontSize: 12, fontWeight: isActive ? 700 : 500,
-                    color: isActive ? VOID.goldMid : VOID.text2,
-                    fontFamily: "'Inter', sans-serif",
-                    letterSpacing: "0.02em",
-                    ...pressedShadow,
-                  }}>
-                    {label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button style={{
-              background: "transparent", border: `1px solid ${VOID.border}`,
-              borderRadius: 8, padding: "7px", cursor: "pointer",
-              color: VOID.text3, display: "grid", placeItems: "center",
-              transition: "all 0.2s",
-            }}>
-              <Bell size={15} />
-            </button>
-            <VaultBtn variant="gold" style={{ padding: "7px 16px", fontSize: 12 }}>
-              <LogIn size={13} />
-              Sign In
-            </VaultBtn>
+        {/* Logo row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><Zap size={20} color="#000" fill="#000" /></div>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 13, color: C.gold, letterSpacing: "0.12em" }}>GOLDEN VAULT XM</div>
+            <div style={{ fontSize: 9, color: C.text3, letterSpacing: "0.2em", marginTop: 1 }}>ELITE TRADING</div>
           </div>
         </div>
-      </nav>
-    </>
-  );
-}
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §9  DASHBOARD PAGE
-   ═══════════════════════════════════════════════════════════════════════════ */
+        {/* Heading */}
+        <div style={{ fontWeight: 900, fontSize: 24, color: C.text, marginBottom: 4 }}>{authMode === "signup" ? "Create Account" : "Welcome Back"}</div>
+        <div style={{ fontSize: 13, color: C.text3, marginBottom: 22, lineHeight: 1.5 }}>{authMode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."}</div>
 
-function generateChart(n = 30, base = 100, vol = 8) {
-  const data = [];
-  let v = base;
-  for (let i = 0; i < n; i++) {
-    v += (Math.random() - 0.46) * vol;
-    v = Math.max(v, base * 0.6);
-    data.push({ t: i, v: +v.toFixed(2) });
-  }
-  return data;
-}
+        {/* Google button */}
+        <button
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
+        >
+          {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon />}
+          {googleLoading ? "Redirecting…" : "Continue with Google"}
+        </button>
 
-function StatCard({ icon: Icon, label, value, sub, subUp, color = VOID.goldMid }) {
-  return (
-    <VaultCard>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <VaultIconBox icon={Icon} color={color} />
-        <span style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
-          color: subUp ? VOID.green : VOID.red,
-          background: subUp ? `${VOID.green}15` : `${VOID.red}15`,
-          border: `1px solid ${subUp ? VOID.green : VOID.red}30`,
-          borderRadius: 4, padding: "2px 7px",
-          ...pressedShadow,
-        }}>
-          {sub}
-        </span>
-      </div>
-      <div style={{ marginTop: 14 }}>
-        <GoldMetric value={value} size={24} />
-        <div style={{
-          fontSize: 11, color: VOID.text3, marginTop: 3,
-          fontFamily: "'Inter', sans-serif", letterSpacing: "0.04em", fontWeight: 600,
-          textTransform: "uppercase",
-        }}>
-          {label}
+        {/* Divider */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
+          <span style={{ fontSize: 12, color: C.text3, fontWeight: 600 }}>or</span>
+          <div style={{ flex: 1, height: 1, background: C.border2 }} />
         </div>
-      </div>
-    </VaultCard>
-  );
-}
 
-function DashboardPage({ prices }) {
-  const chartData = generateChart(40, 5000, 120);
-  const barData = Array.from({ length: 7 }, (_, i) => ({
-    d: ["M","T","W","T","F","S","S"][i],
-    v: 200 + Math.random() * 600,
-    gain: Math.random() > 0.35,
-  }));
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* Hero stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        <StatCard icon={Wallet}     label="Total Balance"    value="$128,420.00" sub="+2.4%"  subUp color={VOID.goldMid} />
-        <StatCard icon={TrendingUp} label="Total P&L"        value="+$9,842.50"  sub="+8.3%"  subUp color={VOID.green} />
-        <StatCard icon={Activity}   label="Open Positions"   value="7"           sub="+3"      subUp color={VOID.blue} />
-        <StatCard icon={Target}     label="Win Rate"         value="68.4%"       sub="+1.2%"  subUp color={VOID.purple} />
-        <StatCard icon={BarChart2}  label="Daily Volume"     value="$42,100"     sub="-4.1%"       color={VOID.red} />
-      </div>
-
-      {/* Main chart + sidebar */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 14 }}>
-        <VaultCard>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <VaultHeading size={18}>Portfolio Performance</VaultHeading>
-            <div style={{ display: "flex", gap: 6 }}>
-              {["1D","1W","1M","3M","1Y"].map(p => (
-                <button key={p} style={{
-                  background: p === "1M" ? "rgba(191,149,63,0.12)" : "transparent",
-                  border: `1px solid ${p === "1M" ? VOID.border2 : VOID.border}`,
-                  borderRadius: 6, padding: "4px 10px", cursor: "pointer",
-                  color: p === "1M" ? VOID.goldMid : VOID.text3,
-                  fontSize: 11, fontWeight: 700, fontFamily: "'Inter', sans-serif",
-                }}>
-                  {p}
-                </button>
-              ))}
-            </div>
+        {/* Fields */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          {authMode === "signup" && (
+            <input placeholder="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inp} />
+          )}
+          <input placeholder="Email address" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inp} />
+          <div style={{ position: "relative" }}>
+            <input placeholder="Password" type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} style={{ ...inp, paddingRight: 46 }} />
+            <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}>{showPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="portGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={VOID.goldMid} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={VOID.goldMid} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="t" hide />
-              <YAxis hide domain={["auto","auto"]} />
-              <Tooltip
-                contentStyle={{
-                  background: VOID.card2, border: `1px solid ${VOID.border2}`,
-                  borderRadius: 8, color: VOID.text, fontFamily: "'Inter', sans-serif",
-                  fontSize: 12,
-                }}
-                formatter={v => [`$${v.toFixed(2)}`, "Value"]}
-              />
-              <ReferenceLine y={chartData[0]?.v} stroke={VOID.border2} strokeDasharray="4 4" />
-              <Area type="monotone" dataKey="v"
-                stroke={VOID.goldMid} strokeWidth={2}
-                fill="url(#portGrad)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </VaultCard>
+        </div>
 
-        {/* Weekly volume bars */}
-        <VaultCard>
-          <VaultHeading size={15} style={{ marginBottom: 14 }}>Weekly Activity</VaultHeading>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={barData} barSize={22}>
-              <XAxis dataKey="d" tick={{ fill: VOID.text3, fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{
-                  background: VOID.card2, border: `1px solid ${VOID.border2}`,
-                  borderRadius: 8, fontSize: 12, fontFamily: "'Inter', sans-serif",
-                }}
-              />
-              <Bar dataKey="v" radius={[4,4,0,0]}>
-                {barData.map((e, i) => (
-                  <Cell key={i} fill={e.gain ? `${VOID.green}99` : `${VOID.red}88`} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <GoldRule opacity={0.2} />
-          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-            {[
-              { label: "Best Day", val: "Friday +$2,841", up: true },
-              { label: "Worst Day", val: "Monday -$412", up: false },
-              { label: "Avg Daily", val: "$1,204", up: true },
-            ].map(r => (
-              <div key={r.label} style={{
-                display: "flex", justifyContent: "space-between",
-                fontSize: 12, fontFamily: "'Inter', sans-serif",
-              }}>
-                <span style={{ color: VOID.text3, fontWeight: 600 }}>{r.label}</span>
-                <span style={{
-                  color: r.up ? VOID.green : VOID.red, fontWeight: 700,
-                  ...pressedShadow,
-                }}>
-                  {r.val}
-                </span>
+        {/* Age + Terms checkbox (signup only) */}
+        {authMode === "signup" && (
+          <div
+            onClick={() => setAgreed(a => !a)}
+            style={{ display: "flex", alignItems: "flex-start", gap: 11, marginTop: 14, padding: "13px 14px", background: C.card2, border: `1px solid ${agreed ? C.gold + "55" : C.border2}`, borderRadius: 12, cursor: "pointer", transition: "border-color .2s" }}
+          >
+            {/* Custom checkbox */}
+            <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? C.gold : C.text3}`, background: agreed ? C.gold : "transparent", display: "grid", placeItems: "center", flexShrink: 0, marginTop: 1, transition: "all .15s" }}>
+              {agreed && <CheckCircle2 size={11} color="#000" strokeWidth={3} />}
+            </div>
+            <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.6 }}>
+              I confirm I am <strong style={{ color: C.text }}>18 years of age or older</strong>, and I agree to the{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Terms of Service</span>,{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Acceptable Use Policy</span>, and{" "}
+              <span style={{ color: C.gold, fontWeight: 700 }}>Privacy Policy</span> of Golden Vault XM.
+            </span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: `${C.red}14`, border: `1px solid ${C.red}33`, borderRadius: 9 }}>
+            <AlertCircle size={13} color={C.red} /><span style={{ fontSize: 12, color: C.red }}>{error}</span>
+          </div>
+        )}
+
+        {/* Submit */}
+        <Btn variant="gold" onClick={handle} loading={loading} disabled={authMode === "signup" && !agreed} style={{ width: "100%", marginTop: 16, borderRadius: 12, padding: "14px 16px", fontSize: 15 }}>
+          {authMode === "signup" ? <><UserPlus size={16} /> Create Account</> : <><LogIn size={16} /> Sign In</>}
+        </Btn>
+
+        {/* Trust badges (signup only) */}
+        {authMode === "signup" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 20, marginTop: 14 }}>
+            {[["🔒", "Encrypted"], ["✅", "Regulated"], ["🌐", "24/7 Support"]].map(([em, lbl]) => (
+              <div key={lbl} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 16 }}>{em}</div>
+                <div style={{ fontSize: 9, color: C.text3, marginTop: 3, letterSpacing: "0.04em" }}>{lbl}</div>
               </div>
             ))}
           </div>
-        </VaultCard>
-      </div>
+        )}
 
-      {/* Recent positions */}
-      <VaultCard>
-        <VaultHeading size={16} style={{ marginBottom: 14 }}>Active Positions</VaultHeading>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: "'Inter', sans-serif" }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${VOID.border}` }}>
-                {["Instrument","Type","Entry","Current","P&L","Status"].map(h => (
-                  <th key={h} style={{
-                    padding: "8px 12px", textAlign: "left",
-                    color: VOID.text3, fontWeight: 700, letterSpacing: "0.06em",
-                    fontSize: 10, textTransform: "uppercase",
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { inst: "BTC/USDT", type: "LONG",  entry: "$64,200", cur: "$67,800", pnl: "+$3,600", up: true },
-                { inst: "ETH/USDT", type: "LONG",  entry: "$3,200",  cur: "$3,520",  pnl: "+$320",   up: true },
-                { inst: "EUR/USD",  type: "SHORT", entry: "1.0920",  cur: "1.0843",  pnl: "+$770",   up: true },
-                { inst: "TSLA",     type: "LONG",  entry: "$260.40", cur: "$248.60", pnl: "-$1,180", up: false },
-                { inst: "XAU/USD",  type: "LONG",  entry: "$2,310",  cur: "$2,342",  pnl: "+$320",   up: true },
-              ].map((r, i) => (
-                <tr key={i} style={{
-                  borderBottom: `1px solid ${VOID.border}`,
-                  transition: "background 0.15s",
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(191,149,63,0.04)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: VOID.text }}>{r.inst}</td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <VaultBadge color={r.type === "LONG" ? VOID.green : VOID.red}>{r.type}</VaultBadge>
-                  </td>
-                  <td style={{ padding: "10px 12px", color: VOID.text2 }}>{r.entry}</td>
-                  <td style={{ padding: "10px 12px", color: VOID.text2 }}>{r.cur}</td>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: r.up ? VOID.green : VOID.red }}>
-                    {r.pnl}
-                  </td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <span style={{
-                      width: 7, height: 7, borderRadius: "50%",
-                      background: VOID.green, display: "inline-block",
-                      boxShadow: `0 0 6px ${VOID.green}`,
-                      marginRight: 6,
-                    }} />
-                    <span style={{ color: VOID.text3, fontSize: 11 }}>Active</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Switch mode */}
+        <div style={{ textAlign: "center", marginTop: 18, fontSize: 12, color: C.text3 }}>
+          {authMode === "signup" ? "Already have an account? " : "Don't have an account? "}
+          <button onClick={() => { setAuthMode(m => m === "signup" ? "login" : "signup"); setError(""); setAgreed(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.gold, fontWeight: 800, fontSize: 12 }}>
+            {authMode === "signup" ? "Sign In" : "Create Account"}
+          </button>
         </div>
-      </VaultCard>
+
+      </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §10  MARKETS PAGE
-   ═══════════════════════════════════════════════════════════════════════════ */
+function AuthProvider({ children, onLogin }) {
+  const [user, setUser] = useState(null);
+  const [modal, setModal] = useState(null);
+  const isAuthenticated = !!user;
+
+  // Pick up session on mount (covers Google OAuth redirect-back)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        if (onLogin) onLogin();
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        setUser({ name: session.user.user_metadata?.full_name || session.user.email.split("@")[0], email: session.user.email });
+        setModal(null);
+        if (onLogin) onLogin();
+      }
+      if (event === "SIGNED_OUT") setUser(null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = (u) => { setUser(u); setModal(null); if (onLogin) onLogin(); };
+  const logout = async () => { await supabase.auth.signOut(); setUser(null); };
+  const requireAuth = (mode = "signup") => { if (!isAuthenticated) { setModal(mode); return false; } return true; };
+  return (
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, requireAuth }}>
+      {children}
+      {modal && <AuthModal onClose={() => setModal(null)} initialMode={modal} />}
+    </AuthContext.Provider>
+  );
+}
+
+function useNotifications() {
+  const { user, isAuthenticated } = useAuth();
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email) return;
+    const fetchNotes = async () => {
+      const { data } = await supabase
+        .from('notifications')
+        .select('id, title, body, read, created_at')
+        .eq('recipient_email', user.email)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (data) setNotes(data);
+    };
+    fetchNotes();
+    const channel = supabase
+      .channel('notifications-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_email=eq.${user.email}` },
+        payload => setNotes(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [isAuthenticated, user?.email]);
+
+  const markAllRead = async () => {
+    const unreadIds = notes.filter(n => !n.read).map(n => n.id);
+    if (!unreadIds.length) return;
+    await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+    setNotes(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const unreadCount = notes.filter(n => !n.read).length;
+  return { notes, unreadCount, markAllRead };
+}
+
+function Nav({ page, setPage, open, setOpen, openDeposit }) {
+  const { isAuthenticated, logout, requireAuth } = useAuth();
+  const { mode } = useLayout();
+  const { notes, unreadCount, markAllRead } = useNotifications();
+  const [bellOpen, setBellOpen] = useState(false);
+
+  const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "news", label: "News", icon: Newspaper }, { id: "settings", label: "Settings", icon: Settings },];
+
+  const ACTIONS = [
+    { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
+    { icon: ArrowUpFromLine, label: "Withdraw Funds", color: C.gold,    onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: BarChart2,       label: "Markets",        color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+    { icon: TrendingUp,      label: "Trade Now",      color: C.purple,  onClick: () => { if (!requireAuth("signup")) return; setPage("trade"); setOpen(false); } },
+    { icon: FileBarChart,    label: "Reports",        color: "#a78bfa", onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: Mail,            label: "Support",        color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+  ];
+
+  return (
+    <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+
+      {/* Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.2 }}>GOLDEN VAULT <span style={{ color: "#ef4444" }}>XM</span></div>
+          <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 400, fontSize: 10, color: "#e69d00", marginTop: -2, lineHeight: 1.2 }}>Expert automated trading</div>
+        </div>
+      </div>
+
+      {/* Right controls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+
+        {/* Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); if (!bellOpen) markAllRead(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", lineHeight: 1 }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {bellOpen && (
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
+                <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
+              </div>
+              {notes.length === 0 ? (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>No notifications yet</div>
+              ) : (
+                notes.map((n, i) => (
+                  <div key={n.id} style={{ padding: "13px 16px", borderBottom: i < notes.length - 1 ? `1px solid ${C.border}` : "none", background: n.read ? "transparent" : `${C.gold}08` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.read ? C.text4 : C.gold, flexShrink: 0, marginTop: 4 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>{n.title}</div>
+                        <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{n.body}</div>
+                        <div style={{ fontSize: 10, color: C.text3, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Hamburger */}
+        <button onClick={() => { setOpen(!open); setBellOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+
+      {/* Bell backdrop */}
+      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+
+      {/* Hamburger drawer */}
+      {open && (
+        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+
+          {/* Nav links */}
+          {NAV.map(n => (
+            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent" }}>
+              <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
+              <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
+              {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
+            </button>
+          ))}
+
+          {/* Quick Actions */}
+          <div style={{ marginTop: 16, marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {ACTIONS.map((a, i) => (
+                <button key={i} onClick={a.onClick}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <a.icon size={15} color={a.color} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sign out / in */}
+          <div style={{ marginTop: "auto", paddingTop: 12 }}>
+            <GoldLine />
+            {isAuthenticated
+              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
+              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+            }
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+
+function BottomNav({ page, setPage }) {
+  const { isAuthenticated, requireAuth } = useAuth();
+  const { width } = useLayout();
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];
+  return (
+    <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
+      {TABS.map(t => {
+        const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
+        return (
+          <button key={t.id} onClick={() => { if (locked) { requireAuth("signup"); return; } setPage(t.id); }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "none", border: "none", cursor: "pointer", padding: "4px 0", }}>
+            <div style={{ width: active ? 36 : 28, height: active ? 36 : 28, borderRadius: active ? 10 : 8, background: active ? `${C.gold}22` : "transparent", display: "grid", placeItems: "center", transition: "all .2s", position: "relative" }}><t.icon size={18} color={active ? C.gold : C.text4} /> {locked && (<div style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, background: C.card, borderRadius: "50%", display: "grid", placeItems: "center" }}><Lock size={6} color={C.text3} /></div>)}</div>
+            <span style={{ fontSize: 10, fontWeight: 800, color: active ? C.gold : C.text4, letterSpacing: "0.04em" }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ─── PAGES (Modified TradePage) ────────────────────────────────────────── */
+function HomePage({ setPage }) {
+  const { requireAuth } = useAuth();
+  const [tab, setTab] = useState("1m");
+  const TABS = ["1m", "5m", "15m", "1h", "4h", "D"];
+  const chartData = Array.from({ length: 40 }, (_, i) => { const base = 4680 + Math.sin(i * 0.4) * 40 + i * 1.2; const o = base + (Math.random() - 0.5) * 10; return { i, v: o + (Math.random() - 0.5) * 15 }; });
+  const STATS = [{ val: "$2.4B+", label: "Daily Volume" }, { val: "150K+", label: "Active Traders" }, { val: "200+", label: "Pairs" }, { val: "24/7", label: "Support" },];
+  const INFRA = [{ icon: TrendingUp, title: "Advanced Trading", desc: "Institutional-grade tools and real-time analytics" }, { icon: Shield, title: "Bank-Level Security", desc: "Multi-layer encryption and cold storage protection" }, { icon: Zap, title: "Lightning Execution", desc: "Sub-millisecond order routing across deep liquidity" }, { icon: Globe, title: "Global Access", desc: "Trade 24/7 across forex, crypto, and commodities" },];
+  const STEPS = [{ n: "01", icon: Users, title: "Register", desc: "Create a secure account in minutes with identity verification." }, { n: "02", icon: TrendingUp, title: "Deposit Funds", desc: "Fund via bank transfer, credit card, or cryptocurrency." }, { n: "03", icon: BarChart2, title: "Start Trading", desc: "Access real-time data across all major asset classes." }, { n: "04", icon: ArrowUpFromLine, title: "Withdraw", desc: "Fast withdrawals to your preferred payment method." },];
+  const handleCTA = () => { if (requireAuth("signup")) setPage("trade"); };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ background: `linear-gradient(160deg,#1a0f00 0%,${C.bg} 65%)`, borderRadius: 16, border: `1px solid ${C.gold}22`, padding: "28px 20px", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: `radial-gradient(${C.gold}18,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
+        <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} /> System Online // Live Data </div>
+        <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18, fontFamily: "'Playfair Display', serif", fontStyle: "italic" }}><div style={{ color: C.text }}>PRECISION</div><div style={{ background: "linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>VELOCITY</div><div style={{ color: C.text }}>INSIGHT.</div></div>
+        <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
+      </div>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>S&P 500 Live</div><div style={{ fontSize: 11, color: C.text3 }}>Simulated real-time feed</div></div>
+          <div style={{ display: "flex", gap: 5 }}>{TABS.map(t => (<button key={t} onClick={() => setTab(t)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: t === tab ? C.gold : `${C.gold}14`, color: t === tab ? "#000" : C.text3, }}>{t}</button>))}</div>
+        </div>
+        <ResponsiveContainer width="100%" height={130}>
+          <AreaChart data={chartData} margin={{ left: -30, right: 0, top: 4, bottom: 0 }}>
+            <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.gold} stopOpacity={0.22} /><stop offset="100%" stopColor={C.gold} stopOpacity={0} /></linearGradient></defs>
+            <XAxis dataKey="i" hide /><YAxis domain={["dataMin - 20", "dataMax + 20"]} />
+            <Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 11 }} formatter={v => [v.toFixed(2), "Price"]} labelFormatter={() => ""} />
+            <ReferenceLine y={4700} stroke={C.green} strokeDasharray="3 3" strokeWidth={1} /><Area type="monotone" dataKey="v" stroke={C.gold} strokeWidth={2} fill="url(#ag)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
+      <div style={{ background: `linear-gradient(135deg,#130c00,#0d0800)`, border: `1px solid ${C.gold}28`, borderRadius: 14, display: "grid", gridTemplateColumns: "repeat(4,1fr)", padding: "14px 8px" }}>{STATS.map(s => (<div key={s.label} style={{ textAlign: "center" }}><div style={{ fontSize: 15, fontWeight: 900, color: C.gold }}>{s.val}</div><div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 2 }}>{s.label}</div></div>))}</div>
+      <Card>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${C.gold}44`, borderRadius: 6, padding: "5px 12px", marginBottom: 14 }}><Zap size={11} color={C.gold} /><span style={{ fontSize: 10, fontWeight: 800, color: C.gold, letterSpacing: "0.14em" }}>QUICK START</span><ChevronRight size={10} color={C.gold} /></div>
+        <div style={{ fontWeight: 900, fontSize: 19, color: C.text, marginBottom: 4 }}> Get Started in <span style={{ color: C.gold }}>Four Simple Steps</span> </div>
+        <div style={{ fontSize: 12, color: C.text3, marginBottom: 16, lineHeight: 1.5 }}> Follow our streamlined onboarding process to register, deposit, trade, and withdraw. </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{STEPS.map((s, i) => (<div key={i} style={{ background: C.card2, border: `1px solid ${C.gold}22`, borderRadius: 12, padding: "14px 12px", position: "relative", overflow: "hidden" }}><div style={{ fontSize: 22, fontWeight: 900, color: `${C.gold}20`, lineHeight: 1, marginBottom: 8 }}>{s.n}</div><IconBox icon={s.icon} color={C.gold} size={14} boxSize={30} /><div style={{ fontSize: 12, fontWeight: 800, color: C.text, marginTop: 8, marginBottom: 4 }}>{s.title}</div><div style={{ fontSize: 11, color: C.text3, lineHeight: 1.5 }}>{s.desc}</div></div>))}</div>
+        <Btn variant="purple" onClick={handleCTA} style={{ width: "100%", marginTop: 14 }}> START YOUR JOURNEY <ChevronRight size={16} /></Btn>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 900, fontSize: 18, color: C.text, marginBottom: 4 }}> Enterprise-Grade <span style={{ color: C.gold }}>Infrastructure.</span> </div>
+        <div style={{ fontSize: 12, color: C.text3, marginBottom: 16, lineHeight: 1.6 }}> Built on cutting-edge technology for unmatched performance, security, and reliability. </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{INFRA.map((ic, i) => (<div key={i} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px", display: "flex", alignItems: "flex-start", gap: 12 }}><IconBox icon={ic.icon} color={C.gold} size={16} boxSize={38} /><div><div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 4 }}>{ic.title}</div><div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5 }}>{ic.desc}</div></div></div>))}</div>
+      </Card>
+    </div>
+  );
+}
+
+function TradingViewChart() {
+  const containerRef = useRef(null);
+  const widgetRef = useRef(null);
+  const [symbol, setSymbol] = useState("OANDA:XAUUSD");
+  const [interval, setTVInterval] = useState("5");
+  const [zoom, setZoom] = useState(1);
+
+  const TV_SYMBOLS = [
+    { label: "GOLD", value: "OANDA:XAUUSD" },
+    { label: "BTC", value: "BINANCE:BTCUSDT" },
+    { label: "ETH", value: "BINANCE:ETHUSDT" },
+    { label: "EUR/USD", value: "FX:EURUSD" },
+    { label: "S&P 500", value: "SP:SPX" },
+    { label: "OIL", value: "TVC:USOIL" },
+    { label: "NVDA", value: "NASDAQ:NVDA" },
+    { label: "AAPL", value: "NASDAQ:AAPL" },
+  ];
+  const INTERVALS = [
+    { label: "1m", value: "1" },
+    { label: "5m", value: "5" },
+    { label: "15m", value: "15" },
+    { label: "1h", value: "60" },
+    { label: "4h", value: "240" },
+    { label: "1D", value: "D" },
+  ];
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    // Remove previous widget iframe if any
+    containerRef.current.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://s3.tradingview.com/tv.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.TradingView) {
+        widgetRef.current = new window.TradingView.widget({
+          autosize: true,
+          symbol: symbol,
+          interval: interval,
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#000000",
+          enable_publishing: false,
+          allow_symbol_change: true,
+          container_id: "tv_chart_container",
+          hide_side_toolbar: true,
+          studies: [],
+          overrides: {
+            "paneProperties.background": "#000000",
+            "paneProperties.vertGridProperties.color": "#0f0f0f",
+            "paneProperties.horzGridProperties.color": "#0f0f0f",
+            "scalesProperties.textColor": "#a3a3a3",
+          },
+          loading_screen: { backgroundColor: "#000000", foregroundColor: "#BF953F" },
+        });
+      }
+    };
+    // If tv.js already loaded, just create widget
+    if (window.TradingView) {
+      script.onload();
+    } else {
+      document.head.appendChild(script);
+    }
+    return () => {
+      if (containerRef.current) containerRef.current.innerHTML = "";
+    };
+  }, [symbol, interval]);
+
+  // BUG 8 FIX: Removed direct DOM containerRef.current.style.transform mutations.
+  // The parent wrapper div already has transform:scale(zoom) bound to React state,
+  // so mutating the DOM directly was redundant AND conflicted with React's render.
+  const handleZoomIn = () => {
+    setZoom(z => Math.min(z + 0.15, 2.2));
+  };
+  const handleZoomOut = () => {
+    setZoom(z => Math.max(z - 0.15, 0.5));
+  };
+  const handleZoomReset = () => {
+    setZoom(1);
+  };
+
+  return (
+    <Card style={{ padding: "14px 14px 10px", overflow: "hidden" }}>
+      {/* Header Row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontWeight: 900, fontSize: 14, color: C.text }}>Live Chart</div>
+          <div style={{ fontSize: 10, color: C.green, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} />
+            TradingView Real-Time
+          </div>
+        </div>
+
+      </div>
+
+      {/* Symbol Selector */}
+      <div style={{ display: "flex", gap: 5, overflowX: "auto", paddingBottom: 6, marginBottom: 8 }}>
+        {TV_SYMBOLS.map(s => (
+          <button key={s.value} onClick={() => setSymbol(s.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "5px 9px", borderRadius: 6, border: "none", cursor: "pointer", background: symbol === s.value ? "#800080" : `${C.gold}14`, color: symbol === s.value ? "#fff" : C.text3, transition: "all .15s" }}>{s.label}</button>
+        ))}
+      </div>
+
+      {/* Interval Selector */}
+      <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+        {INTERVALS.map(iv => (
+          <button key={iv.value} onClick={() => setTVInterval(iv.value)} style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, padding: "4px 8px", borderRadius: 5, border: "none", cursor: "pointer", background: interval === iv.value ? "#ffffff" : `${C.gold}0f`, color: interval === iv.value ? "#000" : C.text3, transition: "all .15s" }}>{iv.label}</button>
+        ))}
+      </div>
+
+      {/* Chart Container */}
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 10, background: "#000000", border: `1px solid ${C.border}` }}>
+        <div
+          style={{
+            transformOrigin: "top left",
+            transform: `scale(${zoom})`,
+            width: zoom < 1 ? `${100 / zoom}%` : "100%",
+            height: zoom < 1 ? `${340 / zoom}px` : "340px",
+            transition: "transform 0.2s ease",
+          }}
+        >
+          <div id="tv_chart_container" ref={containerRef} style={{ width: "100%", height: "340px" }} />
+        </div>
+        {/* Height holder when zoomed out */}
+        {zoom < 1 && <div style={{ height: 340 }} />}
+      </div>
+
+      <div style={{ fontSize: 10, color: C.text3, textAlign: "center", marginTop: 8 }}>
+        Powered by <span style={{ color: C.gold, fontWeight: 800 }}>TradingView</span> · Real market data
+      </div>
+    </Card>
+  );
+}
 
 function MarketsPage({ prices, flash }) {
   const [cat, setCat] = useState("All");
   const [search, setSearch] = useState("");
-
-  const visible = INSTRUMENT_DEFS.filter(d =>
-    (cat === "All" || d.cat === cat) &&
-    (d.pair.toLowerCase().includes(search.toLowerCase()) ||
-     d.name.toLowerCase().includes(search.toLowerCase()))
-  );
-
+  const filtered = INSTRUMENT_DEFS.filter(d => (cat === "All" || d.cat === cat) && (!search || d.pair.toLowerCase().includes(search.toLowerCase()) || d.name.toLowerCase().includes(search.toLowerCase())));
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <VaultHeading italic>Global Markets</VaultHeading>
-
-      {/* Category tabs */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {CATS.map(c => (
-          <button key={c} onClick={() => setCat(c)} style={{
-            background: cat === c
-              ? "linear-gradient(135deg, rgba(191,149,63,0.18), rgba(179,135,40,0.08))"
-              : VOID.card2,
-            border: `1px solid ${cat === c ? VOID.border2 : VOID.border}`,
-            borderRadius: 8, padding: "7px 16px", cursor: "pointer",
-            color: cat === c ? VOID.goldMid : VOID.text3,
-            fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif",
-            letterSpacing: "0.04em", transition: "all 0.2s",
-            boxShadow: cat === c ? `0 0 12px rgba(191,149,63,0.1)` : "none",
-          }}>
-            {c}
-          </button>
-        ))}
-        {/* Search */}
-        <div style={{ position: "relative", marginLeft: "auto" }}>
-          <Search size={13} color={VOID.text3} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search markets…"
-            style={{ paddingLeft: 30, width: 180, height: 36 }}
-          />
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: "20px 0 4px" }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: C.text, lineHeight: 1.1 }}> Global Trading <span style={{ color: C.gold }}>Markets</span> </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}><div style={{ fontSize: 12, color: C.text3 }}>{INSTRUMENT_DEFS.length} instruments</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 6px ${C.green}`, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green, letterSpacing: "0.08em" }}>LIVE</span></div></div>
       </div>
-
-      {/* Market rows */}
-      <VaultCard style={{ padding: 0 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
-          <thead>
-            <tr style={{
-              background: `linear-gradient(90deg, ${VOID.surface}, ${VOID.card})`,
-              borderBottom: `1px solid ${VOID.border}`,
-            }}>
-              {["Instrument","Category","Price","24h Change","Chart","Action"].map(h => (
-                <th key={h} style={{
-                  padding: "12px 16px", textAlign: "left",
-                  color: VOID.text3, fontWeight: 700, fontSize: 10,
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(d => {
-              const p = prices[d.pair];
-              if (!p) return null;
-              const up = p.pct24h >= 0;
-              const fl = flash[d.pair];
-              return (
-                <tr key={d.pair}
-                  className={fl === "up" ? "flash-up" : fl === "dn" ? "flash-dn" : ""}
-                  style={{
-                    borderBottom: `1px solid ${VOID.border}`,
-                    transition: "background 0.15s",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(191,149,63,0.04)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 700, color: VOID.text, letterSpacing: "0.02em" }}>{d.pair}</div>
-                    <div style={{ fontSize: 11, color: VOID.text3, marginTop: 2 }}>{d.name}</div>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <VaultBadge color={catColor(d.cat)}>{d.cat}</VaultBadge>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontWeight: 700, color: VOID.text, fontVariantNumeric: "tabular-nums" }}>
-                    {fmtPrice(p.price, d.cat)}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span style={{
-                      fontWeight: 800, fontSize: 13,
-                      color: up ? VOID.green : VOID.red,
-                      background: up ? `${VOID.green}12` : `${VOID.red}12`,
-                      border: `1px solid ${up ? VOID.green : VOID.red}30`,
-                      borderRadius: 6, padding: "3px 8px",
-                    }}>
-                      {fmtPct(p.pct24h)}
-                    </span>
-                  </td>
-                  <td style={{ padding: "8px 16px" }}>
-                    <SparkChart pair={d.pair} up={up} />
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <VaultBtn variant="gold" style={{ padding: "6px 14px", fontSize: 11 }}>
-                      Trade
-                    </VaultBtn>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </VaultCard>
+      <TradingViewChart />
+      <div style={{ position: "relative" }}><Search size={14} color={C.text3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} /><input placeholder="Search symbol or name…" value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "11px 36px", color: C.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />{search && (<button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={14} /></button>)}</div>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>{CATS.map(c => { const count = c === "All" ? INSTRUMENT_DEFS.length : INSTRUMENT_DEFS.filter(d => d.cat === c).length; return (<button key={c} onClick={() => setCat(c)} style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: "6px 10px", borderRadius: 6, border: "none", cursor: "pointer", transition: "all .15s", background: c === cat ? C.gold : `${C.gold}14`, color: c === cat ? "#000" : C.text3, display: "flex", alignItems: "center", gap: 4, }}>{c} <span style={{ fontSize: 9, opacity: .7 }}>{count}</span></button>); })}</div>
+      <Card style={{ padding: "0 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.border}` }}><span style={{ fontSize: 10, color: C.text3, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}> {filtered.length} INSTRUMENTS </span><div style={{ display: "flex", gap: 16 }}><span style={{ fontSize: 10, color: C.text3 }}>PRICE</span><span style={{ fontSize: 10, color: C.text3 }}>24H</span></div></div>
+        {filtered.map((inst, i) => { const pd = prices[inst.pair]; const flDir = flash[inst.pair]; const color = catColor(inst.cat); return (
+          <div key={inst.pair}>
+            <div style={{ display: "flex", alignItems: "center", padding: "12px 0", transition: "background .3s", background: flDir === "up" ? `${C.green}08` : flDir === "dn" ? `${C.red}08` : "transparent", borderRadius: 8 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0, background: `${color}18`, display: "grid", placeItems: "center", marginRight: 10 }}><span style={{ fontSize: 9, fontWeight: 900, color, textAlign: "center", lineHeight: 1.1, letterSpacing: "-0.02em" }}>{inst.pair.length > 6 ? inst.pair.slice(0, 5) : inst.pair}</span></div>
+              <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.pair}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inst.name}</div></div>
+              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 8 }}><div style={{ fontWeight: 900, fontSize: 14, color: flDir === "up" ? C.green : flDir === "dn" ? C.red : C.text, fontVariantNumeric: "tabular-nums", transition: "color .4s" }}>{fmtPrice(pd?.price, inst.cat)}</div><div style={{ fontSize: 11, fontWeight: 800, color: pd?.pct24h >= 0 ? C.green : C.red, marginTop: 2 }}>{pd?.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd?.pct24h)}</div></div>
+            </div>
+            {i < filtered.length - 1 && <GoldLine />}
+          </div>
+        ); })}
+        {filtered.length === 0 && (<div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}> No instruments found for "{search}" </div>)}
+      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{CATS.slice(1).map(s => { const defs = INSTRUMENT_DEFS.filter(d => d.cat === s); const col = catColor(s); return (<div key={s} onClick={() => setCat(s)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer" }}><div style={{ fontWeight: 800, fontSize: 16, color: col }}>{defs.length}</div><div style={{ fontWeight: 700, fontSize: 12, color: C.text, marginTop: 2 }}>{s}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Live Simulated Feed</div></div>); })}</div>
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §11  TRADE PAGE  (Gear infrastructure lives ONLY here)
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 function TradePage({ prices }) {
-  const [selected, setSelected] = useState("BTC/USDT");
-  const [side, setSide] = useState("buy");
-  const [amount, setAmount] = useState("");
-  const [leverage, setLeverage] = useState(1);
-  const [orderType, setOrderType] = useState("market");
+  const { user } = useAuth();
+  const [loadingDep, setLoadingDep] = useState(false);
+  const [loadingWd, setLoadingWd] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [range, setRange] = useState("30D");
+  const [vote, setVote] = useState(null);
+  const [showVote, setShowVote] = useState(true);
+  
+  // State for all 6 dashboard metrics
+  const [totalInvested, setTotalInvested] = useState(0);
+  const [currentValue, setCurrentValue] = useState(0);
+  const [balance, setBalance] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [activePositions, setActivePositions] = useState(0);
+  const [winRate, setWinRate] = useState(0);
 
-  const def = INSTRUMENT_DEFS.find(d => d.pair === selected);
-  const p = prices[selected];
-  const price = p?.price || def?.base || 0;
-  const estTotal = amount ? (parseFloat(amount) * price).toFixed(2) : "—";
+  // Supabase Fetch — fixed: .eq('id', ...) not .eq('user_id', ...)
+  useEffect(() => {
+    const loadUserData = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data } = await supabase
+        .from('account_summary')
+        .select('balance, total_profit, active_positions, win_rate, total_invested, current_value')
+        .eq('id', authUser.id)
+        .single();
+      if (data) {
+        setBalance(data.balance ?? 0);
+        setTotalProfit(data.total_profit ?? 0);
+        setActivePositions(data.active_positions ?? 0);
+        setWinRate(data.win_rate ?? 0);
+        setTotalInvested(data.total_invested ?? 0);
+        setCurrentValue(data.current_value ?? 0);
+      }
+    };
+    loadUserData();
+  }, []);
 
+  const perfData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.6) * 1800 + i * 180 + Math.random() * 400 }));
+  const RANGES = ["7D", "30D", "3M", "1Y"];
+  const data = range === "7D" ? perfData.slice(-7) : range === "3M" ? [...perfData, ...perfData, ...perfData].slice(0, 60) : range === "1Y" ? Array.from({ length: 52 }, (_, i) => ({ day: i + 1, value: 3200 + Math.sin(i * 0.25) * 2200 + i * 90 + Math.random() * 500 })) : perfData;
+  const HOLDINGS = [{ pair: "BTC/USDT", label: "Perpetual Futures", color: C.gold2, pct: +5.4, delta: +2310.5 }, { pair: "ETH/USDT", label: "Spot Trading", color: C.blue, pct: +8.2, delta: +1486.7 }, { pair: "EUR/USD", label: "Forex Pairs", color: C.red, pct: -2.1, delta: -689.2 }, { pair: "XAU/USD", label: "Gold Futures", color: C.gold3, pct: +3.8, delta: +1045.3 },];
+  const topMarkets = ["BTC/USDT", "ETH/USDT", "EUR/USD", "SPX"];
+  
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <VaultHeading italic>Trade Terminal</VaultHeading>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
+      {/* ── GEAR BACKGROUND: CSS-only, no logic, no JS ───────────────────── */}
+      {/* Keyframes for counter-rotating gears */}
+      <style>{`
+        @keyframes gearCW  { to { transform: rotate( 360deg); } }
+        @keyframes gearCCW { to { transform: rotate(-360deg); } }
+      `}</style>
 
-        {/* Chart / instrument area */}
-        <VaultCard gearBg>
-          {/* ─── GEAR INFRASTRUCTURE (Trade section only) ─── */}
-          {/* These are additional gears beyond what VaultCard gearBg renders */}
-          <div style={{
-            position: "absolute", inset: 0, overflow: "hidden",
-            pointerEvents: "none", zIndex: 0,
-          }}>
-            <GearIcon size={300} speed="gear-spin"  opacity={0.06} style={{ top: -60, right: 80 }} />
-            <GearIcon size={180} speed="gear-spinR" opacity={0.08} style={{ bottom: -40, left: 40 }} />
-            <GearIcon size={90}  speed="gear-spin"  opacity={0.07} style={{ top: 80, left: 200 }} />
-            <GearIcon size={60}  speed="gear-spinR" opacity={0.06} style={{ bottom: 120, right: 200 }} />
-            {/* Scanning horizontal line */}
-            <div style={{
-              position: "absolute", left: 0, right: 0, height: 1,
-              background: `linear-gradient(90deg, transparent, ${VOID.techGreen}33, transparent)`,
-              top: "30%", animation: "goldPulse 3s ease infinite",
-            }} />
-          </div>
-
-          <div style={{ position: "relative", zIndex: 1 }}>
-            {/* Instrument selector */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {INSTRUMENT_DEFS.slice(0, 6).map(d => (
-                <button key={d.pair} onClick={() => setSelected(d.pair)} style={{
-                  background: selected === d.pair
-                    ? "linear-gradient(135deg, rgba(191,149,63,0.18), rgba(179,135,40,0.06))"
-                    : "rgba(0,0,0,0.4)",
-                  border: `1px solid ${selected === d.pair ? VOID.border2 : VOID.border}`,
-                  borderRadius: 8, padding: "6px 14px", cursor: "pointer",
-                  color: selected === d.pair ? VOID.goldMid : VOID.text3,
-                  fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif",
-                  transition: "all 0.2s",
-                  backdropFilter: "blur(8px)",
-                }}>
-                  {d.pair}
-                </button>
-              ))}
-            </div>
-
-            {/* Live price display */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: VOID.techGreen, letterSpacing: "0.1em", fontWeight: 700, marginBottom: 4 }}>
-                ◈ LIVE PRICE
-              </div>
-              <GoldMetric value={fmtPrice(price, def?.cat)} size={36} />
-              <span style={{
-                marginLeft: 14, fontSize: 13, fontWeight: 800,
-                color: (p?.pct24h || 0) >= 0 ? VOID.green : VOID.red,
-              }}>
-                {fmtPct(p?.pct24h)}
-              </span>
-            </div>
-
-            {/* Simulated chart area */}
-            <div style={{
-              background: "rgba(0,0,0,0.5)", border: `1px solid ${VOID.border}`,
-              borderRadius: 10, padding: "12px 0", backdropFilter: "blur(4px)",
-            }}>
-              <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={generateChart(60, price * 0.96, price * 0.002)}>
-                  <defs>
-                    <linearGradient id="tradeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"  stopColor={VOID.goldMid} stopOpacity={0.25} />
-                      <stop offset="100%" stopColor={VOID.goldMid} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis hide />
-                  <YAxis hide domain={["auto","auto"]} />
-                  <Tooltip
-                    contentStyle={{
-                      background: VOID.card2, border: `1px solid ${VOID.border2}`,
-                      borderRadius: 8, fontSize: 11, fontFamily: "'Inter', sans-serif",
-                    }}
-                    formatter={v => [fmtPrice(v, def?.cat), "Price"]}
-                  />
-                  <Area type="monotone" dataKey="v"
-                    stroke={VOID.goldMid} strokeWidth={1.8}
-                    fill="url(#tradeGrad)" dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Depth indicators */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 14,
-            }}>
-              {[
-                { label: "Bid", val: fmtPrice(price * 0.9997, def?.cat), color: VOID.green },
-                { label: "Ask", val: fmtPrice(price * 1.0003, def?.cat), color: VOID.red },
-                { label: "High 24h", val: fmtPrice(price * 1.024, def?.cat), color: VOID.text2 },
-                { label: "Low 24h",  val: fmtPrice(price * 0.978, def?.cat), color: VOID.text2 },
-              ].map(r => (
-                <div key={r.label} style={{
-                  background: "rgba(0,0,0,0.4)", border: `1px solid ${VOID.border}`,
-                  borderRadius: 8, padding: "10px 14px",
-                  backdropFilter: "blur(4px)",
-                }}>
-                  <div style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.06em", marginBottom: 4 }}>
-                    {r.label.toUpperCase()}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: r.color, fontFamily: "'Inter', sans-serif" }}>
-                    {r.val}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </VaultCard>
-
-        {/* Order panel */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <VaultCard>
-            <VaultHeading size={15} style={{ marginBottom: 14 }}>Place Order</VaultHeading>
-
-            {/* Buy / Sell */}
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 16,
-            }}>
-              <button onClick={() => setSide("buy")} style={{
-                background: side === "buy"
-                  ? "linear-gradient(135deg, #22c55e, #15803d)"
-                  : VOID.card2,
-                border: `1px solid ${side === "buy" ? `${VOID.green}60` : VOID.border}`,
-                borderRadius: 8, padding: "11px", cursor: "pointer",
-                color: side === "buy" ? "#000" : VOID.text3,
-                fontWeight: 900, fontSize: 13, fontFamily: "'Inter', sans-serif",
-                letterSpacing: "0.04em", transition: "all 0.2s",
-                boxShadow: side === "buy" ? `0 0 16px rgba(34,197,94,0.25)` : "none",
-              }}>
-                ▲ BUY
-              </button>
-              <button onClick={() => setSide("sell")} style={{
-                background: side === "sell"
-                  ? "linear-gradient(135deg, #ef4444, #b91c1c)"
-                  : VOID.card2,
-                border: `1px solid ${side === "sell" ? `${VOID.red}60` : VOID.border}`,
-                borderRadius: 8, padding: "11px", cursor: "pointer",
-                color: side === "sell" ? "#fff" : VOID.text3,
-                fontWeight: 900, fontSize: 13, fontFamily: "'Inter', sans-serif",
-                letterSpacing: "0.04em", transition: "all 0.2s",
-                boxShadow: side === "sell" ? `0 0 16px rgba(239,68,68,0.25)` : "none",
-              }}>
-                ▼ SELL
-              </button>
-            </div>
-
-            {/* Order type */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                ORDER TYPE
-              </label>
-              <div style={{ display: "flex", gap: 6 }}>
-                {["market","limit","stop"].map(t => (
-                  <button key={t} onClick={() => setOrderType(t)} style={{
-                    flex: 1, background: orderType === t ? "rgba(191,149,63,0.12)" : "transparent",
-                    border: `1px solid ${orderType === t ? VOID.border2 : VOID.border}`,
-                    borderRadius: 6, padding: "6px", cursor: "pointer",
-                    color: orderType === t ? VOID.goldMid : VOID.text3,
-                    fontSize: 11, fontWeight: 700, textTransform: "capitalize",
-                    fontFamily: "'Inter', sans-serif",
-                  }}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Amount */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                AMOUNT
-              </label>
-              <input
-                type="number" value={amount}
-                onChange={e => setAmount(e.target.value)}
-                placeholder="0.00"
-                style={{ width: "100%", fontWeight: 700, fontSize: 14 }}
-              />
-            </div>
-
-            {/* Leverage */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                LEVERAGE  <span style={{ color: VOID.goldMid }}>{leverage}×</span>
-              </label>
-              <input type="range" min={1} max={100} value={leverage}
-                onChange={e => setLeverage(Number(e.target.value))}
-                style={{
-                  width: "100%", accentColor: VOID.goldMid,
-                  background: "transparent", border: "none", padding: 0,
-                }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: VOID.text3, marginTop: 2 }}>
-                <span>1×</span><span>25×</span><span>50×</span><span>100×</span>
-              </div>
-            </div>
-
-            <GoldRule opacity={0.2} />
-            <div style={{
-              display: "flex", justifyContent: "space-between", marginTop: 12, marginBottom: 14,
-              fontSize: 12, fontFamily: "'Inter', sans-serif",
-            }}>
-              <span style={{ color: VOID.text3 }}>Est. Total</span>
-              <span style={{ color: VOID.goldMid, fontWeight: 800 }}>
-                {estTotal !== "—" ? `$${parseFloat(estTotal).toLocaleString()}` : "—"}
-              </span>
-            </div>
-
-            <VaultBtn
-              variant={side === "buy" ? "green" : "red"}
-              style={{ width: "100%", padding: "14px" }}
-            >
-              {side === "buy" ? "▲ BUY" : "▼ SELL"} {selected}
-            </VaultBtn>
-          </VaultCard>
-
-          {/* Risk info */}
-          <VaultCard>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <Shield size={14} color={VOID.goldMid} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: VOID.text2, fontFamily: "'Inter', sans-serif" }}>
-                Risk Parameters
-              </span>
-            </div>
-            {[
-              { label: "Margin Required", val: amount ? `$${(parseFloat(amount || 0) * price / leverage).toFixed(2)}` : "—" },
-              { label: "Liquidation Price", val: amount ? fmtPrice(price * (side === "buy" ? 0.91 : 1.09), def?.cat) : "—" },
-              { label: "Max Loss", val: amount ? `$${(parseFloat(amount || 0) * price * 0.09).toFixed(2)}` : "—" },
-            ].map(r => (
-              <div key={r.label} style={{
-                display: "flex", justifyContent: "space-between",
-                fontSize: 12, fontFamily: "'Inter', sans-serif",
-                padding: "6px 0", borderBottom: `1px solid ${VOID.border}`,
-              }}>
-                <span style={{ color: VOID.text3 }}>{r.label}</span>
-                <span style={{ color: VOID.text, fontWeight: 700 }}>{r.val}</span>
-              </div>
-            ))}
-          </VaultCard>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §12  SUPPORT PAGE  (email corrected to support@goldenvaultxm.live)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function SupportPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [msg, setMsg] = useState("");
-  const [sent, setSent] = useState(false);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <VaultHeading italic>Institutional Support</VaultHeading>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Contact form */}
-        <VaultCard>
-          <VaultHeading size={16} style={{ marginBottom: 16 }}>Submit a Request</VaultHeading>
-          {sent ? (
-            <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 12, padding: "30px 0",
-            }}>
-              <CheckCircle2 size={40} color={VOID.green} />
-              <div style={{ color: VOID.text, fontWeight: 700, fontSize: 16, fontFamily: "'Inter', sans-serif" }}>
-                Message Sent!
-              </div>
-              <div style={{ color: VOID.text3, fontSize: 13, fontFamily: "'Inter', sans-serif", textAlign: "center" }}>
-                Our team will respond within 24 hours.
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                  FULL NAME
-                </label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" style={{ width: "100%" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                  EMAIL ADDRESS
-                </label>
-                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" style={{ width: "100%" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
-                  MESSAGE
-                </label>
-                <textarea
-                  value={msg} onChange={e => setMsg(e.target.value)}
-                  placeholder="Describe your issue…"
-                  rows={5}
-                  style={{ width: "100%", resize: "vertical" }}
-                />
-              </div>
-              <VaultBtn variant="gold" onClick={() => { if (name && email && msg) setSent(true); }}>
-                <Mail size={14} />
-                Send Message
-              </VaultBtn>
-            </div>
-          )}
-        </VaultCard>
-
-        {/* Contact info */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <VaultCard>
-            <VaultHeading size={15} style={{ marginBottom: 14 }}>Direct Contact</VaultHeading>
-            {[
-              {
-                icon: Mail, label: "Email Support",
-                val: "support@goldenvaultxm.live",  /* ← CORRECTED */
-                color: VOID.goldMid,
-              },
-              { icon: Phone,  label: "Phone", val: "+1 (888) 492-7700", color: VOID.blue },
-              { icon: Globe,  label: "Live Chat", val: "24/7 Available", color: VOID.green },
-              { icon: MapPin, label: "HQ", val: "One Financial Plaza, NYC", color: VOID.purple },
-            ].map(r => (
-              <div key={r.label} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "10px 0", borderBottom: `1px solid ${VOID.border}`,
-              }}>
-                <VaultIconBox icon={r.icon} color={r.color} boxSize={32} />
-                <div>
-                  <div style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.06em" }}>
-                    {r.label.toUpperCase()}
-                  </div>
-                  <div style={{
-                    fontSize: 13, fontWeight: 700, color: VOID.text,
-                    fontFamily: "'Inter', sans-serif", marginTop: 2,
-                    ...pressedShadow,
-                  }}>
-                    {r.val}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </VaultCard>
-
-          <VaultCard>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Shield size={16} color={VOID.goldMid} />
-              <VaultHeading size={14}>Response Times</VaultHeading>
-            </div>
-            {[
-              { tier: "VIP Clients",      time: "< 1 hour",  color: VOID.goldMid },
-              { tier: "Premium Accounts", time: "< 4 hours", color: VOID.blue },
-              { tier: "Standard",         time: "< 24 hours",color: VOID.text3 },
-            ].map(r => (
-              <div key={r.tier} style={{
-                display: "flex", justifyContent: "space-between",
-                padding: "8px 0", borderBottom: `1px solid ${VOID.border}`,
-                fontSize: 12, fontFamily: "'Inter', sans-serif",
-              }}>
-                <span style={{ color: VOID.text3 }}>{r.tier}</span>
-                <span style={{ color: r.color, fontWeight: 800, ...pressedShadow }}>
-                  {r.time}
-                </span>
-              </div>
-            ))}
-          </VaultCard>
-        </div>
-      </div>
-
-      {/* FAQ */}
-      <VaultCard>
-        <VaultHeading size={16} style={{ marginBottom: 16 }}>Frequently Asked Questions</VaultHeading>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {[
-            { q: "How do I verify my account?", a: "Upload government-issued ID and proof of address through the Verification section in Settings." },
-            { q: "What are the minimum deposit requirements?", a: "Standard accounts require $500 minimum. VIP accounts begin at $25,000." },
-            { q: "How long do withdrawals take?", a: "Withdrawals process within 1-3 business days depending on your payment method and jurisdiction." },
-            { q: "Is my account FDIC insured?", a: "Funds are held in segregated accounts at Tier-1 financial institutions for maximum security." },
-          ].map(faq => (
-            <div key={faq.q} style={{
-              background: VOID.card2, border: `1px solid ${VOID.border}`,
-              borderRadius: 10, padding: "14px 16px",
-            }}>
-              <div style={{
-                fontWeight: 700, fontSize: 13, color: VOID.goldMid,
-                fontFamily: "'Playfair Display', serif",
-                marginBottom: 8, ...pressedShadow,
-              }}>
-                {faq.q}
-              </div>
-              <div style={{ fontSize: 12, color: VOID.text2, lineHeight: 1.6, fontFamily: "'Inter', sans-serif" }}>
-                {faq.a}
-              </div>
-            </div>
-          ))}
-        </div>
-      </VaultCard>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §13  PORTFOLIO PAGE
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function PortfolioPage({ prices }) {
-  const holdings = [
-    { pair: "BTC/USDT", cat: "Crypto",  qty: 0.42,  avg: 61200, color: "#f59e0b" },
-    { pair: "ETH/USDT", cat: "Crypto",  qty: 4.80,  avg: 3100,  color: "#6366f1" },
-    { pair: "AAPL",     cat: "Stocks",  qty: 50,    avg: 175,   color: "#22c55e" },
-    { pair: "XAU/USD",  cat: "Commodities", qty: 2, avg: 2210, color: VOID.goldMid },
-    { pair: "EUR/USD",  cat: "Forex",   qty: 10000, avg: 1.092, color: "#3b82f6" },
-  ];
-
-  let totalValue = 0;
-  let totalCost  = 0;
-  const rows = holdings.map(h => {
-    const cur = prices[h.pair]?.price || h.avg;
-    const val = h.qty * cur;
-    const cost = h.qty * h.avg;
-    const pnl = val - cost;
-    const pnlPct = ((val - cost) / cost) * 100;
-    totalValue += val;
-    totalCost  += cost;
-    return { ...h, cur, val, cost, pnl, pnlPct };
-  });
-  const totalPnl    = totalValue - totalCost;
-  const totalPnlPct = ((totalValue - totalCost) / totalCost) * 100;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <VaultHeading italic>My Portfolio</VaultHeading>
-
-      {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-        <VaultCard>
-          <div style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
-            TOTAL VALUE
-          </div>
-          <GoldMetric value={`$${totalValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`} size={26} />
-        </VaultCard>
-        <VaultCard>
-          <div style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
-            TOTAL P&L
-          </div>
-          <div style={{
-            fontSize: 26, fontWeight: 800, fontFamily: "'Inter', sans-serif",
-            color: totalPnl >= 0 ? VOID.green : VOID.red,
-          }}>
-            {totalPnl >= 0 ? "+" : ""}${Math.abs(totalPnl).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-          </div>
-        </VaultCard>
-        <VaultCard>
-          <div style={{ fontSize: 10, color: VOID.text3, fontWeight: 700, letterSpacing: "0.08em", marginBottom: 8 }}>
-            RETURN
-          </div>
-          <div style={{
-            fontSize: 26, fontWeight: 800, fontFamily: "'Inter', sans-serif",
-            color: totalPnlPct >= 0 ? VOID.green : VOID.red,
-          }}>
-            {totalPnlPct >= 0 ? "+" : ""}{totalPnlPct.toFixed(2)}%
-          </div>
-        </VaultCard>
-      </div>
-
-      {/* Holdings table */}
-      <VaultCard style={{ padding: 0 }}>
-        <div style={{ padding: "16px 16px 10px", borderBottom: `1px solid ${VOID.border}` }}>
-          <VaultHeading size={15}>Holdings</VaultHeading>
-        </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
-          <thead>
-            <tr style={{ background: VOID.surface, borderBottom: `1px solid ${VOID.border}` }}>
-              {["Asset","Qty","Avg Cost","Current","Value","P&L","Return"].map(h => (
-                <th key={h} style={{
-                  padding: "10px 16px", textAlign: "left",
-                  color: VOID.text3, fontSize: 10, fontWeight: 700,
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.pair} style={{ borderBottom: `1px solid ${VOID.border}` }}
-                onMouseEnter={e => e.currentTarget.style.background = "rgba(191,149,63,0.04)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <td style={{ padding: "12px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: "50%",
-                      background: r.color,
-                      boxShadow: `0 0 6px ${r.color}`,
-                    }} />
-                    <div>
-                      <div style={{ fontWeight: 700, color: VOID.text }}>{r.pair}</div>
-                      <div style={{ fontSize: 10, color: VOID.text3 }}>{r.cat}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style={{ padding: "12px 16px", color: VOID.text2, fontWeight: 600 }}>
-                  {r.qty.toLocaleString()}
-                </td>
-                <td style={{ padding: "12px 16px", color: VOID.text2 }}>
-                  {fmtPrice(r.avg, r.cat)}
-                </td>
-                <td style={{ padding: "12px 16px", color: VOID.text, fontWeight: 700 }}>
-                  {fmtPrice(r.cur, r.cat)}
-                </td>
-                <td style={{ padding: "12px 16px", fontWeight: 700, color: VOID.text }}>
-                  ${r.val.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </td>
-                <td style={{ padding: "12px 16px", fontWeight: 800, color: r.pnl >= 0 ? VOID.green : VOID.red }}>
-                  {r.pnl >= 0 ? "+" : ""}${Math.abs(r.pnl).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </td>
-                <td style={{ padding: "12px 16px" }}>
-                  <span style={{
-                    fontWeight: 800, color: r.pnlPct >= 0 ? VOID.green : VOID.red,
-                    background: r.pnlPct >= 0 ? `${VOID.green}12` : `${VOID.red}12`,
-                    border: `1px solid ${r.pnlPct >= 0 ? VOID.green : VOID.red}30`,
-                    borderRadius: 6, padding: "3px 8px", fontSize: 12,
-                  }}>
-                    {r.pnlPct >= 0 ? "+" : ""}{r.pnlPct.toFixed(2)}%
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </VaultCard>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §14  FOOTER
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function Footer() {
-  return (
-    <footer style={{
-      background: VOID.surface,
-      borderTop: `1px solid ${VOID.border}`,
-      padding: "32px 24px 24px",
-      marginTop: 40,
-    }}>
-      {/* Gold top rule */}
-      <div style={{
-        height: 2,
-        background: GOLD_GRADIENT,
-        opacity: 0.4, marginBottom: 28,
-        borderRadius: 2,
+      {/* Full-page tinted background image — fixed so it covers whole Trade view */}
+      <div aria-hidden="true" style={{
+        position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none",
+        backgroundImage: "url('/99298.jpg')",
+        backgroundSize: "cover", backgroundPosition: "center top",
+        opacity: 0.12,
+        WebkitMaskImage: "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
+        maskImage:        "linear-gradient(to bottom,transparent 0%,black 10%,black 84%,transparent 100%)",
       }} />
 
-      <div style={{ maxWidth: 1440, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 32, marginBottom: 32 }}>
-          {/* Brand */}
-          <div>
-            <div style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 700, fontSize: 18,
-              background: GOLD_GRADIENT,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              letterSpacing: "0.05em", marginBottom: 10,
-            }}>
-              GoldenVaultXM
-            </div>
-            <p style={{ fontSize: 12, color: VOID.text3, lineHeight: 1.7, fontFamily: "'Inter', sans-serif", maxWidth: 260 }}>
-              Institutional-grade trading infrastructure trusted by professional traders worldwide. 
-              Multi-asset execution with unmatched liquidity.
-            </p>
-            <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-              {["Regulated", "256-bit SSL", "Cold Storage"].map(b => (
-                <VaultBadge key={b} color={VOID.goldMid}>{b}</VaultBadge>
-              ))}
-            </div>
-          </div>
+      {/* Gear ring — top-right, clockwise */}
+      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
+        position:"fixed", top:"6%", right:"-20%",
+        width:"65vw", maxWidth:320,
+        opacity:0.18, pointerEvents:"none", zIndex:0,
+        animation:"gearCW 30s linear infinite", transformOrigin:"50% 50%",
+        filter:"drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 20px #00FF4188)",
+      }}>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#00FF41" strokeWidth="4" strokeDasharray="14 6"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#00FF41" strokeWidth="2" strokeDasharray="6 10"/>
+        <circle cx="100" cy="100" r="52" fill="none" stroke="#00FF41" strokeWidth="5" strokeDasharray="16 5"/>
+        {Array.from({length:16},(_,i)=>{const a=i*(Math.PI*2/16);return(<line key={i} x1={100+60*Math.cos(a)} y1={100+60*Math.sin(a)} x2={100+88*Math.cos(a)} y2={100+88*Math.sin(a)} stroke="#00FF41" strokeWidth="2" opacity="0.6"/>);})}
+      </svg>
 
-          {[
-            { title: "Products", links: ["Spot Trading","Futures","Margin","Copy Trading","API Access"] },
-            { title: "Company",  links: ["About Us","Careers","Press","Regulations","Partners"] },
-            { title: "Support",  links: ["Help Center","Documentation","Status","Community","Contact"] },
-          ].map(col => (
-            <div key={col.title}>
-              <div style={{
-                fontWeight: 800, fontSize: 11, color: VOID.goldMid,
-                letterSpacing: "0.1em", textTransform: "uppercase",
-                fontFamily: "'Inter', sans-serif", marginBottom: 14,
-                ...pressedShadow,
-              }}>
-                {col.title}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {col.links.map(l => (
-                  <a key={l} href="#" style={{
-                    fontSize: 12, color: VOID.text3, textDecoration: "none",
-                    fontFamily: "'Inter', sans-serif",
-                    transition: "color 0.2s",
-                  }}
-                    onMouseEnter={e => e.target.style.color = VOID.goldMid}
-                    onMouseLeave={e => e.target.style.color = VOID.text3}
-                  >
-                    {l}
-                  </a>
-                ))}
-              </div>
-            </div>
-          ))}
+      {/* Gear ring — bottom-left, counter-clockwise */}
+      <svg aria-hidden="true" viewBox="0 0 200 200" style={{
+        position:"fixed", bottom:"8%", left:"-24%",
+        width:"70vw", maxWidth:350,
+        opacity:0.15, pointerEvents:"none", zIndex:0,
+        animation:"gearCCW 38s linear infinite", transformOrigin:"50% 50%",
+        filter:"drop-shadow(0 0 8px #00FF41) drop-shadow(0 0 20px #00FF4188)",
+      }}>
+        <circle cx="100" cy="100" r="90" fill="none" stroke="#00FF41" strokeWidth="4" strokeDasharray="10 8"/>
+        <circle cx="100" cy="100" r="68" fill="none" stroke="#00FF41" strokeWidth="2" strokeDasharray="5 12"/>
+        <circle cx="100" cy="100" r="50" fill="none" stroke="#00FF41" strokeWidth="5" strokeDasharray="14 6"/>
+        {Array.from({length:14},(_,i)=>{const a=i*(Math.PI*2/14);return(<line key={i} x1={100+57*Math.cos(a)} y1={100+57*Math.sin(a)} x2={100+86*Math.cos(a)} y2={100+86*Math.sin(a)} stroke="#00FF41" strokeWidth="2" opacity="0.6"/>);})}
+      </svg>
+      {/* ── END GEAR BACKGROUND ──────────────────────────────────────────── */}
+
+      {/* All content sits above background */}
+      <div style={{ position: "relative", zIndex: 1, padding: "20px 0 4px" }}><div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}> Trading Overview </div><div style={{ fontSize: 24, fontWeight: 900, color: C.text, lineHeight: 1.15 }}>Welcome,</div><div style={{ fontSize: 24, fontWeight: 900, color: C.gold, lineHeight: 1.15 }}>{user?.name || "goldenvaultxm"}</div><div style={{ fontSize: 13, color: "#7c3aed", marginTop: 8, fontStyle: "italic" }}> Here's your trading overview for today </div></div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{[{ icon: Wallet, label: "Total Balance", value: `$${balance.toLocaleString()}`, badge: "+5.2%", color: C.green }, { icon: TrendingUp, label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, badge: "+11.2%", color: C.green }, { icon: Activity, label: "Active Positions", value: `${activePositions}`, badge: "+3", color: C.gold }, { icon: Target, label: "Signal Value", value: `${winRate.toFixed(1)}%`, badge: "+2.3%", color: C.gold },].map((s, i) => (<Card key={i} style={{ display: "flex", flexDirection: "column", gap: 10 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><IconBox icon={s.icon} color={s.color} /><span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}18`, borderRadius: 20, padding: "3px 8px" }}> ↑ {s.badge} </span></div><div><div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{s.label}</div><div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.value}</div></div></Card>))}</div>
+      <Card>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}><div><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Performance</div><div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>Last {range} overview</div></div><div style={{ display: "flex", gap: 5 }}>{RANGES.map(r => (<button key={r} onClick={() => setRange(r)} style={{ fontSize: 10, fontWeight: 800, padding: "4px 9px", borderRadius: 5, border: "none", cursor: "pointer", background: r === range ? C.gold : `${C.gold}14`, color: r === range ? "#000" : C.text3, }}>{r}</button>))}</div></div>
+        <ResponsiveContainer width="100%" height={148}>
+          <BarChart data={data} barSize={range === "1Y" ? 2 : range === "3M" ? 4 : 8} margin={{ left: -20, right: 0 }}><XAxis dataKey="day" hide /><YAxis hide domain={["dataMin - 500", "dataMax + 200"]} /><Tooltip contentStyle={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, fontSize: 12 }} formatter={v => [`$${v.toFixed(0)}`, "Value"]} cursor={{ fill: `${C.gold}08` }} /><Bar dataKey="value" radius={[3, 3, 0, 0]}>{data.map((e, i) => (<Cell key={i} fill={e.value > 7500 ? C.gold2 : e.value > 5500 ? C.gold : `${C.goldDim}cc`} />))}</Bar></BarChart>
+        </ResponsiveContainer>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+          <div><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Total Invested</div><div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginTop: 3 }}>${totalInvested.toLocaleString()}</div></div>
+          <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase" }}>Current Value</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green, marginTop: 3 }}>${currentValue.toLocaleString()}</div></div>
         </div>
-
-        <GoldRule opacity={0.15} />
-
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          marginTop: 20, flexWrap: "wrap", gap: 12,
-        }}>
-          <div style={{ fontSize: 11, color: VOID.text3, fontFamily: "'Inter', sans-serif" }}>
-            © 2024 GoldenVaultXM. All rights reserved. Trading involves substantial risk.
-          </div>
-          {/* Corrected email */}
-          <a href="mailto:support@goldenvaultxm.live" style={{
-            fontSize: 11, color: VOID.goldMid, textDecoration: "none",
-            fontFamily: "'Inter', sans-serif", fontWeight: 600,
-            ...pressedShadow,
-          }}>
-            support@goldenvaultxm.live
-          </a>
-          <div style={{ display: "flex", gap: 16, fontSize: 11, color: VOID.text3, fontFamily: "'Inter', sans-serif" }}>
-            {["Privacy Policy","Terms of Service","Risk Disclosure","Cookie Policy"].map(l => (
-              <a key={l} href="#" style={{ color: VOID.text3, textDecoration: "none" }}
-                onMouseEnter={e => e.target.style.color = VOID.goldMid}
-                onMouseLeave={e => e.target.style.color = VOID.text3}
-              >
-                {l}
-              </a>
-            ))}
-          </div>
+      </Card>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Live Markets</div><div style={{ display: "flex", alignItems: "center", gap: 5 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite" }} /><span style={{ fontSize: 10, fontWeight: 800, color: C.green }}>LIVE</span></div></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{topMarkets.map(pair => { const def = INSTRUMENT_DEFS.find(d => d.pair === pair); const pd = prices[pair]; if (!def || !pd) return null; return (<div key={pair} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 13px" }}><div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>{def.name}</div><div style={{ fontWeight: 900, fontSize: 12, color: C.text, marginBottom: 5 }}>{pair}</div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{fmtPrice(pd.price, def.cat)}</div><div style={{ fontSize: 11, fontWeight: 800, color: pd.pct24h >= 0 ? C.green : C.red }}>{pd.pct24h >= 0 ? "↗" : "↘"} {fmtPct(pd.pct24h)}</div></div>); })}</div>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 2500); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+          {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
+          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
+          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
         </div>
-      </div>
-    </footer>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Account Status</div>
+        {[{ label: "Verification", value: "Verified", color: C.green }, { label: "Account Type", value: "Premium", color: C.gold2 }, { label: "KYC Level", value: "Level 3", color: "#a78bfa" },].map((row, i, arr) => (<div key={i}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0" }}><span style={{ fontSize: 13, color: C.text3 }}>{row.label}</span><Badge color={row.color}>{row.value}</Badge></div>{i < arr.length - 1 && <GoldLine />}</div>))}
+      </Card>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Portfolio Holdings</div><button style={{ background: "none", border: "none", color: C.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}> View All <ChevronRight size={12} /></button></div>
+        {HOLDINGS.map((h, i) => (<div key={i}><div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0" }}><div style={{ width: 36, height: 36, borderRadius: 9, background: `${h.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}><span style={{ fontSize: 10, fontWeight: 900, color: h.color }}>{h.pair.split("/")[0]}</span></div><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{h.pair}</div><div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{h.label}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 800, color: h.pct >= 0 ? C.green : C.red }}>{h.pct >= 0 ? "+" : ""}{h.pct}%</div><div style={{ fontSize: 11, color: h.pct >= 0 ? C.green : C.red, marginTop: 1 }}>{h.delta >= 0 ? "+$" : "-$"}{Math.abs(h.delta).toFixed(2)}</div></div></div>{i < HOLDINGS.length - 1 && <GoldLine />}</div>))}
+      </Card>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>Market Sentiment</div><Activity size={15} color={C.gold} /></div>
+        <div style={{ textAlign: "center", marginBottom: 18 }}><div style={{ fontSize: 72, fontWeight: 900, color: C.red, lineHeight: 1, textShadow: `0 0 40px ${C.red}44` }}>24</div><div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.14em" }}>Fear</div></div>
+        <div style={{ display: "flex", height: 7, borderRadius: 4, overflow: "hidden", gap: 2, marginBottom: 8 }}><div style={{ flex: 38, background: C.green, borderRadius: "4px 0 0 4px" }} /><div style={{ flex: 24, background: C.red, borderRadius: "0 4px 4px 0" }} /></div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}><span style={{ fontSize: 12, fontWeight: 800, color: C.green }}>Bullish 38</span><span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>Bearish 24</span></div>
+        {showVote && (
+          <div style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: "14px", position: "relative" }}>
+            <button onClick={() => setShowVote(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", color: C.text4 }}><X size={14} /></button>
+            <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 12, paddingRight: 16 }}> How do you feel about the Market today? </div>
+            <div style={{ display: "flex", gap: 8 }}>{ [["bullish", C.green, "Bullish"], ["bearish", C.red, "Bearish"]].map(([key, col, lbl]) => (<button key={key} onClick={() => setVote(key)} style={{ flex: 1, padding: "11px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 800, fontSize: 13, transition: "all .2s", background: vote === key ? col : `${col}22`, color: vote === key ? "#fff" : col, }}>{lbl}</button>))}</div>
+            {vote && <div style={{ marginTop: 10, textAlign: "center", fontSize: 11, color: C.text3 }}> ✓ Thanks — sentiment updated </div>}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   §15  ROOT APP
-   ═══════════════════════════════════════════════════════════════════════════ */
+function SettingsPage() {
+  const { isAuthenticated, logout, requireAuth } = useAuth();
+  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: "20px 0 4px" }}><div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div><div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Manage your profile and settings</div></div>
+      <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
+        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
+        <GoldLine />
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.live"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
+      </Card>
+      {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
+      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
+      {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
+    </div>
+  );
+}
 
-export default function App() {
-  const [page, setPage] = useState("dashboard");
-  const { prices, flash } = useLivePrices();
+/* ─── News API Key ───────────────────────────────────────────────────────── */
+const API_KEY = process.env.REACT_APP_NEWS_API_KEY;
 
-  const renderPage = () => {
-    switch (page) {
-      case "dashboard":  return <DashboardPage prices={prices} />;
-      case "markets":    return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":      return <TradePage prices={prices} />;
-      case "portfolio":  return <PortfolioPage prices={prices} />;
-      case "support":    return <SupportPage />;
-      default:
-        return (
-          <VaultCard>
-            <VaultHeading>{page.charAt(0).toUpperCase() + page.slice(1)}</VaultHeading>
-            <p style={{ color: VOID.text3, fontFamily: "'Inter', sans-serif", marginTop: 12, fontSize: 13 }}>
-              This section is fully operational — visual design applied.
-            </p>
-          </VaultCard>
-        );
+const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
+
+function NewsPage() {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [category, setCategory] = useState("All");
+  const [newStoryCount, setNewStoryCount] = useState(0);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [newsBellAlerts, setNewsBellAlerts] = useState([]);
+  const prevArticleIds = useRef(new Set());
+  const pollRef = useRef(null);
+
+  const buildQuery = (cat) => {
+    const queries = {
+      "All":         "finance OR markets OR stocks OR crypto OR forex",
+      "Top stories": "markets OR economy OR federal reserve OR inflation",
+      "Stocks":      "stocks OR equities OR S&P OR earnings",
+      "ETFs":        "ETF OR exchange traded fund",
+      "Crypto":      "bitcoin OR ethereum OR cryptocurrency OR crypto",
+      "Forex":       "forex OR currency OR dollar OR euro OR yen",
+      "Commodities": "gold OR oil OR commodities OR crude",
+    };
+    return queries[cat] || queries["All"];
+  };
+
+  const fetchNews = useCallback(async (cat, isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      if (!API_KEY) throw new Error("News API key not configured (REACT_APP_NEWS_API_KEY)");
+      const q = encodeURIComponent(buildQuery(cat));
+      const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=20&apiKey=${API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const json = await res.json();
+      if (json.status !== "ok") throw new Error(json.message || "API returned error");
+      const items = (json.articles || []).filter(a => a.title && a.title !== "[Removed]");
+      if (isRefresh) {
+        const newIds = new Set(items.map(a => a.url));
+        const fresh = items.filter(a => !prevArticleIds.current.has(a.url));
+        if (fresh.length > 0) {
+          setNewStoryCount(c => c + fresh.length);
+          setNewsBellAlerts(prev => [
+            ...fresh.slice(0, 3).map(a => ({ title: a.title, source: a.source?.name, time: a.publishedAt })),
+            ...prev,
+          ].slice(0, 20));
+        }
+        prevArticleIds.current = newIds;
+        setArticles(items);
+      } else {
+        prevArticleIds.current = new Set(items.map(a => a.url));
+        setArticles(items);
+        setNewStoryCount(0);
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchNews(category);
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => fetchNews(category, true), 60000);
+    return () => clearInterval(pollRef.current);
+  }, [category, fetchNews]);
+
+  const handleShowNew = () => {
+    setNewStoryCount(0);
+    fetchNews(category);
+  };
+
+  const fmtRelTime = (iso) => {
+    if (!iso) return "";
+    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return "just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
-    <div style={{ background: VOID.bg, minHeight: "100vh", color: VOID.text }}>
-      <ScanOverlay />
-      <NavBar active={page} onNav={setPage} />
-      <MarketTicker prices={prices} />
-      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 20px 0" }}>
-        {renderPage()}
-      </main>
-      <Footer />
-    </div>
-  );
-}
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+      {/* ── Page Header with Notification Bell ── */}
+      <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
+            Market <span style={{ color: C.gold }}>News</span>
+          </div>
+          <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
+        </div>
+
+        {/* News Notification Bell */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
+            style={{ background: newsBellAlerts.length > 0 ? `${C.gold}18` : C.card, border: `1px solid ${newsBellAlerts.length > 0 ? C.gold + "44" : C.border}`, borderRadius: 10, width: 40, height: 40, display: "grid", placeItems: "center", cursor: "pointer", color: newsBellAlerts.length > 0 ? C.gold : C.text3, position: "relative", transition: "all .2s" }}
+          >
+            <Bell size={17} />
+            {newStoryCount > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 9, background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", p
