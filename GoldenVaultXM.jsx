@@ -1611,8 +1611,59 @@ function NewsPage() {
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px", animation: "shimmer 1.5s ease-in-out infinite" }}>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                {Array.from({ length: 3 }).map((_, j) => (<div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />))}
-                <
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} style={{ width: 28, height: 28, borderRadius: "50%", background: C.card3 }} />
+                ))}
+              </div>
+              <div style={{ height: 12, background: C.card3, borderRadius: 6, marginBottom: 8 }} />
+              <div style={{ height: 10, background: C.card3, borderRadius: 6, width: "70%" }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Error ── */}
+      {error && !loading && (
+        <div style={{ background: C.card, border: `1px solid ${C.red}44`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+          <AlertCircle size={28} color={C.red} style={{ marginBottom: 10 }} />
+          <div style={{ fontSize: 13, color: C.red, marginBottom: 12 }}>{error}</div>
+          <button onClick={() => fetchNews(category)} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 18px", color: C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
+      )}
+
+      {/* ── Articles ── */}
+      {!loading && !error && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {articles.map((a, i) => (
+            <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: C.gold, letterSpacing: "0.08em", textTransform: "uppercase" }}>{a.source?.name}</span>
+                  <span style={{ fontSize: 10, color: C.text3 }}>{fmtRelTime(a.publishedAt)}</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.5 }}>{a.title}</div>
+                {a.description && (
+                  <div style={{ fontSize: 11, color: C.text2, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{a.description}</div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                  <ExternalLink size={10} color={C.text3} />
+                  <span style={{ fontSize: 10, color: C.text3 }}>Read full article</span>
+                </div>
+              </div>
+            </a>
+          ))}
+          {articles.length === 0 && (
+            <div style={{ padding: "40px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>No articles found for this category.</div>
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
@@ -1622,4 +1673,4 @@ export default function GoldenVaultXM() {
       </AuthProvider>
     </LayoutProvider>
   );
-          }
+        }
