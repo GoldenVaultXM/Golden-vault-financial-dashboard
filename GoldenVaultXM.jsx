@@ -1543,7 +1543,7 @@ function NewsPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-{/* ── Page Header with Notification Bell ── */}
+      {/* ── Page Header with Notification Bell ── */}
       <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
@@ -1552,7 +1552,7 @@ function NewsPage() {
           <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
         </div>
 
-        {/* News Notification Bell */}
+      {/* News Notification Bell */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
@@ -1664,6 +1664,34 @@ function NewsPage() {
   );
 }
 
+/* ─── App Shell ──────────────────────────────────────────────────────────── */
+function AppShell({ page, setPage }) {
+  const { prices, flash } = useLivePrices();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const { width } = useLayout();
+
+  return (
+    <div id="gvxm-root">
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes spin  { to{transform:rotate(360deg)} }
+        @keyframes shimmer { 0%,100%{opacity:.6} 50%{opacity:1} }
+      `}</style>
+      <Nav page={page} setPage={setPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setShowDepositModal(true)} />
+      {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
+      <main className="gvxm-shell" style={{ padding: "0 16px 100px", boxSizing: "border-box" }}>
+        {page === "home"     && <HomePage     setPage={setPage} />}
+        {page === "markets"  && <MarketsPage  prices={prices} flash={flash} />}
+        {page === "trade"    && <TradePage    prices={prices} />}
+        {page === "news"     && <NewsPage />}
+        {page === "settings" && <SettingsPage />}
+      </main>
+      <BottomNav page={page} setPage={setPage} />
+    </div>
+  );
+}
+
 export default function GoldenVaultXM() {
   const [page, setPage] = useState("home");
   return (
@@ -1673,4 +1701,4 @@ export default function GoldenVaultXM() {
       </AuthProvider>
     </LayoutProvider>
   );
-        }
+                                               }
