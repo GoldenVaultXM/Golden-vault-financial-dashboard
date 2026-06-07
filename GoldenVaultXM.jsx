@@ -878,7 +878,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
     { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
     { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
     { icon: Lock,            label: "Settings & Privacy",color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: Mail, label: "Support", color: C.text2, onClick: () => { window.open("mailto:support@goldenvaultxm.com"); setOpen(false); } },
+    { icon: Mail,            label: "Support",           color: C.gold,    onClick: () => { setPage("support");  setOpen(false); } },
     { icon: Cpu,             label: "Mining",            color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
   ];
 
@@ -1360,25 +1360,26 @@ function TradePage({ prices }) {
 }
 function SettingsPage({ setPage }) {
   const { isAuthenticated, logout, requireAuth } = useAuth();
-  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management", onClick: () => setPage("profile") }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
+  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation", onClick: () => setPage("support") },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
-        <ThemeToggle />
-      </div>
+  <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
+  <ThemeToggle />
+</div>
       <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
-        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}>Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance.</div>
+        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
         <GoldLine />
         <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
       </Card>
       {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
-      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div onClick={item.onClick} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: item.onClick ? "pointer" : "default" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
+      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }} onClick={item.onClick || undefined}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
       {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
     </div>
   );
 }
+
 /* ─── News API Key ───────────────────────────────────────────────────────── */
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
@@ -1542,136 +1543,14 @@ useEffect(() => {
       )}
 
       {/* ── Error / No Key ── */}
-      {!loading && error && (
-        error === "__NO_KEY__" ? (
-          <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
-            <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
-              Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
-            </div>
-          </div>
-        ) : (
-          <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
-            <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
-            <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
-            <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
-              <RefreshCw size={13} /> Retry
-            </Btn>
-          </div>
-        )
-      )}
+      {!loading && error && ( ... )}
 
       {/* ── Articles ── */}
-      {!loading && !error && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          {articles.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 16px", color: C.text3, fontSize: 13 }}>No articles found for this category.</div>
-          )}
-          {articles.map((article, i) => (
-            <a
-              key={article.url}
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "block", textDecoration: "none", padding: "16px 0", borderBottom: i < articles.length - 1 ? `1px solid ${C.border}` : "none" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}44`, display: "grid", placeItems: "center" }}>
-                  <Newspaper size={10} color={C.gold} />
-                </div>
-                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>{article.source?.name || "Unknown"}</span>
-                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
-                <span style={{ fontSize: 11, color: C.text3 }}>{fmtTime(article.publishedAt)}</span>
-                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
-                <span style={{ fontSize: 11, color: C.text3 }}>{fmtRelTime(article.publishedAt)}</span>
-                <ExternalLink size={10} color={C.text4} style={{ marginLeft: "auto", flexShrink: 0 }} />
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.4, letterSpacing: "-0.01em" }}>
-                {article.title}
-              </div>
-              {article.description && (
-                <div style={{ fontSize: 13, color: C.text2, marginTop: 6, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {article.description}
-                </div>
-              )}
-            </a>
-          ))}
-        </div>
-      )}
+      {!loading && !error && ( ... )}
 
-      {/* ── Footer attribution ── */}
-      {!loading && !error && articles.length > 0 && (
-        <div style={{ textAlign: "center", padding: "16px 0 4px", fontSize: 10, color: C.text4 }}>
-          Powered by <span style={{ color: C.gold, fontWeight: 700 }}>NewsAPI</span>
-        </div>
-      )}
+      {/* ── Footer ── */}
+      ...
+
     </div>
   );
 }
-
-function AppShell({ page, setPage }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [newsCount, setNewsCount] = useState(0);
-  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
-  const { isAuthenticated, requireAuth, user } = useAuth();
-  const { prices, flash } = useLivePrices();
-  const { mode, width } = useLayout();
-
-  const handleSetPage = useCallback((p) => {
-    if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
-    setPage(p);
-  }, [isAuthenticated, requireAuth, setPage]);
-
-  const renderPage = () => {
-    switch (page) {
-      case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "mining":   return <Mining user={user} />;
-      case "profile":  return <ProfilePage />;
-      case "news":     return <NewsPage onNewsCount={setNewsCount} />;
-      case "settings": return <SettingsPage setPage={handleSetPage} />;
-      default:         return <HomePage setPage={handleSetPage} />;
-    }
-  };
-
-  return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
-      <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { display: none; }
-        scrollbar-width: none;
-        input, button, select, textarea { font-family: inherit; }
-        input::placeholder { color: #404040; }
-        img, svg { display: block; max-width: 100%; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
-      `}</style>
-      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
-      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
-        <main style={{ padding: "0 16px 100px" }}>
-          {renderPage()}
-        </main>
-        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
-      </div>
-    </div>
-  );
-}
-
-export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
-  return (
-    <LayoutProvider>
-      <ThemeProvider>
-        <AuthProvider onLogin={() => setPage("trade")}>
-          <AppShell page={page} setPage={setPage} />
-        </AuthProvider>
-      </ThemeProvider>
-    </LayoutProvider>
-  );
-          }
