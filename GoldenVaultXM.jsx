@@ -873,7 +873,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   const [bellOpen, setBellOpen] = useState(false);
 
   const MENU_ITEMS = [
-    { icon: Settings,        label: "Profile",           color: C.gold,    onClick: () => { setPage("settings"); setOpen(false); } },
+    { icon: Settings,        label: "Profile",           color: C.gold,    onClick: () => { setPage("profile");  setOpen(false); } },
     { icon: ArrowDownToLine, label: "Deposit",           color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
     { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
     { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
