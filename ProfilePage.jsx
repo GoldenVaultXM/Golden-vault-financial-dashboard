@@ -508,89 +508,252 @@ export default function ProfilePage({ onBack }) {
       avatar_url: profile.avatar_url,
       updated_at: new Date().toISOString(),
     });
-    await supabase.auth.updateUser({ data: { full_name: profile.full_name } });
-    if (error) { setToast({ msg: "Save failed: " + error.message, type: "error" }); }
-    else { setOriginal({ ...profile }); setEditMode(false); setToast({ msg: "Profile saved!", type: "success" }); }
+
+    // Also update auth display name
+    await supabase.auth.updateUser({
+      data: { full_name: profile.full_name },
+    });
+
+    if (error) {
+      setToast({ msg: "Save failed: " + error.message, type: "error" });
+    } else {
+      setOriginal({ ...profile });
+      setEditMode(false);
+      setToast({ msg: "Profile saved!", type: "success" });
+    }
     setSaving(false);
   };
 
   const isDirty = JSON.stringify(profile) !== JSON.stringify(original);
-  const memberSince = authUser?.created_at ? new Date(authUser.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
 
-  if (loading) return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "20px 0" }}>
-      {[96, 60, 120, 200].map((h, i) => (<div key={i} style={{ height: h, borderRadius: 16, background: "#0f0f0f", border: "1px solid #222", animation: "shimmer 1.5s ease-in-out infinite" }} />))}
-      <style>{`@keyframes shimmer{0%,100%{opacity:.3}50%{opacity:.7}}`}</style>
-    </div>
-  );
+  /* ── Membership badge from created_at ── */
+  const memberSince = authUser?.created_at
+    ? new Date(authUser.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : null;
 
-  if (!authUser) return (
-    <div style={{ padding: "40px 0", textAlign: "center" }}>
-      <div style={{ fontSize: 40, marginBottom: 14 }}>🔐</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Sign in to view your profile</div>
-      <div style={{ fontSize: 13, color: "#525252" }}>Create an account or log in to access your profile.</div>
-    </div>
-  );
+  /* ── Loading skeleton ── */
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "20px 0" }}>
+        {[96, 60, 120, 200].map((h, i) => (
+          <div key={i} style={{
+            height: h, borderRadius: 16, background: C.card,
+            border: `1px solid ${C.border}`,
+            animation: "shimmer 1.5s ease-in-out infinite",
+          }} />
+        ))}
+        <style>{`@keyframes shimmer{0%,100%{opacity:.3}50%{opacity:.7}}`}</style>
+      </div>
+    );
+  }
+
+  /* ── Not authenticated ── */
+  if (!authUser) {
+    return (
+      <div style={{ padding: "40px 0", textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 14 }}>🔐</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 8 }}>
+          Sign in to view your profile
+        </div>
+        <div style={{ fontSize: 13, color: C.text3 }}>
+          Create an account or log in to access your profile.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideUp{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}} input::placeholder,textarea::placeholder{color:#404040} textarea{resize:vertical}`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
+        @keyframes slideUp { from{opacity:0;transform:translate(-50%,16px)} to{opacity:1;transform:translate(-50%,0)} }
+        input::placeholder, textarea::placeholder { color: #404040; }
+        textarea { resize: vertical; }
+      `}</style>
+
+      {/* Toast */}
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+
+      {/* ── Header ── */}
       <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div style={{ fontSize: 11, color: "#525252", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 5 }}>Account</div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#fff" }}>My <span style={{ color: "#d97706" }}>Profile</span></div>
+          <div style={{ fontSize: 11, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 5 }}>
+            Account
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: C.text }}>
+            My <span style={{ color: C.gold }}>Profile</span>
+          </div>
         </div>
-        <button onClick={() => { if (editMode) { setProfile({ ...original }); setEditMode(false); } else setEditMode(true); }}
-          style={{ background: editMode ? "#ef444414" : "#d9770614", border: `1px solid ${editMode ? "#ef444444" : "#d9770644"}`, borderRadius: 10, padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 800, color: editMode ? "#ef4444" : "#d97706" }}>
+        <button
+          onClick={() => {
+            if (editMode) { setProfile({ ...original }); setEditMode(false); }
+            else setEditMode(true);
+          }}
+          style={{
+            background: editMode ? `${C.red}14` : `${C.gold}14`,
+            border: `1px solid ${editMode ? C.red + "44" : C.gold + "44"}`,
+            borderRadius: 10, padding: "8px 14px", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6,
+            fontSize: 12, fontWeight: 800,
+            color: editMode ? C.red : C.gold,
+          }}>
           {editMode ? <><X size={13} /> Cancel</> : <><Edit3 size={13} /> Edit</>}
         </button>
       </div>
-      <Card style={{ background: "linear-gradient(160deg, #1a0f00, #0f0f0f)", border: "1px solid #d9770628" }}>
-        <AvatarUploader avatarUrl={profile.avatar_url} fullName={profile.full_name} uploading={uploading} onUpload={handleAvatarUpload} />
-        {memberSince && (<div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, padding: "7px 16px", background: "#d9770610", border: "1px solid #d9770628", borderRadius: 40 }}><Sparkles size={11} color="#d97706" /><span style={{ fontSize: 11, fontWeight: 700, color: "#d97706" }}>Member since {memberSince}</span></div>)}
+
+      {/* ── Avatar + name card ── */}
+      <Card style={{
+        background: `linear-gradient(160deg, #1a0f00, ${C.card})`,
+        border: `1px solid ${C.gold}28`,
+      }}>
+        <AvatarUploader
+          avatarUrl={profile.avatar_url}
+          fullName={profile.full_name}
+          uploading={uploading}
+          onUpload={handleAvatarUpload}
+        />
+
+        {/* Membership badge */}
+        {memberSince && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            marginTop: 14, padding: "7px 16px",
+            background: `${C.gold}10`, border: `1px solid ${C.gold}28`,
+            borderRadius: 40,
+          }}>
+            <Sparkles size={11} color={C.gold} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>
+              Member since {memberSince}
+            </span>
+          </div>
+        )}
       </Card>
+
+      {/* ── Personal info ── */}
       <Card>
         <SectionLabel>Personal Information</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Field label="Full Name" icon={User} value={profile.full_name} onChange={v => setProfile(p => ({ ...p, full_name: v }))} placeholder="Your full name" disabled={!editMode} />
-          <Field label="Username" icon={User} value={profile.username} onChange={v => setProfile(p => ({ ...p, username: v }))} placeholder="@username" disabled={!editMode} hint="Visible to other traders" />
-          <Field label="Bio" icon={Edit3} value={profile.bio} onChange={v => setProfile(p => ({ ...p, bio: v }))} placeholder="Tell other traders about yourself…" disabled={!editMode} multiline />
+          <Field
+            label="Full Name" icon={User}
+            value={profile.full_name}
+            onChange={v => setProfile(p => ({ ...p, full_name: v }))}
+            placeholder="Your full name"
+            disabled={!editMode}
+          />
+          <Field
+            label="Username" icon={User}
+            value={profile.username}
+            onChange={v => setProfile(p => ({ ...p, username: v }))}
+            placeholder="@username"
+            disabled={!editMode}
+            hint="Visible to other traders"
+          />
+          <Field
+            label="Bio" icon={Edit3}
+            value={profile.bio}
+            onChange={v => setProfile(p => ({ ...p, bio: v }))}
+            placeholder="Tell other traders about yourself…"
+            disabled={!editMode}
+            multiline
+          />
         </div>
       </Card>
+
+      {/* ── Contact info ── */}
       <Card>
         <SectionLabel>Contact Details</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Email — always read-only (must go via Supabase auth flow to change) */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "#525252", letterSpacing: "0.06em" }}>Email Address</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.text3, letterSpacing: "0.06em" }}>
+              Email Address
+            </label>
             <div style={{ position: "relative" }}>
-              <Mail size={14} color="#303030" style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
-              <input value={authUser.email} disabled readOnly style={{ width: "100%", background: "#141414", border: "1.5px solid #222", borderRadius: 12, padding: "13px 14px 13px 40px", color: "#525252", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+              <Mail size={14} color={C.text4}
+                style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
+              <input
+                value={authUser.email}
+                disabled
+                readOnly
+                style={{
+                  width: "100%", background: C.card2,
+                  border: `1.5px solid ${C.border}`,
+                  borderRadius: 12, padding: "13px 14px 13px 40px",
+                  color: C.text3, fontSize: 13, outline: "none",
+                  boxSizing: "border-box", fontFamily: "inherit",
+                }}
+              />
             </div>
-            <div style={{ fontSize: 11, color: "#303030", paddingLeft: 2 }}>Email is managed through your login credentials</div>
+            <div style={{ fontSize: 11, color: C.text4, paddingLeft: 2 }}>
+              Email is managed through your login credentials
+            </div>
           </div>
-          <Field label="Phone Number" icon={Phone} value={profile.phone} onChange={v => setProfile(p => ({ ...p, phone: v }))} placeholder="+1 (555) 000-0000" disabled={!editMode} type="tel" />
-          <Field label="Location" icon={MapPin} value={profile.location} onChange={v => setProfile(p => ({ ...p, location: v }))} placeholder="City, Country" disabled={!editMode} />
+
+          <Field
+            label="Phone Number" icon={Phone}
+            value={profile.phone}
+            onChange={v => setProfile(p => ({ ...p, phone: v }))}
+            placeholder="+1 (555) 000-0000"
+            disabled={!editMode}
+            type="tel"
+          />
+          <Field
+            label="Location" icon={MapPin}
+            value={profile.location}
+            onChange={v => setProfile(p => ({ ...p, location: v }))}
+            placeholder="City, Country"
+            disabled={!editMode}
+          />
         </div>
       </Card>
+
+      {/* ── Save button ── */}
       {editMode && (
-        <button onClick={handleSave} disabled={saving || !isDirty} style={{ width: "100%", background: isDirty ? "#d97706" : "#141414", border: `1px solid ${isDirty ? "#d97706" : "#222"}`, borderRadius: 13, padding: "15px", color: isDirty ? "#000" : "#525252", fontSize: 15, fontWeight: 900, cursor: saving || !isDirty ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: saving ? 0.7 : 1 }}>
-          {saving ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Saving…</> : <><Save size={15} /> Save Changes</>}
+        <button
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+          style={{
+            width: "100%", background: isDirty ? C.gold : C.card2,
+            border: `1px solid ${isDirty ? C.gold : C.border}`,
+            borderRadius: 13, padding: "15px",
+            color: isDirty ? "#000" : C.text3,
+            fontSize: 15, fontWeight: 900, cursor: saving || !isDirty ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+            opacity: saving ? 0.7 : 1, transition: "all .2s",
+          }}>
+          {saving
+            ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Saving…</>
+            : <><Save size={15} /> Save Changes</>
+          }
         </button>
       )}
+
+      {/* ── Security / Password ── */}
       <PasswordSection userEmail={authUser.email} />
+
+      {/* ── Account meta info ── */}
       <Card style={{ padding: "14px 18px" }}>
         <SectionLabel>Account Info</SectionLabel>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["User ID", authUser.id?.slice(0, 18) + "…"], ["Account Type", authUser.app_metadata?.provider === "google" ? "Google OAuth" : "Email / Password"], ["Email Verified", authUser.email_confirmed_at ? "✅ Verified" : "⚠️ Not verified"], ["Joined", memberSince || "—"]].map(([k, v]) => (
+          {[
+            ["User ID", authUser.id?.slice(0, 18) + "…"],
+            ["Account Type", authUser.app_metadata?.provider === "google" ? "Google OAuth" : "Email / Password"],
+            ["Email Verified", authUser.email_confirmed_at ? "✅ Verified" : "⚠️ Not verified"],
+            ["Joined", memberSince || "—"],
+          ].map(([k, v]) => (
             <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "#525252" }}>{k}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#a3a3a3", fontFamily: k === "User ID" ? "monospace" : "inherit" }}>{v}</span>
+              <span style={{ fontSize: 12, color: C.text3 }}>{k}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, fontFamily: k === "User ID" ? "monospace" : "inherit" }}>
+                {v}
+              </span>
             </div>
           ))}
         </div>
       </Card>
+
+      {/* Bottom padding for nav */}
       <div style={{ height: 20 }} />
     </div>
   );
-            }
+}
