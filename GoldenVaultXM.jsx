@@ -1753,6 +1753,5 @@ export default function GoldenVaultXM() {
         </AuthProvider>
       </ThemeProvider>
     </LayoutProvider>
-  )
+  );
 }
-                                                                                                                                                                                                                                                                                           }
