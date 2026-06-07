@@ -1538,19 +1538,3 @@ useEffect(() => {
               </div>
               <div style={{ height: 12, borderRadius: 6, background: C.card3, width: "90%", marginTop: 6 }} />
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Error / No Key ── */}
-      {!loading && error && ( ... )}
-
-      {/* ── Articles ── */}
-      {!loading && !error && ( ... )}
-
-      {/* ── Footer ── */}
-      ...
-
-    </div>
-  );
-}
