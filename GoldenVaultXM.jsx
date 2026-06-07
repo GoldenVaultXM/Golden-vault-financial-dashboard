@@ -878,7 +878,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
     { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
     { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
     { icon: Lock,            label: "Settings & Privacy",color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: Mail,            label: "Support",           color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+    { icon: Mail, label: "Support", color: C.text2, onClick: () => { window.open("mailto:support@goldenvaultxm.com"); setOpen(false); } },
     { icon: Cpu,             label: "Mining",            color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
   ];
 
