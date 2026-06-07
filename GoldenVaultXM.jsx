@@ -868,18 +868,20 @@ function useNotifications() {
 }
 
 function Nav({ page, setPage, open, setOpen, openDeposit }) {
-  const { isAuthenticated, logout, requireAuth, user } = useAuth();
+  const { isAuthenticated, logout, requireAuth } = useAuth();
+  const { mode } = useLayout();
   const { notes, unreadCount, markAllRead } = useNotifications();
   const [bellOpen, setBellOpen] = useState(false);
 
-  const MENU_ITEMS = [
-    { icon: Settings,        label: "Profile",           color: C.gold,    onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: ArrowDownToLine, label: "Deposit",           color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
-    { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
-    { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
-    { icon: Lock,            label: "Settings & Privacy",color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: Mail,            label: "Support",           color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: Cpu,             label: "Mining",            color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
+  const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "news", label: "News", icon: Newspaper }, { id: "settings", label: "Settings", icon: Settings },];
+
+  const ACTIONS = [
+    { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
+    { icon: ArrowUpFromLine, label: "Withdraw Funds", color: C.gold,    onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: BarChart2,       label: "Markets",        color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+    { icon: TrendingUp,      label: "Trade Now",      color: C.purple,  onClick: () => { if (!requireAuth("signup")) return; setPage("trade"); setOpen(false); } },
+    { icon: FileBarChart,    label: "Reports",        color: "#a78bfa", onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: Mail,            label: "Support",        color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
   ];
 
   return (
@@ -888,25 +890,30 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
-        <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
-          <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
-        </div>
-      </div>
-
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+       <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}><span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
+     </div>
+     </div>
+     </div>
+      
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 
         {/* Bell */}
         <div style={{ position: "relative" }}>
-          <button onClick={() => { setBellOpen(b => !b); setOpen(false); if (!bellOpen) markAllRead(); }} style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); if (!bellOpen) markAllRead(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
+          >
             <Bell size={17} />
             {unreadCount > 0 && (
-              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center" }}>
+              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", lineHeight: 1 }}>
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
+
           {bellOpen && (
-            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 400 }}>
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
                 <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
@@ -938,80 +945,48 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       </div>
 
       {/* Bell backdrop */}
-      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 399 }} />}
+      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
 
-      {/* ── Compact right-side dropdown menu ── */}
+      {/* Hamburger drawer */}
       {open && (
-        <>
-          {/* Backdrop */}
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 298 }} />
+        <div className="gvxm-shell" style={{ position: "fixed", top: 58, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: mode === "desktop" ? 1200 : 600, minWidth: 0, bottom: 0, background: `${C.bg}f8`, backdropFilter: "blur(20px)", zIndex: 200, padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
 
-          {/* Dropdown panel — anchored to top-right, always fully visible */}
-          <div style={{
-            position: "fixed",
-            top: 62,
-            right: 12,
-            width: 220,
-            zIndex: 299,
-            background: C.card,
-            border: `1px solid ${C.border2}`,
-            borderRadius: 16,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(217,119,6,0.1)",
-            overflow: "hidden",
-          }}>
-            {/* User info header */}
-            <div style={{ padding: "14px 16px 12px", borderBottom: `1px solid ${C.border}`, background: `${C.gold}08` }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{user?.email?.split("@")[0] || "Guest"}</div>
-              <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{isAuthenticated ? "Verified Account" : "Not logged in"}</div>
-            </div>
+          {/* Nav links */}
+          {NAV.map(n => (
+            <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent" }}>
+              <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
+              <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
+              {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
+            </button>
+          ))}
 
-            {/* All 6 menu items */}
-            {MENU_ITEMS.map((item, i) => (
-              <button
-                key={i}
-                onClick={item.onClick}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  width: "100%",
-                  padding: "12px 16px",
-                  background: "none",
-                  border: "none",
-                  borderBottom: i < MENU_ITEMS.length - 1 ? `1px solid ${C.border}` : "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  boxSizing: "border-box",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = `${item.color}10`}
-                onMouseLeave={e => e.currentTarget.style.background = "none"}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${item.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                  <item.icon size={13} color={item.color} />
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</span>
-              </button>
-            ))}
-
-            {/* Sign out / in */}
-            <div style={{ borderTop: `1px solid ${C.border}` }}>
-              {isAuthenticated
-                ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background = `${C.red}10`}
-                    onMouseLeave={e => e.currentTarget.style.background = "none"}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.red}18`, display: "grid", placeItems: "center" }}><LogOut size={13} color={C.red} /></div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>Sign Out</span>
-                  </button>
-                : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer" }}
-                    onMouseEnter={e => e.currentTarget.style.background = `${C.gold}10`}
-                    onMouseLeave={e => e.currentTarget.style.background = "none"}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.gold}18`, display: "grid", placeItems: "center" }}><UserPlus size={13} color={C.gold} /></div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>Sign Up / Login</span>
-                  </button>
-              }
+          {/* Quick Actions */}
+          <div style={{ marginTop: 16, marginBottom: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {ACTIONS.map((a, i) => (
+                <button key={i} onClick={a.onClick}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <a.icon size={15} color={a.color} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </>
+
+          {/* Sign out / in */}
+          <div style={{ marginTop: "auto", paddingTop: 12 }}>
+            <GoldLine />
+            {isAuthenticated
+              ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
+              : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+            }
+          </div>
+        </div>
       )}
     </header>
   );
@@ -1021,7 +996,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { width } = useLayout();
-  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "mining", icon: Cpu, label: "Mine" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
@@ -1358,9 +1333,122 @@ function TradePage({ prices }) {
       </div>
   );
 }
-function SettingsPage() {
+function ProfilePage() {
+  const { isAuthenticated, requireAuth } = useAuth();
+  const [profile, setProfile] = useState({ full_name: "", email: "", account_type: "Basic", avatar_url: "", created_at: "" });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const fileRef = useRef(null);
+  const ANIME_AVATARS = [
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=naruto&backgroundColor=b6e3f4",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=sasuke&backgroundColor=d1d4f9",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=sakura&backgroundColor=ffd5dc",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=kakashi&backgroundColor=c0aede",
+    "https://api.dicebear.com/7.x/avataaars/svg?seed=itachi&backgroundColor=b6e3f4",
+  ];
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const loadProfile = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data } = await supabase.from("profiles").select("*").eq("id", authUser.id).single();
+      if (data) {
+        setProfile({ full_name: data.full_name || "", email: authUser.email || "", account_type: data.account_type || "Basic", avatar_url: data.avatar_url || "", created_at: data.created_at || "" });
+        setSelectedAvatar(data.avatar_url || null);
+      } else {
+        setProfile(p => ({ ...p, email: authUser.email || "", created_at: authUser.created_at || "" }));
+      }
+    };
+    loadProfile();
+  }, [isAuthenticated]);
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { setSelectedAvatar(ev.target.result); setProfile(p => ({ ...p, avatar_url: ev.target.result })); };
+    reader.readAsDataURL(file);
+  };
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      await supabase.from("profiles").upsert({ id: authUser.id, full_name: profile.full_name, avatar_url: profile.avatar_url, account_type: profile.account_type });
+      if (profile.email !== authUser.email) { await supabase.auth.updateUser({ email: profile.email }); }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) { console.error(e); } finally { setSaving(false); }
+  };
+  if (!isAuthenticated) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <Card style={{ textAlign: "center", padding: "40px 20px" }}>
+          <Lock size={40} color={C.gold} style={{ margin: "0 auto 16px" }} />
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 8 }}>Login Required</div>
+          <div style={{ fontSize: 13, color: C.text3, marginBottom: 20 }}>Sign in to view and edit your profile</div>
+          <Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}>Sign Up / Login</Btn>
+        </Card>
+      </div>
+    );
+  }
+  const joinDate = profile.created_at ? new Date(profile.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ fontSize: 22, fontWeight: 900, color: C.text, padding: "10px 0 4px" }}>My Profile</div>
+      <Card>
+        <div style={{ fontWeight: 800, fontSize: 14, color: C.text, marginBottom: 14 }}>Profile Photo</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+          <div style={{ width: 90, height: 90, borderRadius: "50%", border: `3px solid ${C.gold}`, overflow: "hidden", background: C.card2, display: "grid", placeItems: "center" }}>
+            {selectedAvatar ? (<img src={selectedAvatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (<span style={{ fontSize: 32, fontWeight: 900, color: C.gold }}>{profile.full_name?.[0] || "U"}</span>)}
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.text3, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Choose Anime Avatar</div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, justifyContent: "center" }}>
+          {ANIME_AVATARS.map((url, i) => (
+            <div key={i} onClick={() => { setSelectedAvatar(url); setProfile(p => ({ ...p, avatar_url: url })); }}
+              style={{ width: 48, height: 48, borderRadius: "50%", border: `2.5px solid ${selectedAvatar === url ? C.gold : C.border2}`, overflow: "hidden", cursor: "pointer", transition: "border .2s", background: C.card2 }}>
+              <img src={url} alt={`avatar${i}`} style={{ width: "100%", height: "100%" }} />
+            </div>
+          ))}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display: "none" }} />
+        <Btn variant="ghost" onClick={() => fileRef.current?.click()} style={{ width: "100%" }}><Award size={14} /> Upload from Device</Btn>
+      </Card>
+      <Card>
+        <div style={{ fontWeight: 800, fontSize: 14, color: C.text, marginBottom: 16 }}>Personal Info</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Full Name</div>
+            <input value={profile.full_name} onChange={e => setProfile(p => ({ ...p, full_name: e.target.value }))} placeholder="Enter your full name" style={{ width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Email Address</div>
+            <input value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} placeholder="Enter your email" style={{ width: "100%", background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "12px 14px", color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+            <div style={{ fontSize: 10, color: C.text3, marginTop: 4 }}>A verification link will be sent to your new email</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Account Type</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", background: C.card2, borderRadius: 10, border: `1px solid ${C.border}` }}>
+              <Badge color={profile.account_type === "Premium" ? C.gold : C.blue}>{profile.account_type}</Badge>
+              <span style={{ fontSize: 12, color: C.text3 }}>Your current plan</span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>Member Since</div>
+            <div style={{ padding: "12px 14px", background: C.card2, borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14, color: C.text }}>{joinDate}</div>
+          </div>
+        </div>
+      </Card>
+      <Btn variant="gold" loading={saving} onClick={handleSave} style={{ width: "100%" }}>
+        {saved ? <><CheckCircle2 size={16} /> Saved!</> : "Save Changes"}
+      </Btn>
+    </div>
+  );
+}
+function SettingsPage({ setPage }) {
   const { isAuthenticated, logout, requireAuth } = useAuth();
-  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
+  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: UserPlus, label: "My Profile", sub: "Edit your profile and avatar", onClick: () => setPage && setPage("profile") }, { icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -1374,7 +1462,7 @@ function SettingsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
       </Card>
       {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
-      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
+      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div onClick={() => item.onClick && item.onClick()} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
       {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
     </div>
   );
@@ -1478,8 +1566,6 @@ useEffect(() => {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-
-      {/* ── Page Header with Notification Bell ── */}
       <div style={{ padding: "20px 0 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 26, fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
@@ -1487,8 +1573,6 @@ useEffect(() => {
           </div>
           <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
         </div>
-
-        {/* News Notification Bell */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
@@ -1501,7 +1585,6 @@ useEffect(() => {
               </span>
             )}
           </button>
-
           {bellOpen && (
             <div style={{ position: "absolute", top: 46, right: 0, width: "min(320px, 88vw)", maxHeight: "60vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: 14, boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px 10px", borderBottom: `1px solid ${C.border}` }}>
@@ -1523,8 +1606,6 @@ useEffect(() => {
           {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
         </div>
       </div>
-
-      {/* ── Loading ── */}
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
           {Array.from({ length: 5 }).map((_, i) => (
@@ -1541,8 +1622,6 @@ useEffect(() => {
           ))}
         </div>
       )}
-
-      {/* ── Error / No Key ── */}
       {!loading && error && (
         error === "__NO_KEY__" ? (
           <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
@@ -1563,8 +1642,6 @@ useEffect(() => {
           </div>
         )
       )}
-
-      {/* ── Articles ── */}
       {!loading && !error && (
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {articles.length === 0 && (
@@ -1601,8 +1678,6 @@ useEffect(() => {
           ))}
         </div>
       )}
-
-      {/* ── Footer attribution ── */}
       {!loading && !error && articles.length > 0 && (
         <div style={{ textAlign: "center", padding: "16px 0 4px", fontSize: 10, color: C.text4 }}>
           Powered by <span style={{ color: C.gold, fontWeight: 700 }}>NewsAPI</span>
@@ -1628,19 +1703,24 @@ function AppShell({ page, setPage }) {
   const renderPage = () => {
     switch (page) {
       case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "mining":   return <Mining user={user} />;
-      case "news":     return <NewsPage onNewsCount={setNewsCount} />;
-      case "settings": return <SettingsPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
+case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+case "trade":    return <TradePage prices={prices} />;
+case "mining":   return <Mining user={user} />;
+case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+case "profile":  return <ProfilePage />;
+case "settings": return <SettingsPage setPage={handleSetPage} />;
+default:         return <HomePage setPage={handleSetPage} />;
     }
   };
 
   return (
     <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
         ::-webkit-scrollbar { display: none; }
         scrollbar-width: none;
         input, button, select, textarea { font-family: inherit; }
@@ -1674,4 +1754,4 @@ export default function GoldenVaultXM() {
       </ThemeProvider>
     </LayoutProvider>
   );
-}
+                                                                                                                                                                                                                                                                                           }
