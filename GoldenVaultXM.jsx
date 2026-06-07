@@ -3,7 +3,7 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu, ExternalLink, } from "lucide-react";
 import Mining from "./Mining";
 import { supabase } from './supabaseClient';
-
+import ProfilePage from './ProfilePage';
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const DARK_TOKENS = {
   bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
