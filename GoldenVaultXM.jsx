@@ -1633,7 +1633,7 @@ function AppShell({ page, setPage }) {
       case "mining":   return <Mining user={user} />;
       case "profile":  return <ProfilePage />;
       case "news":     return <NewsPage onNewsCount={setNewsCount} />;
-      case "settings": return <SettingsPage />;
+      case "settings": return <SettingsPage setPage={handleSetPage} />;
       default:         return <HomePage setPage={handleSetPage} />;
     }
   };
