@@ -868,20 +868,18 @@ function useNotifications() {
 }
 
 function Nav({ page, setPage, open, setOpen, openDeposit }) {
-  const { isAuthenticated, logout, requireAuth } = useAuth();
-  const { mode } = useLayout();
+  const { isAuthenticated, logout, requireAuth, user } = useAuth();
   const { notes, unreadCount, markAllRead } = useNotifications();
   const [bellOpen, setBellOpen] = useState(false);
 
-  const NAV = [{ id: "home", label: "Home", icon: Home }, { id: "markets", label: "Markets", icon: BarChart2 }, { id: "trade", label: "Trade", icon: TrendingUp }, { id: "news", label: "News", icon: Newspaper }, { id: "settings", label: "Settings", icon: Settings },];
-
-  const ACTIONS = [
-    { icon: ArrowDownToLine, label: "Deposit Funds",  color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
-    { icon: ArrowUpFromLine, label: "Withdraw Funds", color: C.gold,    onClick: () => { setPage("trade");    setOpen(false); } },
-    { icon: BarChart2,       label: "Markets",        color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
-    { icon: TrendingUp,      label: "Trade Now",      color: C.purple,  onClick: () => { if (!requireAuth("signup")) return; setPage("trade"); setOpen(false); } },
-    { icon: FileBarChart,    label: "Reports",        color: "#a78bfa", onClick: () => { setPage("trade");    setOpen(false); } },
-    { icon: Mail,            label: "Support",        color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+  const MENU_ITEMS = [
+    { icon: Settings,        label: "Profile",           color: C.gold,    onClick: () => { setPage("settings"); setOpen(false); } },
+    { icon: ArrowDownToLine, label: "Deposit",           color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
+    { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
+    { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+    { icon: Lock,            label: "Settings & Privacy",color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
+    { icon: Mail,            label: "Support",           color: C.text2,   onClick: () => { setPage("settings"); setOpen(false); } },
+    { icon: Cpu,             label: "Mining",            color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
   ];
 
   return (
@@ -890,30 +888,25 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-       <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}><span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
-     </div>
-     </div>
-     </div>
-      
+        <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
+          <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
+        </div>
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 
         {/* Bell */}
         <div style={{ position: "relative" }}>
-          <button
-            onClick={() => { setBellOpen(b => !b); if (!bellOpen) markAllRead(); }}
-            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
-          >
+          <button onClick={() => { setBellOpen(b => !b); setOpen(false); if (!bellOpen) markAllRead(); }} style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}>
             <Bell size={17} />
             {unreadCount > 0 && (
-              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center", lineHeight: 1 }}>
+              <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center" }}>
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
-
           {bellOpen && (
-            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 300 }}>
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 400 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
                 <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
@@ -945,50 +938,76 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       </div>
 
       {/* Bell backdrop */}
-      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />}
+      {bellOpen && <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 399 }} />}
 
-      {/* Hamburger drawer */}
+      {/* ── Compact right-side dropdown menu ── */}
       {open && (
         <>
           {/* Backdrop */}
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 199, background: "rgba(0,0,0,0.5)" }} />
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 298 }} />
 
-          {/* Drawer — no gvxm-shell class so overflow/maxWidth never clips it */}
-          <div style={{ position: "fixed", top: 58, left: 0, right: 0, bottom: 0, zIndex: 200, background: `${C.bg}f8`, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", padding: "20px 20px 100px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", WebkitOverflowScrolling: "touch", boxSizing: "border-box" }}>
+          {/* Dropdown panel — anchored to top-right, always fully visible */}
+          <div style={{
+            position: "fixed",
+            top: 62,
+            right: 12,
+            width: 220,
+            zIndex: 299,
+            background: C.card,
+            border: `1px solid ${C.border2}`,
+            borderRadius: 16,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(217,119,6,0.1)",
+            overflow: "hidden",
+          }}>
+            {/* User info header */}
+            <div style={{ padding: "14px 16px 12px", borderBottom: `1px solid ${C.border}`, background: `${C.gold}08` }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{user?.email?.split("@")[0] || "Guest"}</div>
+              <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{isAuthenticated ? "Verified Account" : "Not logged in"}</div>
+            </div>
 
-            {/* Nav links */}
-            {NAV.map(n => (
-              <button key={n.id} onClick={() => { if (n.id === "trade" && !requireAuth()) return; setPage(n.id); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: page === n.id ? `${C.gold}12` : "none", border: "none", borderRadius: 12, cursor: "pointer", borderLeft: page === n.id ? `3px solid ${C.gold}` : "3px solid transparent", width: "100%", boxSizing: "border-box" }}>
-                <n.icon size={18} color={page === n.id ? C.gold : C.text3} />
-                <span style={{ fontSize: 17, fontWeight: 800, color: page === n.id ? C.text : C.text3 }}>{n.label}</span>
-                {n.id === "trade" && !isAuthenticated && (<Lock size={12} color={C.text3} style={{ marginLeft: "auto" }} />)}
+            {/* All 6 menu items */}
+            {MENU_ITEMS.map((item, i) => (
+              <button
+                key={i}
+                onClick={item.onClick}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "none",
+                  border: "none",
+                  borderBottom: i < MENU_ITEMS.length - 1 ? `1px solid ${C.border}` : "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  boxSizing: "border-box",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = `${item.color}10`}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${item.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                  <item.icon size={13} color={item.color} />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</span>
               </button>
             ))}
 
-            {/* Quick Actions */}
-            <div style={{ marginTop: 16, marginBottom: 4 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, letterSpacing: "0.12em", textTransform: "uppercase", paddingLeft: 14, marginBottom: 10 }}>Quick Actions</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {ACTIONS.map((a, i) => (
-                  <button key={i} onClick={a.onClick}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = a.color}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, cursor: "pointer", transition: "border-color .18s", width: "100%", boxSizing: "border-box" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${a.color}18`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                      <a.icon size={15} color={a.color} />
-                    </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "left", lineHeight: 1.3 }}>{a.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Sign out / in */}
-            <div style={{ marginTop: "auto", paddingTop: 12 }}>
-              <GoldLine />
+            <div style={{ borderTop: `1px solid ${C.border}` }}>
               {isAuthenticated
-                ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><LogOut size={18} color={C.red} /><span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>Sign Out</span></button>
-                : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 14, padding: "15px 14px", background: "none", border: "none", cursor: "pointer", width: "100%" }}><UserPlus size={18} color={C.gold} /><span style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>Sign Up / Login</span></button>
+                ? <button onClick={() => { logout(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${C.red}10`}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.red}18`, display: "grid", placeItems: "center" }}><LogOut size={13} color={C.red} /></div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>Sign Out</span>
+                  </button>
+                : <button onClick={() => { requireAuth("signup"); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${C.gold}10`}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${C.gold}18`, display: "grid", placeItems: "center" }}><UserPlus size={13} color={C.gold} /></div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>Sign Up / Login</span>
+                  </button>
               }
             </div>
           </div>
@@ -1002,7 +1021,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
   const { width } = useLayout();
-  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "mining", icon: Cpu, label: "Mine" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
+  const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
         const active = page === t.id; const locked = t.id === "trade" && !isAuthenticated;
@@ -1655,4 +1674,4 @@ export default function GoldenVaultXM() {
       </ThemeProvider>
     </LayoutProvider>
   );
-                  }
+          }
