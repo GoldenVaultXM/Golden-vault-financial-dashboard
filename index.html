@@ -3,47 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Dashboard</title>
+    <title>Golden Vault XM</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/main.jsx"></script>
 
     <script type="text/javascript">
-      // =====================================================
-      // ➡️  PASTE YOUR TAWK.TO CHAT LINK HERE:
-      var TAWK_SRC = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/';
-      // =====================================================
+      var TAWK_SRC = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/1iqvs9ckp';
 
-      // Must be set BEFORE the tawk script loads
       window.Tawk_API = window.Tawk_API || {};
       window.Tawk_LoadStart = new Date();
 
-      // --- HOME PAGE CHECK ---
       function isHomePage() {
         var p = window.location.pathname;
         return p === '/' || p === '/index.html' || p === '';
       }
 
-      // onLoad fires once tawk widget is ready — show after 2s delay on home page only
       window.Tawk_API.onLoad = function () {
         if (isHomePage()) {
-          window.Tawk_API.hideWidget(); // hide first
+          window.Tawk_API.hideWidget();
           setTimeout(function () {
-            window.Tawk_API.showWidget(); // pop up after 2 seconds
+            window.Tawk_API.showWidget();
           }, 2000);
         } else {
           window.Tawk_API.hideWidget();
         }
       };
 
-      // --- SPA ROUTE CHANGE HANDLER (React Router etc.) ---
       (function () {
         var _push = history.pushState;
         var _replace = history.replaceState;
-
         function onRouteChange() {
-          setTimeout(function () { // small tick to let pathname update
+          setTimeout(function () {
             if (typeof window.Tawk_API === 'undefined') return;
             if (isHomePage()) {
               window.Tawk_API.showWidget && window.Tawk_API.showWidget();
@@ -52,13 +44,11 @@
             }
           }, 50);
         }
-
         history.pushState = function () { _push.apply(history, arguments); onRouteChange(); };
         history.replaceState = function () { _replace.apply(history, arguments); onRouteChange(); };
         window.addEventListener('popstate', onRouteChange);
       })();
 
-      // --- LOAD TAWK SCRIPT ---
       (function () {
         var s1 = document.createElement("script");
         var s0 = document.getElementsByTagName("script")[0];
@@ -67,86 +57,6 @@
         s1.charset = 'UTF-8';
         s1.setAttribute('crossorigin', '*');
         s0.parentNode.insertBefore(s1, s0);
-      })();
-
-      // --- DRAGGABLE: poll until Tawk's iframe container appears ---
-      (function () {
-        var dragging = false;
-        var startX, startY, origX, origY;
-        var attached = null;
-
-        function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
-
-        function makeDraggable(el) {
-          if (!el || el._draggable) return;
-          el._draggable = true;
-
-          // Mouse drag
-          el.addEventListener('mousedown', function (e) {
-            dragging = true;
-            startX = e.clientX; startY = e.clientY;
-            var r = el.getBoundingClientRect();
-            origX = r.left; origY = r.top;
-            el.style.cursor = 'grabbing';
-            e.stopPropagation();
-          }, true);
-
-          document.addEventListener('mousemove', function (e) {
-            if (!dragging) return;
-            var nx = clamp(origX + e.clientX - startX, 0, window.innerWidth - el.offsetWidth);
-            var ny = clamp(origY + e.clientY - startY, 0, window.innerHeight - el.offsetHeight);
-            el.style.left = nx + 'px'; el.style.top = ny + 'px';
-            el.style.right = 'auto'; el.style.bottom = 'auto';
-          });
-
-          document.addEventListener('mouseup', function () {
-            dragging = false;
-            el.style.cursor = 'grab';
-          });
-
-          // Touch drag
-          el.addEventListener('touchstart', function (e) {
-            dragging = true;
-            startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-            var r = el.getBoundingClientRect();
-            origX = r.left; origY = r.top;
-          }, { passive: true });
-
-          document.addEventListener('touchmove', function (e) {
-            if (!dragging) return;
-            var nx = clamp(origX + e.touches[0].clientX - startX, 0, window.innerWidth - el.offsetWidth);
-            var ny = clamp(origY + e.touches[0].clientY - startY, 0, window.innerHeight - el.offsetHeight);
-            el.style.left = nx + 'px'; el.style.top = ny + 'px';
-            el.style.right = 'auto'; el.style.bottom = 'auto';
-          }, { passive: true });
-
-          document.addEventListener('touchend', function () { dragging = false; });
-        }
-
-        var tries = 0;
-        var poll = setInterval(function () {
-          tries++;
-          // Tawk injects a div directly into body with id like "tawkchat-container" or similar
-          var el = document.querySelector(
-            '#tawk-bubble-container, #tawkchat-container, ' +
-            'div[id^="tawk_"], div[class^="tawk-"], ' +
-            'iframe[src*="tawk.to"]'
-          );
-
-          if (el) {
-            // Walk up to the direct child of body
-            while (el.parentElement && el.parentElement.tagName !== 'BODY') {
-              el = el.parentElement;
-            }
-            el.style.position = 'fixed';
-            el.style.cursor = 'grab';
-            el.style.zIndex = '99999';
-            makeDraggable(el);
-            attached = el;
-          }
-
-          if (attached || tries > 120) clearInterval(poll);
-        }, 500);
       })();
     </script>
   </body>
