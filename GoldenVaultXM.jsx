@@ -1631,6 +1631,7 @@ function AppShell({ page, setPage }) {
       case "markets":  return <MarketsPage prices={prices} flash={flash} />;
       case "trade":    return <TradePage prices={prices} />;
       case "mining":   return <Mining user={user} />;
+      case "profile":  return <ProfilePage />;
       case "news":     return <NewsPage onNewsCount={setNewsCount} />;
       case "settings": return <SettingsPage />;
       default:         return <HomePage setPage={handleSetPage} />;
