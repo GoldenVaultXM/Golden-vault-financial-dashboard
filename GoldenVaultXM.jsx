@@ -1360,26 +1360,25 @@ function TradePage({ prices }) {
 }
 function SettingsPage({ setPage }) {
   const { isAuthenticated, logout, requireAuth } = useAuth();
-  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management" }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
+  const GROUPS = [{ title: "Platform", items: [{ icon: BarChart2, label: "Markets", sub: "View all trading pairs" }, { icon: TrendingUp, label: "Trading", sub: "Configure trading preferences" }, { icon: BookOpen, label: "Support Center", sub: "Help and documentation" },] }, { title: "Account", items: [{ icon: Eye, label: "Dashboard", sub: "View performance overview" }, { icon: Lock, label: "Security Settings", sub: "2FA and login management", onClick: () => setPage("profile") }, { icon: Bell, label: "Notifications", sub: "Alerts and push settings" },] }, { title: "Resources", items: [{ icon: BookOpen, label: "Trading Guide", sub: "Learn trading strategies" }, { icon: Award, label: "Market Analysis", sub: "Expert insights and reports" },] },];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ padding: "20px 0 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-  <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
-  <ThemeToggle />
-</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
+        <ThemeToggle />
+      </div>
       <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
-        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
+        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}>Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance.</div>
         <GoldLine />
         <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
       </Card>
       {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
-      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
+      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div onClick={item.onClick} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: item.onClick ? "pointer" : "default" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
       {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
     </div>
   );
 }
-
 /* ─── News API Key ───────────────────────────────────────────────────────── */
 const NEWS_CATEGORIES = ["All", "Top stories", "Stocks", "ETFs", "Crypto", "Forex", "Commodities"];
 
