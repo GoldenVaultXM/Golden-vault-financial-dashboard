@@ -1524,7 +1524,7 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* ── Loading ── */}
+            {/* ── Loading ── */}
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
           {Array.from({ length: 5 }).map((_, i) => (
@@ -1616,8 +1616,8 @@ useEffect(() => {
 // Replace with your real Tawk.to IDs from:
 // tawk.to Dashboard → Administration → Chat Widget → Direct Chat Link
 // URL format: https://embed.tawk.to/{PROPERTY_ID}/{WIDGET_ID}
-const TAWK_PROPERTY_ID = "6a2187aa4a36f41c2edf040c";
-const TAWK_WIDGET_ID   = "1jq9nm3li";
+const TAWK_PROPERTY_ID = "YOUR_PROPERTY_ID";
+const TAWK_WIDGET_ID   = "YOUR_WIDGET_ID";
 
 const SUPPORT_FAQS = [
   { q: "How do I make a deposit?", a: "Go to Menu → Deposit. We support bank transfer, crypto, and card payments. Funds typically reflect within 15 minutes." },
@@ -1646,9 +1646,12 @@ function SupportPage() {
   useEffect(() => {
     if (TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
     window.Tawk_API = window.Tawk_API || {};
-    window.Tawk_LoadStart = new Date();
-    window.Tawk_API.onLoad = () => { setTawkLoaded(true); window.Tawk_API.hideWidget(); };
-    window.Tawk_API.onChatEnded = () => setTawkOpen(false);
+    window.Tawk_API.customStyle = { visibility: { desktop: { position: "br", xOffset: -9999, yOffset: -9999 }, mobile: { position: "br", xOffset: -9999, yOffset: -9999 } } };
+    window.Tawk_API.onLoad = () => {
+      setTawkLoaded(true);
+      window.Tawk_API.hideWidget();
+    };
+    window.Tawk_API.onChatEnded = () => { window.Tawk_API.hideWidget(); setTawkOpen(false); };
     const s = document.createElement("script");
     s.async = true;
     s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
@@ -1667,10 +1670,10 @@ function SupportPage() {
     setMessages(prev => [...prev, { from: "user", text, time: fmtNow() }]);
     await new Promise(r => setTimeout(r, 900));
     if (tawkLoaded && window.Tawk_API) {
-      window.Tawk_API.showWidget();
-      window.Tawk_API.maximize();
-      setTawkOpen(true);
-      setMessages(prev => [...prev, { from: "agent", text: "🔗 Connecting you to a live agent now…", time: fmtNow() }]);
+      // Send to Tawk silently without showing the widget bubble
+      try { window.Tawk_API.setAttributes({ message: text }, function(error) {}); } catch(e) {}
+      setTawkOpen(false);
+      setMessages(prev => [...prev, { from: "agent", text: "✅ Message received! A live agent will respond shortly.", time: fmtNow() }]);
     } else {
       setMessages(prev => [...prev, { from: "agent", text: "Message received! A support agent will respond shortly. For urgent matters, email support@goldenvaultxm.com", time: fmtNow() }]);
     }
