@@ -14,20 +14,12 @@ const splashStyles = `
     gap: 36px;
     z-index: 99999;
   }
-  #gw-splash::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.9) 100%);
-    pointer-events: none;
-  }
   #gw-splash img {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     object-fit: contain;
-    border-radius: 20px;
+    border-radius: 18px;
     animation: gwLogoIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
-    filter: drop-shadow(0 0 35px rgba(201,149,42,0.6)) drop-shadow(0 0 90px rgba(201,149,42,0.22));
   }
   #gw-dots {
     display: flex;
@@ -58,7 +50,7 @@ const splashStyles = `
 
 function SplashScreen({ onDone }) {
   useEffect(() => {
-    const timer = setTimeout(onDone, 3000);
+    const timer = setTimeout(onDone, 5500);
     return () => clearTimeout(timer);
   }, [onDone]);
 
