@@ -1488,7 +1488,7 @@ useEffect(() => {
           <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
         </div>
 
-        {/* News Notification Bell */}
+                {/* News Notification Bell */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
@@ -1538,3 +1538,141 @@ useEffect(() => {
               </div>
               <div style={{ height: 12, borderRadius: 6, background: C.card3, width: "90%", marginTop: 6 }} />
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Error / No Key ── */}
+      {!loading && error && (
+        error === "__NO_KEY__" ? (
+          <div style={{ background: C.card, border: `1px solid ${C.gold}33`, borderRadius: 14, padding: "28px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📰</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.text, marginBottom: 8 }}>News Coming Soon</div>
+            <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.6, maxWidth: 280, margin: "0 auto" }}>
+              Market news requires a NewsAPI key. Add <span style={{ color: C.gold, fontFamily: "monospace" }}>REACT_APP_NEWS_API_KEY</span> to your environment variables to enable live financial news.
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: C.card, border: `1px solid ${C.red}33`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+            <AlertCircle size={28} color={C.red} style={{ margin: "0 auto 10px" }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>Unable to load news</div>
+            <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5, marginBottom: 14 }}>{error}</div>
+            <Btn variant="outline" onClick={() => fetchNews(category)} style={{ margin: "0 auto" }}>
+              <RefreshCw size={13} /> Retry
+            </Btn>
+          </div>
+        )
+      )}
+
+      {/* ── Articles ── */}
+      {!loading && !error && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {articles.length === 0 && (
+            <div style={{ textAlign: "center", padding: "40px 16px", color: C.text3, fontSize: 13 }}>No articles found for this category.</div>
+          )}
+          {articles.map((article, i) => (
+            <a
+              key={article.url}
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "block", textDecoration: "none", padding: "16px 0", borderBottom: i < articles.length - 1 ? `1px solid ${C.border}` : "none" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.gold}22`, border: `1px solid ${C.gold}44`, display: "grid", placeItems: "center" }}>
+                  <Newspaper size={10} color={C.gold} />
+                </div>
+                <span style={{ fontSize: 11, color: C.text3, fontWeight: 600 }}>{article.source?.name || "Unknown"}</span>
+                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
+                <span style={{ fontSize: 11, color: C.text3 }}>{fmtTime(article.publishedAt)}</span>
+                <span style={{ fontSize: 11, color: C.text4 }}>·</span>
+                <span style={{ fontSize: 11, color: C.text3 }}>{fmtRelTime(article.publishedAt)}</span>
+                <ExternalLink size={10} color={C.text4} style={{ marginLeft: "auto", flexShrink: 0 }} />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, lineHeight: 1.4, letterSpacing: "-0.01em" }}>
+                {article.title}
+              </div>
+              {article.description && (
+                <div style={{ fontSize: 13, color: C.text2, marginTop: 6, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                  {article.description}
+                </div>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* ── Footer attribution ── */}
+      {!loading && !error && articles.length > 0 && (
+        <div style={{ textAlign: "center", padding: "16px 0 4px", fontSize: 10, color: C.text4 }}>
+          Powered by <span style={{ color: C.gold, fontWeight: 700 }}>NewsAPI</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppShell({ page, setPage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [newsCount, setNewsCount] = useState(0);
+  const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
+  const { isAuthenticated, requireAuth, user } = useAuth();
+  const { prices, flash } = useLivePrices();
+  const { mode, width } = useLayout();
+
+  const handleSetPage = useCallback((p) => {
+    if (p === "trade" && !isAuthenticated) { requireAuth("signup"); return; }
+    setPage(p);
+  }, [isAuthenticated, requireAuth, setPage]);
+
+  const renderPage = () => {
+    switch (page) {
+      case "home":     return <HomePage setPage={handleSetPage} />;
+      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+      case "trade":    return <TradePage prices={prices} />;
+      case "mining":   return <Mining user={user} />;
+      case "profile":  return <ProfilePage />;
+      case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+      case "settings": return <SettingsPage setPage={handleSetPage} />;
+      default:         return <HomePage setPage={handleSetPage} />;
+    }
+  };
+
+  return (
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { display: none; }
+        scrollbar-width: none;
+        input, button, select, textarea { font-family: inherit; }
+        input::placeholder { color: #404040; }
+        img, svg { display: block; max-width: 100%; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
+      `}</style>
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
+      {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
+        <main style={{ padding: "0 16px 100px" }}>
+          {renderPage()}
+        </main>
+        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
+      </div>
+    </div>
+  );
+}
+
+export default function GoldenVaultXM() {
+  const [page, setPage] = useState("home");
+  return (
+    <LayoutProvider>
+      <ThemeProvider>
+        <AuthProvider onLogin={() => setPage("trade")}>
+          <AppShell page={page} setPage={setPage} />
+        </AuthProvider>
+      </ThemeProvider>
+    </LayoutProvider>
+  );
+}
