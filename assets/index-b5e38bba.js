@@ -510,14 +510,14 @@ ${g}`}class qe extends Error{constructor({message:t,code:n,cause:r,name:i}){var 
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 36px;
+    gap: 28px;
     z-index: 99999;
   }
   #gw-splash img {
-    width: 180px;
-    height: 180px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
-    border-radius: 18px;
+    border-radius: 22px;
     animation: gwLogoIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
   }
   #gw-dots {
