@@ -711,29 +711,6 @@ function AuthModal({ onClose, initialMode = "signup" }) {
         <div style={{ fontWeight: 900, fontSize: 24, color: C.text, marginBottom: 4 }}>{authMode === "signup" ? "Create Account" : "Welcome Back"}</div>
         <div style={{ fontSize: 13, color: C.text3, marginBottom: 22, lineHeight: 1.5 }}>{authMode === "signup" ? "Join thousands of institutional traders worldwide." : "Sign in to access your trading dashboard."}</div>
 
-        {/* Google button */}
-        <button
-          onClick={handleGoogle}
-          disabled={googleLoading}
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
-        >
-          {/* Google button */}
-        <button
-          onClick={handleGoogle}
-          disabled={googleLoading}
-          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
-        >
-          {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon />}
-          {googleLoading ? "Redirecting…" : "Continue with Google"}
-        </button>
-
-        {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
-          <div style={{ flex: 1, height: 1, background: C.border2 }} />
-          <span style={{ fontSize: 12, color: C.text3, fontWeight: 600 }}>or</span>
-          <div style={{ flex: 1, height: 1, background: C.border2 }} />
-        </div>
-
         {/* Fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {authMode === "signup" && (
