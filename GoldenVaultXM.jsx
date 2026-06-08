@@ -1488,7 +1488,7 @@ useEffect(() => {
           <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Real-time financial news</div>
         </div>
 
-                {/* News Notification Bell */}
+        {/* News Notification Bell */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setBellOpen(b => !b); setNewStoryCount(0); }}
@@ -1612,11 +1612,185 @@ useEffect(() => {
   );
 }
 
-function AppShell({ page, setPage }) {
+/* ─── Support Page ───────────────────────────────────────────────────────── */
+// Replace with your real Tawk.to IDs from:
+// tawk.to Dashboard → Administration → Chat Widget → Direct Chat Link
+// URL format: https://embed.tawk.to/{PROPERTY_ID}/{WIDGET_ID}
+const TAWK_PROPERTY_ID = "YOUR_PROPERTY_ID";
+const TAWK_WIDGET_ID   = "YOUR_WIDGET_ID";
+
+const SUPPORT_FAQS = [
+  { q: "How do I make a deposit?", a: "Go to Menu → Deposit. We support bank transfer, crypto, and card payments. Funds typically reflect within 15 minutes." },
+  { q: "How long do withdrawals take?", a: "Withdrawals are processed within 24 hours on business days. Crypto withdrawals may be faster depending on network confirmation." },
+  { q: "How do I verify my account?", a: "Navigate to Profile → Verification. Upload a government-issued ID and proof of address. Verification takes 1–2 business days." },
+  { q: "Why is my trade not executing?", a: "Check your available balance, ensure markets are open, and confirm your order parameters. Contact support if the issue persists." },
+  { q: "Is my funds secure?", a: "Yes. Golden Vault XM uses institutional-grade encryption, 2FA, and cold storage for digital assets." },
+];
+
+function SupportPage() {
+  const [activeTab, setActiveTab] = useState("chat");
+  const [messages, setMessages] = useState([
+    { from: "agent", text: "👋 Welcome to Golden Vault XM Support. How can we assist you today?", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+  ]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [tawkLoaded, setTawkLoaded] = useState(false);
+  const [tawkOpen, setTawkOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
+  const bottomRef = useRef(null);
+
+  function fmtNow() {
+    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  useEffect(() => {
+    if (TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
+    window.Tawk_API = window.Tawk_API || {};
+    window.Tawk_LoadStart = new Date();
+    window.Tawk_API.onLoad = () => { setTawkLoaded(true); window.Tawk_API.hideWidget(); };
+    window.Tawk_API.onChatEnded = () => setTawkOpen(false);
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
+    s.charset = "UTF-8";
+    s.setAttribute("crossorigin", "*");
+    document.head.appendChild(s);
+  }, []);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  async function handleSend() {
+    const text = input.trim();
+    if (!text) return;
+    setSending(true);
+    setInput("");
+    setMessages(prev => [...prev, { from: "user", text, time: fmtNow() }]);
+    await new Promise(r => setTimeout(r, 900));
+    if (tawkLoaded && window.Tawk_API) {
+      window.Tawk_API.showWidget();
+      window.Tawk_API.maximize();
+      setTawkOpen(true);
+      setMessages(prev => [...prev, { from: "agent", text: "🔗 Connecting you to a live agent now…", time: fmtNow() }]);
+    } else {
+      setMessages(prev => [...prev, { from: "agent", text: "Message received! A support agent will respond shortly. For urgent matters, email support@goldenvaultxm.com", time: fmtNow() }]);
+    }
+    setSending(false);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 16 }}>
+      <style>{`
+        @keyframes sp-blink { 0%,80%,100%{opacity:0.15} 40%{opacity:1} }
+        .sp-dot{width:8px;height:8px;border-radius:50%;background:${C.gold};display:inline-block;animation:sp-blink 1.2s infinite}
+        .sp-dot:nth-child(2){animation-delay:.2s}.sp-dot:nth-child(3){animation-delay:.4s}
+        .sp-input:focus{outline:none;border-color:${C.gold}88!important}
+        .sp-faq:hover{border-color:${C.gold}44!important}
+      `}</style>
+
+      <div style={{ padding: "20px 0 16px", display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 46, height: 46, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <Mail size={20} color="#000" />
+        </div>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Support</div>
+          <div style={{ fontSize: 12, color: C.text3, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, display: "inline-block" }} />
+            Live agents available 24/7
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, marginBottom: 16 }}>
+        {[["chat", "💬 Live Chat"], ["faq", "❓ FAQ"]].map(([id, label]) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, padding: "11px 0", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, color: activeTab === id ? C.gold : C.text3, borderBottom: `2px solid ${activeTab === id ? C.gold : "transparent"}`, transition: "all 0.18s" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "chat" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, minHeight: 280, maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-end", gap: 8, justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
+                {m.from === "agent" && (
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, color: "#000" }}>GV</span>
+                  </div>
+                )}
+                <div style={{ maxWidth: "75%" }}>
+                  <div style={{ padding: "9px 13px", borderRadius: 14, fontSize: 13, lineHeight: 1.55, ...(m.from === "user" ? { background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, color: "#000", fontWeight: 600, borderBottomRightRadius: 4 } : { background: C.card2, border: `1px solid ${C.border}`, color: C.text, borderBottomLeftRadius: 4 }) }}>
+                    {m.text}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.text3, marginTop: 3, textAlign: m.from === "user" ? "right" : "left" }}>{m.time}</div>
+                </div>
+              </div>
+            ))}
+            {sending && (
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: "#000" }}>GV</span>
+                </div>
+                <div style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: 14, borderBottomLeftRadius: 4, padding: "12px 16px", display: "flex", gap: 5, alignItems: "center" }}>
+                  <span className="sp-dot" /><span className="sp-dot" /><span className="sp-dot" />
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {tawkOpen && (
+            <div style={{ margin: "10px 0", background: "#0a1f0a", border: `1px solid ${C.green}44`, borderRadius: 10, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#86efac" }}>
+              <span>🟢 Live agent chat is open in the overlay</span>
+              <button onClick={() => { if (tawkLoaded && window.Tawk_API) window.Tawk_API.hideWidget(); setTawkOpen(false); }} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", fontSize: 11 }}>Dismiss</button>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <input className="sp-input" style={{ flex: 1, background: C.card2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", color: C.text, fontSize: 14 }} placeholder="Type your message…" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()} />
+            <button onClick={handleSend} disabled={!input.trim() || sending} style={{ width: 46, height: 46, borderRadius: 12, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, border: "none", color: "#000", cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0, opacity: (!input.trim() || sending) ? 0.4 : 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+            </button>
+          </div>
+          <div style={{ textAlign: "center", fontSize: 11, color: C.text3, marginTop: 10 }}>
+            Powered by <a href="https://tawk.to" target="_blank" rel="noreferrer" style={{ color: C.gold, textDecoration: "none" }}>tawk.to</a> · <a href="mailto:support@goldenvaultxm.com" style={{ color: C.gold, textDecoration: "none" }}>support@goldenvaultxm.com</a>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "faq" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {SUPPORT_FAQS.map((item, i) => (
+            <div key={i} className="sp-faq" onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "border-color 0.2s" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 700, color: C.text }}>
+                <span>{item.q}</span>
+                <span style={{ color: C.gold, fontSize: 18, transition: "transform 0.2s", transform: openFaq === i ? "rotate(90deg)" : "rotate(0deg)", lineHeight: 1 }}>›</span>
+              </div>
+              {openFaq === i && <div style={{ marginTop: 10, fontSize: 13, color: C.text2, lineHeight: 1.65, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>{item.a}</div>}
+            </div>
+          ))}
+          <div style={{ textAlign: "center", marginTop: 10, fontSize: 13, color: C.text3 }}>
+            Still need help?{" "}
+            <button onClick={() => setActiveTab("chat")} style={{ background: "none", border: "none", color: C.gold, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Start a chat →</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppShell() {
+  const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [newsCount, setNewsCount] = useState(0);
   const [globalDepositOpen, setGlobalDepositOpen] = useState(false);
   const { isAuthenticated, requireAuth, user } = useAuth();
+
+  const prevAuth = useRef(false);
+  useEffect(() => {
+    if (isAuthenticated && !prevAuth.current) setPage("trade");
+    prevAuth.current = isAuthenticated;
+  }, [isAuthenticated]);
   const { prices, flash } = useLivePrices();
   const { mode, width } = useLayout();
 
@@ -1634,6 +1808,7 @@ function AppShell({ page, setPage }) {
       case "profile":  return <ProfilePage />;
       case "news":     return <NewsPage onNewsCount={setNewsCount} />;
       case "settings": return <SettingsPage setPage={handleSetPage} />;
+      case "support":  return <SupportPage />;
       default:         return <HomePage setPage={handleSetPage} />;
     }
   };
@@ -1665,12 +1840,11 @@ function AppShell({ page, setPage }) {
 }
 
 export default function GoldenVaultXM() {
-  const [page, setPage] = useState("home");
   return (
     <LayoutProvider>
       <ThemeProvider>
-        <AuthProvider onLogin={() => setPage("trade")}>
-          <AppShell page={page} setPage={setPage} />
+        <AuthProvider>
+          <AppShell />
         </AuthProvider>
       </ThemeProvider>
     </LayoutProvider>
