@@ -717,6 +717,12 @@ function AuthModal({ onClose, initialMode = "signup" }) {
           disabled={googleLoading}
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
         >
+          {/* Google button */}
+        <button
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "none", borderRadius: 12, padding: "13px 16px", fontWeight: 700, fontSize: 14, color: "#1a1a1a", cursor: googleLoading ? "not-allowed" : "pointer", opacity: googleLoading ? 0.7 : 1, transition: "opacity .2s, box-shadow .2s", boxShadow: "0 2px 8px #0004" }}
+        >
           {googleLoading ? <RefreshCw size={16} style={{ animation: "spin 1s linear infinite" }} /> : <GoogleIcon />}
           {googleLoading ? "Redirecting…" : "Continue with Google"}
         </button>
