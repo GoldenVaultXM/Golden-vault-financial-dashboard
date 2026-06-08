@@ -514,8 +514,8 @@ ${g}`}class qe extends Error{constructor({message:t,code:n,cause:r,name:i}){var 
     z-index: 99999;
   }
   #gw-splash img {
-    width: 50px;
-    height: 50px;
+    width: 70px;
+    height: 70px;
     object-fit: contain;
     border-radius: 12px;
     animation: gwLogoIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
