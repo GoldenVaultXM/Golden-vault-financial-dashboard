@@ -302,4 +302,96 @@ function DraggablePopupShell({ children }) {
   }, [pos]);
 
   useEffect(() => {
-    const onMouseMove
+    const onMouseMove = setTimeout(showNext, 2500);
+    const interval = setInterval(() => {
+      dismiss();
+      setTimeout(showNext, 400);
+    }, 7000);
+    return () => { clearTimeout(first); clearInterval(interval); };
+  }, [showNext, dismiss]);
+
+  useEffect(() => {
+    if (!person) return;
+    const timer = setTimeout(dismiss, 5500);
+    return () => clearTimeout(timer);
+  }, [person, dismiss]);
+
+  if (!person) return null;
+  return <WithdrawalPopup person={person} onClose={dismiss} exiting={exiting} />;
+}
+
+// ─── SPLASH SCREEN ────────────────────────────────────────────────────────────
+
+const splashStyles = `
+  #gw-splash {
+    position: fixed; inset: 0; background: #000000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 28px; z-index: 99999;
+  }
+  #gw-splash img {
+    width: 70px; height: 70px; object-fit: contain; border-radius: 12px;
+    animation: gwLogoIn 0.85s cubic-bezier(0.16,1,0.3,1) 0.15s both;
+  }
+  #gw-dots { display: flex; gap: 10px; }
+  .gw-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ffffff; opacity: 0;
+    animation: gwDotBounce 1.4s ease-in-out infinite;
+  }
+  .gw-dot:nth-child(1) { animation-delay: 1.05s; }
+  .gw-dot:nth-child(2) { animation-delay: 1.23s; }
+  .gw-dot:nth-child(3) { animation-delay: 1.41s; }
+  .gw-dot:nth-child(4) { animation-delay: 1.59s; }
+  .gw-dot:nth-child(5) { animation-delay: 1.77s; }
+  @keyframes gwLogoIn {
+    from { opacity: 0; transform: scale(0.75) translateY(22px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes gwDotBounce {
+    0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+    30%           { opacity: 1;   transform: translateY(-11px); }
+  }
+`;
+
+function SplashScreen({ onDone }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 5500);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <>
+      <style>{splashStyles}</style>
+      <div id="gw-splash">
+        <img src="/IMG_20260512_072009_2.webp.webp" alt="GW Logo" />
+        <div id="gw-dots">
+          <span className="gw-dot"></span>
+          <span className="gw-dot"></span>
+          <span className="gw-dot"></span>
+          <span className="gw-dot"></span>
+          <span className="gw-dot"></span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (showSplash) {
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
+
+  return (
+    <div className="App" style={{ overflowX: 'hidden' }}>
+      <GoldenVaultXM />
+      <WithdrawalPopupController />
+    </div>
+  );
+}
+
+export default App;
