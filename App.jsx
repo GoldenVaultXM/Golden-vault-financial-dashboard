@@ -6,7 +6,7 @@ const splashStyles = `
   #gw-splash {
     position: fixed;
     inset: 0;
-    background: #050505;
+    background: #000000;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -15,10 +15,10 @@ const splashStyles = `
     z-index: 99999;
   }
   #gw-splash img {
-    width: 100px;
-    height: 100px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
-    border-radius: 22px;
+    border-radius: 12px;
     animation: gwLogoIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
   }
   #gw-dots {
@@ -29,7 +29,7 @@ const splashStyles = `
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #c9952a;
+    background: #ffffff;
     opacity: 0;
     animation: gwDotBounce 1.4s ease-in-out infinite;
   }
@@ -43,8 +43,8 @@ const splashStyles = `
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
   @keyframes gwDotBounce {
-    0%, 60%, 100% { opacity: 0.15; transform: translateY(0); }
-    30%           { opacity: 1;    transform: translateY(-11px); }
+    0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+    30%           { opacity: 1;   transform: translateY(-11px); }
   }
 `;
 
