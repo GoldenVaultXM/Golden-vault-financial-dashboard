@@ -1617,7 +1617,7 @@ useEffect(() => {
 // tawk.to Dashboard → Administration → Chat Widget → Direct Chat Link
 // URL format: https://embed.tawk.to/{PROPERTY_ID}/{WIDGET_ID}
 const TAWK_PROPERTY_ID = "6a2187aa4a36f41c2edf040c";
-const TAWK_WIDGET_ID   = "https://tawk.to/chat/6a2187aa4a36f41c2edf040c/";
+const TAWK_WIDGET_ID   = "1jq9nm3li";
 
 const SUPPORT_FAQS = [
   { q: "How do I make a deposit?", a: "Go to Menu → Deposit. We support bank transfer, crypto, and card payments. Funds typically reflect within 15 minutes." },
