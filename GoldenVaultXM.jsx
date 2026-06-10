@@ -677,7 +677,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(true);
     let authError = null;
     if (authMode === "signup") {
-      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { full_name: form.name } } });
+      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { name: form.name } } });
       authError = error;
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
