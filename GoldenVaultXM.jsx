@@ -1842,8 +1842,15 @@ function AppShell() {
     switch (page) {
       case "home":     return <HomePage setPage={handleSetPage} />;
       case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":    return <TradePage prices={prices} />;
-      case "mining":   return <Mining user={user} />;
+      case "trade":  return <Mining user={user} onAccountChange={(patch) => {
+  if (patch.balance !== undefined) setBalance(patch.balance);
+  if (patch.totalProfit !== undefined) setTotalProfit(patch.totalProfit);
+  if (patch.activePositions !== undefined) setActivePositions(patch.activePositions);
+}} />;
+      case "mining":   return <Mining
+  user={user}
+  onAccountChange={(patch) => setDashboardStats(prev => ({ ...prev, ...patch }))}
+/>
       case "profile":  return <ProfilePage />;
       case "news":     return <NewsPage onNewsCount={setNewsCount} />;
       case "settings": return <SettingsPage setPage={handleSetPage} />;
