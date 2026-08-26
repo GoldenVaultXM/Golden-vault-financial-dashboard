@@ -545,7 +545,7 @@ function MiningCore({ pair, active, completing }) {
       {/* Ring 2 — mid outer, faster CCW */}
       <motion.div
         animate={{ rotate: active ? [360, 0] : 0 }}
-        transition={{ repeat: Infinity, duration: active ? 8, : 0, ease: "linear" }}
+        transition={{ repeat: Infinity, duration: active ? 8 : 0, ease: "linear" }}
         style={{
           position: "absolute", inset: 20,
           borderRadius: "50%",
