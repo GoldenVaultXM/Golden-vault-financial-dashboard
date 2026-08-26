@@ -1,14 +1,49 @@
 /**
- * Mining.jsx  –  GoldenVaultXM Tap-to-Earn Module
+ * Mining.jsx  –  GoldenVaultXM Session Mining Module
+ *
+ * ┌─ Architecture Notes ───────────────────────────────────────────────────┐
+ * │  • Mining sessions are timestamp-based (startTime / endTime).          │
+ * │  • Remaining time = endTime - Date.now() — survives page refreshes.    │
+ * │  • Sessions persisted to Supabase "mining_sessions" table.             │
+ * │  • Balance persisted to "mining" table (existing schema preserved).    │
+ * │  • Framer Motion drives all animation. No CSS keyframe hacks.          │
+ * │  • One active session per user enforced at the application level.      │
+ * │  • All intervals cleaned up on unmount.                                │
+ * └────────────────────────────────────────────────────────────────────────┘
+ *
+ * Props
+ *   user               – { email: string } | null
+ *   onNavigateSignUp   – () => void
+ *   onNavigateSignIn   – () => void
+ *
+ * Supabase table required:
+ *   mining_sessions (
+ *     id            uuid primary key default gen_random_uuid(),
+ *     user_email    text not null,
+ *     pair_id       text not null,
+ *     pair_label    text not null,
+ *     pair_color    text not null,
+ *     amount        numeric not null,
+ *     duration_ms   bigint not null,
+ *     start_time    bigint not null,   -- Date.now() ms
+ *     end_time      bigint not null,   -- Date.now() ms
+ *     status        text not null,     -- 'active' | 'complete' | 'claimed'
+ *     output        numeric,
+ *     created_at    timestamptz default now()
+ *   )
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { supabase } from "./supabaseClient";
-import { Zap, Cpu, TrendingUp, Lock, X, UserPlus, LogIn, ChevronRight } from "lucide-react";
+import {
+  Zap, Lock, X, UserPlus, LogIn, ChevronDown,
+  CheckCircle, Clock, Activity, TrendingUp, Cpu,
+  ArrowRight, Minus, Plus,
+} from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Design tokens
+   Design tokens — preserved from original, extended
 ───────────────────────────────────────────────────────────────────────── */
 const C = {
   bg: "#07050f",
@@ -29,6 +64,7 @@ const C = {
   pink: "#ec4899",
   pink2: "#f472b6",
   green: "#22c55e",
+  greenDim: "#15803d",
   red: "#ef4444",
   text: "#ffffff",
   text2: "#c4b5d8",
@@ -37,73 +73,83 @@ const C = {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Mining pair definitions
+   Mining pair definitions — preserved from original
 ───────────────────────────────────────────────────────────────────────── */
 const MINING_PAIRS = [
   {
     id: "btc",
     label: "BTC",
     name: "Bitcoin",
-    rate: 1,
     color: "#f7931a",
-    logo: (
-      <svg viewBox="0 0 32 32" width="64" height="64">
-        <circle cx="16" cy="16" r="16" fill="none" />
-        <text x="16" y="22" textAnchor="middle" fontSize="26" fontWeight="900" fill="#000">₿</text>
-      </svg>
-    ),
+    outputPerHour: 0.00004,
+    decimals: 8,
+    symbol: "₿",
+    glowColor: "#f7931a",
   },
   {
     id: "eth",
     label: "ETH",
     name: "Ethereum",
-    rate: 2,
     color: "#627eea",
-    logo: (
-      <svg viewBox="0 0 32 32" width="64" height="64">
-        <circle cx="16" cy="16" r="16" fill="none" />
-        <text x="16" y="22" textAnchor="middle" fontSize="22" fontWeight="900" fill="#000">Ξ</text>
-      </svg>
-    ),
+    outputPerHour: 0.00062,
+    decimals: 6,
+    symbol: "Ξ",
+    glowColor: "#627eea",
   },
   {
     id: "sol",
     label: "SOL",
     name: "Solana",
-    rate: 3,
     color: "#9945ff",
-    logo: (
-      <svg viewBox="0 0 32 32" width="64" height="64">
-        <circle cx="16" cy="16" r="16" fill="none" />
-        <text x="16" y="22" textAnchor="middle" fontSize="12" fontWeight="900" fill="#000">SOL</text>
-      </svg>
-    ),
+    outputPerHour: 0.014,
+    decimals: 5,
+    symbol: "◎",
+    glowColor: "#9945ff",
   },
   {
     id: "xau",
     label: "XAU",
     name: "Gold Spot",
-    rate: 5,
     color: "#d97706",
-    logo: (
-      <svg viewBox="0 0 32 32" width="64" height="64">
-        <circle cx="16" cy="16" r="16" fill="none" />
-        <text x="16" y="22" textAnchor="middle" fontSize="16" fontWeight="900" fill="#000">Au</text>
-      </svg>
-    ),
+    outputPerHour: 0.00008,
+    decimals: 6,
+    symbol: "Au",
+    glowColor: "#f59e0b",
   },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Energy constants
+   Duration helpers
 ───────────────────────────────────────────────────────────────────────── */
-const MAX_ENERGY = 500;
-const ENERGY_COST = 10;
-const REGEN_RATE = 1;
-const SUPABASE_DEBOUNCE_MS = 1500;
+const MIN_DURATION_MS = 30 * 60 * 1000;   // 30 min
+const MAX_DURATION_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+function formatDuration(ms) {
+  if (ms <= 0) return "00:00:00";
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+  return `${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+}
+
+function formatDurationShort(ms) {
+  if (ms <= 0) return "00:00:00";
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function calcEstimatedOutput(pair, amount, durationMs) {
+  const hours = durationMs / (1000 * 60 * 60);
+  return (pair.outputPerHour * hours * (amount / 100)).toFixed(pair.decimals);
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Auth gate modal – shown when unauthenticated user taps the coin
+   AuthGateModal — preserved + polished from original
 ───────────────────────────────────────────────────────────────────────── */
 function AuthGateModal({ pair, onClose, onNavigate }) {
   return (
@@ -111,164 +157,76 @@ function AuthGateModal({ pair, onClose, onNavigate }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.22 }}
       style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-        background: "rgba(0,0,0,0.82)",
-        backdropFilter: "blur(6px)",
+        position: "fixed", inset: 0, zIndex: 1000,
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        background: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(8px)",
       }}
       onPointerDown={onClose}
     >
       <motion.div
-        initial={{ y: 80, opacity: 0 }}
+        initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 340, damping: 30 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 360, damping: 32 }}
         onPointerDown={(e) => e.stopPropagation()}
         style={{
-          width: "100%",
-          maxWidth: 480,
-          background: "linear-gradient(160deg, #141414, #0c0c0c)",
+          width: "100%", maxWidth: 480,
+          background: "linear-gradient(160deg, #141420, #0c0c18)",
           border: `1px solid ${C.border2}`,
           borderBottom: "none",
           borderRadius: "24px 24px 0 0",
-          padding: "28px 24px 48px",
-          boxShadow: `0 -8px 48px #000a, 0 -2px 0 ${pair.color}33 inset`,
+          padding: "28px 24px 52px",
+          boxShadow: `0 -8px 60px #000c, 0 -1px 0 ${pair.color}44 inset`,
           position: "relative",
         }}
       >
-        {/* Drag handle */}
-        <div
-          style={{
-            width: 40,
-            height: 4,
-            borderRadius: 2,
-            background: C.border2,
-            margin: "0 auto 24px",
-          }}
-        />
-
-        {/* Lock icon */}
-        <div
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${pair.color}22, ${pair.color}0a)`,
-            border: `1px solid ${pair.color}44`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 20px",
-            boxShadow: `0 0 24px ${pair.color}33`,
-          }}
-        >
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: C.border2, margin: "0 auto 28px" }} />
+        <div style={{
+          width: 64, height: 64, borderRadius: "50%",
+          background: `radial-gradient(circle, ${pair.color}22, ${pair.color}08)`,
+          border: `1px solid ${pair.color}44`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 20px",
+          boxShadow: `0 0 32px ${pair.color}33`,
+        }}>
           <Lock size={26} color={pair.color} strokeWidth={2.5} />
         </div>
-
-        {/* Heading */}
-        <h3
-          style={{
-            margin: "0 0 8px",
-            textAlign: "center",
-            fontSize: 20,
-            fontWeight: 900,
-            color: C.text,
-            letterSpacing: "-0.02em",
-          }}
-        >
+        <h3 style={{ margin: "0 0 8px", textAlign: "center", fontSize: 20, fontWeight: 900, color: C.text, letterSpacing: "-0.02em" }}>
           Start Mining {pair.name}
         </h3>
-        <p
-          style={{
-            margin: "0 0 28px",
-            textAlign: "center",
-            fontSize: 13,
-            color: C.text3,
-            lineHeight: 1.6,
-          }}
-        >
-          Create a free account to begin earning{" "}
-          <span style={{ color: pair.color, fontWeight: 700 }}>+{pair.rate} {pair.label}</span> per tap
-          and track your balance.
+        <p style={{ margin: "0 0 32px", textAlign: "center", fontSize: 13, color: C.text3, lineHeight: 1.6 }}>
+          Create a free account to launch mining sessions and track your earnings.
         </p>
-
-        {/* CTA buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onNavigate("register")}
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => onNavigate("register")}
             style={{
-              width: "100%",
-              padding: "16px",
-              borderRadius: 14,
-              border: "none",
-              background: `linear-gradient(135deg, ${pair.color}, ${C.gold})`,
-              color: "#000",
-              fontSize: 15,
-              fontWeight: 900,
-              letterSpacing: "0.04em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: `0 4px 20px ${pair.color}55`,
-            }}
-          >
-            <UserPlus size={17} strokeWidth={2.5} />
-            Create Free Account
+              width: "100%", padding: "16px", borderRadius: 14, border: "none",
+              background: `linear-gradient(135deg, ${pair.color}, ${C.gold2})`,
+              color: "#000", fontSize: 15, fontWeight: 900, letterSpacing: "0.04em",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: `0 4px 24px ${pair.color}55`,
+            }}>
+            <UserPlus size={17} strokeWidth={2.5} /> Create Free Account
           </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onNavigate("login")}
+          <motion.button whileTap={{ scale: 0.97 }} onClick={() => onNavigate("login")}
             style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: 14,
-              border: `1px solid ${C.border2}`,
-              background: C.card2,
-              color: C.text2,
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: "0.03em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <LogIn size={16} strokeWidth={2} />
-            Sign In
+              width: "100%", padding: "15px", borderRadius: 14,
+              border: `1px solid ${C.border2}`, background: C.card2,
+              color: C.text2, fontSize: 14, fontWeight: 700, letterSpacing: "0.03em",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}>
+            <LogIn size={16} strokeWidth={2} /> Sign In
           </motion.button>
         </div>
-
-        {/* Close */}
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 20,
-            right: 20,
-            background: C.card3,
-            border: `1px solid ${C.border}`,
-            borderRadius: "50%",
-            width: 32,
-            height: 32,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: C.text3,
-          }}
-        >
+        <button onClick={onClose} style={{
+          position: "absolute", top: 20, right: 20,
+          background: C.card3, border: `1px solid ${C.border}`, borderRadius: "50%",
+          width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", color: C.text3,
+        }}>
           <X size={15} />
         </button>
       </motion.div>
@@ -277,953 +235,859 @@ function AuthGateModal({ pair, onClose, onNavigate }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Floating "+N" particle
+   Mining Configuration Flyer / Modal
 ───────────────────────────────────────────────────────────────────────── */
-function TapParticle({ x, y, amount, onDone }) {
+function MiningConfigFlyer({ pairs, onStart, onClose }) {
+  const [pair, setPair] = useState(pairs[0]);
+  const [amount, setAmount] = useState(100);
+  const [durationMs, setDurationMs] = useState(60 * 60 * 1000); // default 1h
+
+  const estimatedOutput = calcEstimatedOutput(pair, amount, durationMs);
+  const pct = (durationMs - MIN_DURATION_MS) / (MAX_DURATION_MS - MIN_DURATION_MS);
+
+  // Duration label
+  const durationLabel = (() => {
+    const h = Math.floor(durationMs / 3600000);
+    const m = Math.floor((durationMs % 3600000) / 60000);
+    const s = Math.floor((durationMs % 60000) / 1000);
+    if (h > 0) return `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+    return `${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+  })();
+
+  const handleSlider = (e) => {
+    const raw = Number(e.target.value); // 0–100
+    const rangeMs = MAX_DURATION_MS - MIN_DURATION_MS;
+    const ms = MIN_DURATION_MS + Math.round((raw / 100) * rangeMs);
+    setDurationMs(ms);
+  };
+
+  const sliderVal = Math.round(pct * 100);
+
   return (
     <motion.div
-      initial={{ opacity: 1, y: 0, scale: 1 }}
-      animate={{ opacity: 0, y: -90, scale: 1.4 }}
-      transition={{ duration: 0.85, ease: "easeOut" }}
-      onAnimationComplete={onDone}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22 }}
       style={{
-        position: "fixed",
-        left: x - 20,
-        top: y - 20,
-        pointerEvents: "none",
-        zIndex: 999,
-        fontFamily: "'Courier New', monospace",
-        fontWeight: 900,
-        fontSize: 22,
-        color: C.gold3,
-        textShadow: `0 0 12px ${C.gold}cc, 0 0 24px ${C.gold}66`,
-        userSelect: "none",
-        letterSpacing: "-0.02em",
+        position: "fixed", inset: 0, zIndex: 900,
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        background: "rgba(3,2,10,0.92)",
+        backdropFilter: "blur(14px)",
       }}
+      onPointerDown={onClose}
     >
-      +{amount}
+      <motion.div
+        initial={{ y: 120, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 120, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 340, damping: 34 }}
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 520,
+          background: "linear-gradient(170deg, #111020, #0a0816, #080612)",
+          border: `1px solid ${C.border2}`,
+          borderTop: `1px solid ${pair.color}33`,
+          borderBottom: "none",
+          borderRadius: "28px 28px 0 0",
+          padding: "0 0 48px",
+          boxShadow: `0 -12px 80px #000e, 0 -1px 0 ${pair.color}22 inset`,
+          position: "relative",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: C.border2, margin: "20px auto 0" }} />
+
+        {/* Header */}
+        <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, letterSpacing: "0.18em", marginBottom: 4 }}>
+              MINING TERMINAL
+            </div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: C.text, letterSpacing: "-0.03em" }}>
+              Configure Session
+            </h2>
+          </div>
+          <button onClick={onClose} style={{
+            background: C.card3, border: `1px solid ${C.border}`, borderRadius: "50%",
+            width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", color: C.text3, flexShrink: 0,
+          }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Pair selector */}
+        <div style={{ padding: "24px 24px 0" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.16em", marginBottom: 10 }}>
+            MINING PAIR
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+            {pairs.map((p) => {
+              const active = p.id === pair.id;
+              return (
+                <motion.button
+                  key={p.id}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => setPair(p)}
+                  style={{
+                    padding: "12px 8px",
+                    borderRadius: 14,
+                    border: `1px solid ${active ? p.color + "77" : C.border}`,
+                    background: active ? `${p.color}18` : C.card,
+                    cursor: "pointer",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    transition: "all 0.18s",
+                    boxShadow: active ? `0 0 20px ${p.color}33` : "none",
+                  }}
+                >
+                  <span style={{ fontSize: 18, fontWeight: 900, color: active ? p.color : C.text3, lineHeight: 1 }}>
+                    {p.symbol}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: active ? p.color : C.text4, letterSpacing: "0.1em" }}>
+                    {p.label}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Amount input */}
+        <div style={{ padding: "20px 24px 0" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.16em", marginBottom: 10 }}>
+            MINING POWER (%)
+          </div>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            background: C.card, border: `1px solid ${C.border}`,
+            borderRadius: 14, padding: "8px 12px",
+          }}>
+            <motion.button whileTap={{ scale: 0.9 }}
+              onClick={() => setAmount(Math.max(10, amount - 10))}
+              style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, color: C.text2 }}>
+              <Minus size={14} />
+            </motion.button>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <span style={{ fontSize: 28, fontWeight: 900, color: pair.color, fontVariantNumeric: "tabular-nums" }}>
+                {amount}
+              </span>
+              <span style={{ fontSize: 13, color: C.text3, marginLeft: 4 }}>%</span>
+            </div>
+            <motion.button whileTap={{ scale: 0.9 }}
+              onClick={() => setAmount(Math.min(100, amount + 10))}
+              style={{ background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, color: C.text2 }}>
+              <Plus size={14} />
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Duration slider */}
+        <div style={{ padding: "20px 24px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.16em" }}>
+              DURATION
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: pair.color, letterSpacing: "0.04em", fontVariantNumeric: "tabular-nums" }}>
+              {durationLabel}
+            </div>
+          </div>
+          <div style={{ position: "relative", padding: "4px 0" }}>
+            {/* Track bg */}
+            <div style={{ height: 6, borderRadius: 3, background: C.border, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 3,
+                width: `${sliderVal}%`,
+                background: `linear-gradient(90deg, ${pair.color}99, ${pair.color})`,
+                transition: "width 0.08s",
+              }} />
+            </div>
+            <input
+              type="range" min={0} max={100} value={sliderVal}
+              onChange={handleSlider}
+              style={{
+                position: "absolute", inset: 0, opacity: 0,
+                width: "100%", cursor: "pointer", margin: 0,
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+            <span style={{ fontSize: 10, color: C.text4 }}>30m</span>
+            <span style={{ fontSize: 10, color: C.text4 }}>4h max</span>
+          </div>
+        </div>
+
+        {/* Estimated output */}
+        <div style={{ padding: "20px 24px 0" }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${pair.color}0e, ${C.card})`,
+            border: `1px solid ${pair.color}33`,
+            borderRadius: 16, padding: "16px 18px",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.14em", marginBottom: 4 }}>
+                ESTIMATED OUTPUT
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: pair.color, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+                {estimatedOutput} <span style={{ fontSize: 13, opacity: 0.7 }}>{pair.label}</span>
+              </div>
+            </div>
+            <div style={{
+              width: 44, height: 44, borderRadius: "50%",
+              background: `${pair.color}18`, border: `1px solid ${pair.color}44`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <TrendingUp size={20} color={pair.color} />
+            </div>
+          </div>
+        </div>
+
+        {/* Start button */}
+        <div style={{ padding: "24px 24px 0" }}>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => onStart({ pair, amount, durationMs, estimatedOutput: parseFloat(estimatedOutput) })}
+            style={{
+              width: "100%", padding: "18px",
+              borderRadius: 16, border: "none",
+              background: `linear-gradient(135deg, ${pair.color}, ${pair.color}bb)`,
+              color: "#000", fontSize: 15, fontWeight: 900,
+              letterSpacing: "0.08em", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: `0 8px 32px ${pair.color}55, 0 2px 0 #ffffff22 inset`,
+            }}
+          >
+            <Cpu size={18} strokeWidth={2.5} />
+            START MINING
+            <ArrowRight size={18} strokeWidth={2.5} />
+          </motion.button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Electric ring burst on tap
+   Mining Engine Core — the central animated machine
 ───────────────────────────────────────────────────────────────────────── */
-function ElectricRing({ trigger }) {
+function MiningCore({ pair, active, completing }) {
+  const color = pair?.color || C.gold2;
+
+  // Orbital particles
+  const particles = Array.from({ length: 6 }, (_, i) => ({
+    angle: (i / 6) * 360,
+    radius: 86,
+    delay: i * 0.38,
+    size: i % 2 === 0 ? 5 : 3.5,
+  }));
+  const innerParticles = Array.from({ length: 4 }, (_, i) => ({
+    angle: (i / 4) * 360,
+    radius: 55,
+    delay: i * 0.5,
+    size: 3,
+  }));
+
+  const coreScale = active ? [1, 1.06, 1] : [1, 1.01, 1];
+  const coreDuration = active ? 1.8 : 3.2;
+  const ringOpacity = active ? 1 : 0.32;
+  const glowIntensity = active ? 1 : 0.18;
+
   return (
-    <AnimatePresence>
-      {trigger && (
+    <div style={{ position: "relative", width: 240, height: 240, flexShrink: 0 }}>
+      {/* Ambient ground glow */}
+      <motion.div
+        animate={{ opacity: active ? [0.45, 0.75, 0.45] : [0.1, 0.14, 0.1], scale: [1, 1.12, 1] }}
+        transition={{ repeat: Infinity, duration: active ? 2.2 : 4, ease: "easeInOut" }}
+        style={{
+          position: "absolute",
+          top: "50%", left: "50%",
+          width: 300, height: 300,
+          transform: "translate(-50%,-50%)",
+          borderRadius: "50%",
+          background: `radial-gradient(ellipse, ${color}55 0%, ${color}18 40%, transparent 70%)`,
+          filter: "blur(28px)",
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Ring 1 — outermost, slow CW */}
+      <motion.div
+        animate={{ rotate: completing ? [0, 360] : active ? [0, 360] : 0 }}
+        transition={completing
+          ? { duration: 8, ease: "easeOut", repeat: 0 }
+          : { repeat: Infinity, duration: active ? 14 : 0, ease: "linear" }}
+        style={{
+          position: "absolute", inset: 0,
+          borderRadius: "50%",
+          border: `1px solid ${color}${active ? "55" : "1a"}`,
+          boxShadow: active ? `0 0 18px ${color}33` : "none",
+          transition: "border-color 0.8s, box-shadow 0.8s",
+        }}
+      >
+        {/* Ring 1 tick marks */}
+        {[0, 90, 180, 270].map((deg) => (
+          <div key={deg} style={{
+            position: "absolute", top: "50%", left: "50%",
+            width: 8, height: 2,
+            background: active ? color : C.border,
+            borderRadius: 1,
+            opacity: active ? 0.9 : 0.3,
+            transform: `rotate(${deg}deg) translateX(112px) translateY(-50%)`,
+            transformOrigin: "0 50%",
+            transition: "background 0.8s, opacity 0.8s",
+          }} />
+        ))}
+      </motion.div>
+
+      {/* Ring 2 — mid outer, faster CCW */}
+      <motion.div
+        animate={{ rotate: active ? [360, 0] : 0 }}
+        transition={{ repeat: Infinity, duration: active ? 8, : 0, ease: "linear" }}
+        style={{
+          position: "absolute", inset: 20,
+          borderRadius: "50%",
+          border: `1.5px solid ${color}${active ? "77" : "22"}`,
+          borderTopColor: active ? color : "transparent",
+          borderRightColor: active ? `${color}44` : "transparent",
+          boxShadow: active ? `0 0 24px ${color}44, inset 0 0 14px ${color}1a` : "none",
+          transition: "border-color 0.8s, box-shadow 0.8s",
+        }}
+      />
+
+      {/* Ring 3 — mid CW, segmented */}
+      <motion.div
+        animate={{ rotate: active ? [0, 360] : 0 }}
+        transition={{ repeat: Infinity, duration: active ? 5.5 : 0, ease: "linear" }}
+        style={{
+          position: "absolute", inset: 38,
+          borderRadius: "50%",
+          border: `2px solid transparent`,
+          borderTopColor: active ? color : C.border,
+          borderRightColor: active ? `${color}88` : "transparent",
+          boxShadow: active ? `0 0 16px ${color}55` : "none",
+          transition: "border-color 0.8s, box-shadow 0.8s",
+        }}
+      />
+
+      {/* Ring 4 — inner CCW, thick glow ring */}
+      <motion.div
+        animate={{ rotate: active ? [360, 0] : 0 }}
+        transition={{ repeat: Infinity, duration: active ? 3.8 : 0, ease: "linear" }}
+        style={{
+          position: "absolute", inset: 56,
+          borderRadius: "50%",
+          border: `2px solid ${color}${active ? "99" : "22"}`,
+          borderBottomColor: active ? `${color}44` : "transparent",
+          boxShadow: active ? `0 0 20px ${color}66, inset 0 0 20px ${color}22` : "none",
+          transition: "border-color 0.8s, box-shadow 0.8s",
+        }}
+      />
+
+      {/* Orbital particles — outer */}
+      {active && particles.map((p, i) => (
         <motion.div
-          key={trigger}
-          initial={{ scale: 0.7, opacity: 0.9 }}
-          animate={{ scale: 1.7, opacity: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          style={{
+          key={i}
+          animate={{ rotate: [p.angle, p.angle + 360] }}
+          transition={{ repeat: Infinity, duration: 7 + i * 0.4, ease: "linear", delay: p.delay }}
+          style={{ position: "absolute", inset: 0, borderRadius: "50%" }}
+        >
+          <div style={{
             position: "absolute",
-            inset: 0,
+            top: "50%", left: "50%",
+            width: p.size, height: p.size,
             borderRadius: "50%",
-            border: `3px solid ${C.gold2}`,
-            boxShadow: `0 0 18px ${C.gold}99, inset 0 0 18px ${C.gold}44`,
+            background: color,
+            boxShadow: `0 0 8px ${color}, 0 0 16px ${color}88`,
+            transform: `translate(-50%, -${p.radius}px)`,
+          }} />
+        </motion.div>
+      ))}
+
+      {/* Orbital particles — inner */}
+      {active && innerParticles.map((p, i) => (
+        <motion.div
+          key={`in-${i}`}
+          animate={{ rotate: [p.angle + 180, p.angle - 180] }}
+          transition={{ repeat: Infinity, duration: 4.5 + i * 0.3, ease: "linear", delay: p.delay }}
+          style={{ position: "absolute", inset: 0, borderRadius: "50%" }}
+        >
+          <div style={{
+            position: "absolute",
+            top: "50%", left: "50%",
+            width: p.size, height: p.size,
+            borderRadius: "50%",
+            background: `${color}cc`,
+            boxShadow: `0 0 6px ${color}`,
+            transform: `translate(-50%, -${p.radius}px)`,
+          }} />
+        </motion.div>
+      ))}
+
+      {/* Central core */}
+      <div style={{
+        position: "absolute", inset: 72,
+        borderRadius: "50%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <motion.div
+          animate={{ scale: coreScale, opacity: active ? [0.85, 1, 0.85] : [0.3, 0.35, 0.3] }}
+          transition={{ repeat: Infinity, duration: coreDuration, ease: "easeInOut" }}
+          style={{
+            width: "100%", height: "100%",
+            borderRadius: "50%",
+            background: active
+              ? `radial-gradient(circle at 38% 32%, ${color}ee, ${color}99 50%, ${color}44)`
+              : `radial-gradient(circle, #1e1535, #0e0a1c)`,
+            boxShadow: active
+              ? `0 0 32px ${color}88, 0 0 64px ${color}44, inset 0 2px 0 #ffffff33`
+              : `0 0 12px ${color}22`,
+            border: `2px solid ${active ? color + "cc" : C.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 0.8s, box-shadow 0.8s, border-color 0.8s",
+          }}
+        >
+          {/* Core symbol */}
+          <motion.span
+            animate={{ opacity: active ? [0.7, 1, 0.7] : 0.2 }}
+            transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut" }}
+            style={{
+              fontSize: 22, fontWeight: 900, color: active ? "#fff" : C.text4,
+              textShadow: active ? `0 0 12px #fff8, 0 0 24px ${color}` : "none",
+              userSelect: "none",
+            }}
+          >
+            {pair?.symbol || "⬡"}
+          </motion.span>
+        </motion.div>
+      </div>
+
+      {/* Completion flash */}
+      {completing && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 0.8, 0], scale: [0.8, 1.4, 1.8] }}
+          transition={{ duration: 1.4, ease: "easeOut" }}
+          style={{
+            position: "absolute", inset: 0,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${color}66 0%, transparent 70%)`,
             pointerEvents: "none",
           }}
         />
       )}
-    </AnimatePresence>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Asset selector pill row
-───────────────────────────────────────────────────────────────────────── */
-function PairSelector({ pairs, selected, onSelect }) {
-  return (
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 16, paddingRight: 16 }}>
-      {pairs.map((p) => {
-        const active = p.id === selected.id;
-        return (
-          <motion.button
-            key={p.id}
-            whileTap={{ scale: 0.93 }}
-            onClick={() => onSelect(p)}
-            style={{
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "8px 14px",
-              borderRadius: 20,
-              border: `1px solid ${active ? p.color + "88" : C.border2}`,
-              background: active ? `${p.color}1a` : C.card2,
-              cursor: "pointer",
-              transition: "all 0.18s",
-            }}
-          >
-            <span style={{ fontSize: 11, fontWeight: 900, color: active ? p.color : C.text3, letterSpacing: "0.06em" }}>
-              {p.label}
-            </span>
-            <span
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                color: active ? p.color : C.text4,
-                background: active ? `${p.color}22` : C.card3,
-                borderRadius: 10,
-                padding: "1px 6px",
-              }}
-            >
-              +{p.rate}/tap
-            </span>
-          </motion.button>
-        );
-      })}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Pinky smoke burst – renders on each tap
+   Active Mining Panel — shows session details while mining runs
 ───────────────────────────────────────────────────────────────────────── */
-function SmokePuff({ id, onDone }) {
-  const puffs = Array.from({ length: 7 }, (_, i) => ({
-    angle: (i / 7) * 360,
-    dist: 55 + Math.random() * 40,
-    size: 28 + Math.random() * 24,
-    delay: i * 0.04,
-  }));
+function ActiveMiningPanel({ session, remaining, elapsed, onClaim }) {
+  const pair = MINING_PAIRS.find((p) => p.id === session.pair_id) || MINING_PAIRS[0];
+  const progress = Math.min(1, elapsed / session.duration_ms);
+  const isComplete = session.status === "complete" || remaining <= 0;
+
+  // Live output (interpolated)
+  const liveOutput = isComplete
+    ? session.output
+    : (session.output * progress).toFixed(pair.decimals);
+
+  // Subtle hashrate display
+  const [hashFlicker, setHashFlicker] = useState("312.47");
+  useEffect(() => {
+    if (!isComplete) {
+      const id = setInterval(() => {
+        const base = 280 + Math.random() * 80;
+        setHashFlicker(base.toFixed(2));
+      }, 2800);
+      return () => clearInterval(id);
+    }
+  }, [isComplete]);
 
   return (
-    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10 }}>
-      {puffs.map((p, i) => {
-        const rad = (p.angle * Math.PI) / 180;
-        const tx = Math.cos(rad) * p.dist;
-        const ty = Math.sin(rad) * p.dist;
-        return (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0.85, scale: 0.3, x: 0, y: 0 }}
-            animate={{ opacity: 0, scale: 1.8, x: tx, y: ty }}
-            transition={{ duration: 0.7, delay: p.delay, ease: "easeOut" }}
-            onAnimationComplete={i === 0 ? onDone : undefined}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              marginTop: -p.size / 2,
-              marginLeft: -p.size / 2,
-              width: p.size,
-              height: p.size,
-              borderRadius: "50%",
-              background: `radial-gradient(circle, #f472b688 0%, #a855f744 50%, transparent 100%)`,
-              filter: "blur(6px)",
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Large floating vault coin
-───────────────────────────────────────────────────────────────────────── */
-function TapCoin({ pair, onTap, exhausted }) {
-  const [ringKey, setRingKey] = useState(0);
-  const [smokes, setSmokes] = useState([]);
-  const smokeId = useRef(0);
-
-  const handleTap = useCallback(
-    (e) => {
-      onTap(e);
-      if (!exhausted) {
-        setRingKey((k) => k + 1);
-        const sid = smokeId.current++;
-        setSmokes((s) => [...s, sid]);
-      }
-    },
-    [exhausted, onTap]
-  );
-
-  const removeSmoke = useCallback((id) => {
-    setSmokes((s) => s.filter((x) => x !== id));
-  }, []);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: 310,
-        position: "relative",
-        paddingTop: 16,
-        paddingBottom: 0,
-      }}
-    >
-      {/* Deep purple ambient light pool behind coin */}
-      <motion.div
-        animate={{ scale: [1, 1.08, 1], opacity: [0.5, 0.75, 0.5] }}
-        transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
-        style={{
-          position: "absolute",
-          top: "5%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "82%",
-          height: "72%",
-          borderRadius: "50%",
-          background: `radial-gradient(ellipse, ${C.purpleGlow}40 0%, ${C.purple}22 40%, transparent 70%)`,
-          filter: "blur(32px)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Coin wrapper with float animation */}
-      <motion.div
-        animate={{ y: [0, -12, 0] }}
-        transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut" }}
-        style={{ position: "relative", zIndex: 2 }}
-      >
+    <div style={{ width: "100%", maxWidth: 400, margin: "0 auto" }}>
+      {/* Status chip */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
         <motion.div
-          whileTap={exhausted ? {} : { scale: 0.88, rotate: -2 }}
-          transition={{ type: "spring", stiffness: 400, damping: 18 }}
-          onPointerDown={handleTap}
+          animate={isComplete ? {} : { opacity: [0.7, 1, 0.7] }}
+          transition={{ repeat: Infinity, duration: 2 }}
           style={{
-            position: "relative",
-            width: "72vw",
-            height: "72vw",
-            maxWidth: 290,
-            maxHeight: 290,
-            minWidth: 220,
-            minHeight: 220,
-            borderRadius: "50%",
-            cursor: exhausted ? "not-allowed" : "pointer",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-            touchAction: "none",
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "6px 16px", borderRadius: 20,
+            background: isComplete ? `${C.green}18` : `${pair.color}18`,
+            border: `1px solid ${isComplete ? C.green + "55" : pair.color + "55"}`,
           }}
         >
-          {/* Rotating conic halo */}
-          <motion.div
-            animate={exhausted ? {} : { rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 9, ease: "linear" }}
-            style={{
-              position: "absolute",
-              inset: -10,
-              borderRadius: "50%",
-              background: exhausted
-                ? "none"
-                : `conic-gradient(from 0deg, ${C.purpleGlow}66, ${C.gold3}cc, ${C.pink}55, ${C.gold2}bb, transparent, ${C.purpleGlow}66)`,
-              filter: "blur(12px)",
-              opacity: exhausted ? 0 : 0.9,
-            }}
-          />
-
-          {/* Outer ring */}
-          <div
-            style={{
-              position: "absolute",
-              inset: -2,
-              borderRadius: "50%",
-              border: `2px solid ${exhausted ? C.border : C.gold2 + "55"}`,
-              pointerEvents: "none",
-            }}
-          />
-
-          {/* Coin body – rich gold radial */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: "50%",
-              background: exhausted
-                ? `radial-gradient(circle at 38% 32%, #2a2040, #0e0a1c)`
-                : `radial-gradient(circle at 33% 26%, #fff3a0, ${C.gold3} 22%, ${C.gold2} 45%, ${C.gold} 65%, ${C.goldDim} 85%, #3d1c00)`,
-              boxShadow: exhausted
-                ? `0 8px 32px #00000088`
-                : `0 16px 60px ${C.gold}55, 0 4px 0 #fffbe066 inset, 0 -8px 0 #00000055 inset, 0 0 0 2px ${C.gold}44`,
-              border: `3px solid ${exhausted ? "#2a1f4a" : C.gold + "99"}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "column",
-              overflow: "hidden",
-              transition: "background 0.4s, box-shadow 0.4s",
-            }}
-          >
-            {/* Coin rim groove */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 10,
-                borderRadius: "50%",
-                border: `2px solid ${exhausted ? "#2a1f4a" : "#fff4"}`,
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Lightning bolt – large centrepiece */}
-            <div
-              style={{
-                position: "relative",
-                zIndex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: exhausted ? 0.25 : 1,
-                filter: exhausted
-                  ? "none"
-                  : `drop-shadow(0 0 12px ${C.gold3}cc) drop-shadow(0 4px 8px #00000088)`,
-              }}
-            >
-              <Zap
-                size={90}
-                color={exhausted ? C.text4 : "#fff"}
-                fill={exhausted ? C.text4 : C.gold3}
-                strokeWidth={1.5}
-              />
-            </div>
-
-            {/* Pair label */}
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 900,
-                color: exhausted ? C.text4 : "#00000099",
-                letterSpacing: "0.22em",
-                zIndex: 1,
-                marginTop: -6,
-                textShadow: exhausted ? "none" : "0 1px 0 #fff5",
-              }}
-            >
-              {exhausted ? "RECHARGING" : pair.label}
-            </span>
-          </div>
-
-          {/* Smoke puffs on tap */}
-          <AnimatePresence>
-            {smokes.map((sid) => (
-              <SmokePuff key={sid} id={sid} onDone={() => removeSmoke(sid)} />
-            ))}
-          </AnimatePresence>
-
-          {/* Electric burst ring */}
-          <ElectricRing trigger={ringKey} />
+          <div style={{
+            width: 7, height: 7, borderRadius: "50%",
+            background: isComplete ? C.green : pair.color,
+            boxShadow: `0 0 8px ${isComplete ? C.green : pair.color}`,
+          }} />
+          <span style={{
+            fontSize: 11, fontWeight: 800, letterSpacing: "0.14em",
+            color: isComplete ? C.green : pair.color,
+          }}>
+            {isComplete ? "MINING COMPLETE" : "MINING ACTIVE"}
+          </span>
         </motion.div>
-      </motion.div>
-
-      {/* ── Coin pedestal / base ── */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          marginTop: -18,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        {/* Shadow cast by coin onto base */}
-        <motion.div
-          animate={{ scaleX: [1, 0.88, 1], opacity: [0.55, 0.35, 0.55] }}
-          transition={{ repeat: Infinity, duration: 3.2, ease: "easeInOut" }}
-          style={{
-            width: "55%",
-            height: 14,
-            borderRadius: "50%",
-            background: `radial-gradient(ellipse, ${C.gold}55 0%, transparent 70%)`,
-            filter: "blur(6px)",
-            marginBottom: -7,
-          }}
-        />
-        {/* Top disc */}
-        <div
-          style={{
-            width: "62vw",
-            maxWidth: 220,
-            height: 18,
-            borderRadius: "50%",
-            background: `linear-gradient(180deg, #2a1f4a, #1a1030)`,
-            border: `1px solid ${C.border2}`,
-            boxShadow: `0 4px 18px #00000077, 0 1px 0 ${C.purple2}33 inset`,
-          }}
-        />
-        {/* Pedestal body */}
-        <div
-          style={{
-            width: "44vw",
-            maxWidth: 156,
-            height: 22,
-            background: `linear-gradient(180deg, #1e1535, #110d20)`,
-            borderLeft: `1px solid ${C.border}`,
-            borderRight: `1px solid ${C.border}`,
-            boxShadow: `0 6px 20px #00000066`,
-            clipPath: "polygon(4% 0%, 96% 0%, 100% 100%, 0% 100%)",
-          }}
-        />
-        {/* Base plate */}
-        <div
-          style={{
-            width: "52vw",
-            maxWidth: 188,
-            height: 10,
-            borderRadius: "0 0 8px 8px",
-            background: `linear-gradient(180deg, #160f28, #0d0a18)`,
-            border: `1px solid ${C.border}`,
-            borderTop: "none",
-            boxShadow: `0 4px 16px #00000055`,
-          }}
-        />
       </div>
 
-      {/* Tap hint */}
-      {!exhausted && (
-        <motion.div
-          animate={{ opacity: [0.35, 0.8, 0.35] }}
-          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+      {/* Live output */}
+      <div style={{ textAlign: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.16em", marginBottom: 6 }}>
+          {isComplete ? "TOTAL MINED" : "MINED SO FAR"}
+        </div>
+        <div style={{ fontSize: 34, fontWeight: 900, color: pair.color, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+          {liveOutput}
+          <span style={{ fontSize: 16, fontWeight: 700, opacity: 0.65, marginLeft: 6 }}>{pair.label}</span>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ height: 4, borderRadius: 2, background: C.border, overflow: "hidden" }}>
+          <motion.div
+            animate={{ width: `${Math.round(progress * 100)}%` }}
+            transition={{ duration: 1, ease: "linear" }}
+            style={{
+              height: "100%", borderRadius: 2,
+              background: isComplete
+                ? `linear-gradient(90deg, ${C.green}99, ${C.green})`
+                : `linear-gradient(90deg, ${pair.color}88, ${pair.color})`,
+              boxShadow: `0 0 10px ${isComplete ? C.green : pair.color}88`,
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+          <span style={{ fontSize: 10, color: C.text4 }}>0%</span>
+          <span style={{ fontSize: 10, color: C.text3 }}>{Math.round(progress * 100)}%</span>
+          <span style={{ fontSize: 10, color: C.text4 }}>100%</span>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        {[
+          {
+            label: isComplete ? "DURATION" : "REMAINING",
+            value: isComplete ? formatDuration(session.duration_ms) : formatDurationShort(Math.max(0, remaining)),
+            icon: <Clock size={13} color={pair.color} />,
+            mono: true,
+          },
+          {
+            label: "ELAPSED",
+            value: formatDurationShort(Math.min(elapsed, session.duration_ms)),
+            icon: <Activity size={13} color={C.purple2} />,
+            mono: true,
+          },
+          {
+            label: "MINING PAIR",
+            value: pair.name,
+            icon: <span style={{ fontSize: 12, color: pair.color }}>{pair.symbol}</span>,
+            mono: false,
+          },
+          {
+            label: "HASH RATE",
+            value: isComplete ? "—" : `${hashFlicker} MH/s`,
+            icon: <Cpu size={13} color={C.text3} />,
+            mono: true,
+          },
+        ].map((s) => (
+          <div key={s.label} style={{
+            background: C.card,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12, padding: "12px 14px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
+              {s.icon}
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.text4, letterSpacing: "0.14em" }}>{s.label}</span>
+            </div>
+            <div style={{
+              fontSize: 13, fontWeight: 800,
+              color: C.text2,
+              fontVariantNumeric: s.mono ? "tabular-nums" : "normal",
+              letterSpacing: s.mono ? "0.02em" : "normal",
+            }}>
+              {s.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Claim button — only when complete */}
+      {isComplete && (
+        <motion.button
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onClaim}
           style={{
-            marginTop: 16,
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: "0.22em",
-            color: C.text3,
-            textTransform: "uppercase",
+            width: "100%", padding: "18px", borderRadius: 16,
+            border: "none",
+            background: `linear-gradient(135deg, ${C.green}, ${C.greenDim}dd)`,
+            color: "#fff", fontSize: 15, fontWeight: 900,
+            letterSpacing: "0.08em", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            boxShadow: `0 8px 32px ${C.green}44, 0 2px 0 #ffffff22 inset`,
           }}
         >
-          TAP THE COIN TO MINE
-        </motion.div>
+          <CheckCircle size={18} strokeWidth={2.5} />
+          CLAIM {session.output} {pair.label}
+        </motion.button>
       )}
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Stats strip – Priority 2, glassmorphism dark-metal cards
+   Idle / MINE button screen
 ───────────────────────────────────────────────────────────────────────── */
-function StatsStrip({ balance, sessionEarned, taps }) {
-  const stats = [
-    {
-      label: "Balance",
-      value: balance.toFixed(2),
-      icon: <TrendingUp size={14} color={C.gold2} />,
-      color: C.gold2,
-    },
-    {
-      label: "Session",
-      value: `+${sessionEarned}`,
-      icon: <Zap size={14} color={C.green} />,
-      color: C.green,
-    },
-    {
-      label: "Taps",
-      value: taps.toLocaleString(),
-      icon: <Cpu size={14} color={C.purple} />,
-      color: C.purple,
-    },
-  ];
-
+function IdleScreen({ pair, onMine, isGuest }) {
+  const color = pair?.color || C.gold2;
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3,1fr)",
-        gap: 8,
-        marginTop: 44,
-        paddingLeft: 16,
-        paddingRight: 16,
-      }}
-    >
-      {stats.map((s) => (
-        <div
-          key={s.label}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 8 }}>
+      <MiningCore pair={pair} active={false} completing={false} />
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{ marginTop: 32, width: "100%", maxWidth: 320, padding: "0 24px" }}
+      >
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={onMine}
           style={{
-            background: `linear-gradient(145deg, ${C.card2}, ${C.card})`,
-            border: `1px solid ${C.border}`,
-            borderRadius: 14,
-            padding: "14px 8px 12px",
-            textAlign: "center",
-            boxShadow: "0 2px 12px #00000066, inset 0 1px 0 #ffffff08",
-            backdropFilter: "blur(10px)",
+            width: "100%", padding: "20px",
+            borderRadius: 18, border: `1px solid ${color}44`,
+            background: `linear-gradient(135deg, ${color}22, ${color}0a)`,
+            color: color, fontSize: 16, fontWeight: 900,
+            letterSpacing: "0.14em", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+            boxShadow: `0 4px 40px ${color}22, 0 1px 0 ${color}33 inset`,
+            position: "relative", overflow: "hidden",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>
-            {s.icon}
-          </div>
-          <div
+          {/* Shimmer sweep */}
+          <motion.div
+            animate={{ x: ["-100%", "200%"] }}
+            transition={{ repeat: Infinity, duration: 2.8, ease: "linear", repeatDelay: 1.2 }}
             style={{
-              fontSize: 16,
-              fontWeight: 900,
-              color: s.color,
-              fontVariantNumeric: "tabular-nums",
-              lineHeight: 1.1,
-              letterSpacing: "-0.02em",
+              position: "absolute", top: 0, left: 0, width: "40%", height: "100%",
+              background: `linear-gradient(90deg, transparent, ${color}22, transparent)`,
+              pointerEvents: "none",
             }}
-          >
-            {s.value}
-          </div>
-          <div
-            style={{
-              fontSize: 9,
-              color: C.text3,
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              marginTop: 4,
-            }}
-          >
-            {s.label}
-          </div>
-        </div>
-      ))}
+          />
+          <Cpu size={20} strokeWidth={2.5} />
+          MINE
+        </motion.button>
+        <p style={{ textAlign: "center", fontSize: 11, color: C.text4, marginTop: 12, letterSpacing: "0.06em" }}>
+          {isGuest ? "Sign in to start a mining session" : "Configure and start a mining session"}
+        </p>
+      </motion.div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Asset info card – Priority 3
+   Balance Header Strip
 ───────────────────────────────────────────────────────────────────────── */
-function AssetInfo({ pair }) {
+function BalanceStrip({ balance }) {
   return (
-    <div
-      style={{
-        marginLeft: 16,
-        marginRight: 16,
-        background: "linear-gradient(135deg, #131313, #0d0d0d)",
-        border: `1px solid ${pair.color}22`,
-        borderLeft: `3px solid ${pair.color}`,
-        borderRadius: 12,
-        padding: "12px 14px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 20px 0",
+    }}>
       <div>
-        <div style={{ fontSize: 12, fontWeight: 800, color: C.text, letterSpacing: "0.04em" }}>
-          {pair.name}
+        <div style={{ fontSize: 10, fontWeight: 700, color: C.text4, letterSpacing: "0.16em", marginBottom: 2 }}>
+          TOTAL BALANCE
         </div>
-        <div style={{ fontSize: 10, color: C.text3, marginTop: 2, letterSpacing: "0.06em" }}>
-          Active Mining Pair
+        <div style={{ fontSize: 22, fontWeight: 900, color: C.text, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+          {balance.toFixed(4)}
+          <span style={{ fontSize: 12, color: C.text3, marginLeft: 6, fontWeight: 600 }}>GVXM</span>
         </div>
       </div>
-      <div
-        style={{
-          background: `${pair.color}18`,
-          border: `1px solid ${pair.color}44`,
-          borderRadius: 20,
-          padding: "5px 12px",
-          fontSize: 11,
-          fontWeight: 900,
-          color: pair.color,
-          letterSpacing: "0.08em",
-        }}
-      >
-        +{pair.rate} / TAP
+      <div style={{
+        padding: "8px 14px", borderRadius: 20,
+        background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
+        display: "flex", alignItems: "center", gap: 6,
+      }}>
+        <TrendingUp size={13} color={C.gold2} />
+        <span style={{ fontSize: 11, fontWeight: 800, color: C.gold2, letterSpacing: "0.08em" }}>VAULT</span>
       </div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Energy bar – Priority 4
-───────────────────────────────────────────────────────────────────────── */
-function EnergyBar({ energy, max }) {
-  const pct = Math.max(0, Math.min(1, energy / max));
-  const barColor = pct > 0.6 ? C.gold2 : pct > 0.3 ? "#fb923c" : C.red;
-
-  return (
-    <div
-      style={{
-        marginLeft: 16,
-        marginRight: 16,
-        background: "linear-gradient(135deg, #111, #0c0c0c)",
-        border: `1px solid ${C.border}`,
-        borderRadius: 14,
-        padding: "14px 16px",
-        boxShadow: "0 2px 12px #00000044",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 10,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Zap size={13} color={barColor} fill={barColor} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: barColor, letterSpacing: "0.08em" }}>
-            ENERGY
-          </span>
-        </div>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: C.text2,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {Math.floor(energy)} / {max}
-        </span>
-      </div>
-
-      <div
-        style={{
-          height: 7,
-          borderRadius: 4,
-          background: "#1a1a1a",
-          overflow: "hidden",
-          border: `1px solid ${C.border}`,
-        }}
-      >
-        <motion.div
-          animate={{ width: `${pct * 100}%` }}
-          transition={{ type: "spring", stiffness: 180, damping: 24 }}
-          style={{
-            height: "100%",
-            borderRadius: 4,
-            background: `linear-gradient(90deg, ${barColor}99, ${barColor})`,
-            boxShadow: `0 0 10px ${barColor}88`,
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          fontSize: 10,
-          color: C.text3,
-          textAlign: "right",
-          marginTop: 6,
-          letterSpacing: "0.04em",
-        }}
-      >
-        Regenerates {REGEN_RATE}/sec
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Auth Gate — shown when user is not signed in
-───────────────────────────────────────────────────────────────────────── */
-function AuthGate({ onSignUp, onSignIn }) {
-  return (
-    <div
-      style={{
-        background: C.bg,
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Ambient background glow */}
-      <div
-        style={{
-          position: "absolute",
-          top: "20%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 320,
-          height: 320,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${C.gold}18 0%, transparent 70%)`,
-          filter: "blur(40px)",
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* Header */}
-      <div
-        style={{
-          padding: "18px 16px 14px",
-          borderBottom: `1px solid ${C.border}`,
-          background: `linear-gradient(180deg, #0d0818, ${C.bg})`,
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 24,
-            fontWeight: 900,
-            color: C.text,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Tap{" "}
-          <span style={{ color: C.gold2, textShadow: `0 0 20px ${C.gold}66` }}>
-            Mining
-          </span>
-        </h1>
-      </div>
-
-      {/* Blurred coin preview */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          paddingTop: 40,
-          paddingBottom: 16,
-          position: "relative",
-        }}
-      >
-        {/* Coin ghost */}
-        <div
-          style={{
-            width: 200,
-            height: 200,
-            borderRadius: "50%",
-            background: `radial-gradient(circle at 35% 28%, ${C.gold3}44, ${C.gold}33 40%, ${C.goldDim}22)`,
-            border: `3px solid ${C.gold}33`,
-            boxShadow: `0 0 60px ${C.gold}22`,
-            filter: "blur(3px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div style={{ opacity: 0.3, fontSize: 64 }}>₿</div>
-        </div>
-
-        {/* Lock badge over coin */}
-        <motion.div
-          animate={{ y: [0, -6, 0] }}
-          transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut" }}
-          style={{
-            position: "absolute",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <div
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: "50%",
-              background: "linear-gradient(145deg, #1a1a1a, #111)",
-              border: `2px solid ${C.gold}55`,
-              boxShadow: `0 0 24px ${C.gold}33, inset 0 1px 0 #ffffff0a`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Lock size={24} color={C.gold2} />
-          </div>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              color: C.gold2,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              textShadow: `0 0 12px ${C.gold}88`,
-            }}
-          >
-            LOCKED
-          </span>
-        </motion.div>
-      </div>
-
-      {/* Gate card */}
-      <div
-        style={{
-          margin: "0 16px",
-          background: "linear-gradient(145deg, #141414, #0e0e0e)",
-          border: `1px solid ${C.border2}`,
-          borderTop: `1px solid ${C.gold}22`,
-          borderRadius: 20,
-          padding: "28px 24px",
-          boxShadow: "0 4px 32px #00000088, inset 0 1px 0 #ffffff06",
-        }}
-      >
-        {/* Perks list */}
-        {[
-          "Persistent balance saved to your account",
-          "Mine BTC, ETH, SOL & Gold Spot",
-          "Real-time energy regeneration",
-        ].map((perk) => (
-          <div
-            key={perk}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: C.gold2,
-                flexShrink: 0,
-                boxShadow: `0 0 6px ${C.gold}`,
-              }}
-            />
-            <span style={{ fontSize: 12, color: C.text2 }}>{perk}</span>
-          </div>
-        ))}
-
-        {/* CTA buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 24 }}>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onSignUp}
-            style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: 14,
-              border: "none",
-              background: `linear-gradient(135deg, ${C.gold}, ${C.gold2})`,
-              color: "#000",
-              fontSize: 14,
-              fontWeight: 900,
-              letterSpacing: "0.06em",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: `0 4px 20px ${C.gold}55`,
-            }}
-          >
-            CREATE FREE ACCOUNT
-            <ChevronRight size={16} />
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={onSignIn}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: 14,
-              border: `1px solid ${C.border2}`,
-              background: C.card2,
-              color: C.text2,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              cursor: "pointer",
-            }}
-          >
-            Already have an account? Sign In
-          </motion.button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Main export
+   Main Mining Component
 ───────────────────────────────────────────────────────────────────────── */
 export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
-  const [selectedPair, setSelectedPair] = useState(MINING_PAIRS[0]);
   const [balance, setBalance] = useState(0);
-  const [energy, setEnergy] = useState(MAX_ENERGY);
-  const [sessionEarned, setSessionEarned] = useState(0);
-  const [tapCount, setTapCount] = useState(0);
-  const [particles, setParticles] = useState([]);
-  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [session, setSession] = useState(null);       // active DB session object
+  const [remaining, setRemaining] = useState(0);      // ms
+  const [elapsed, setElapsed] = useState(0);          // ms
+  const [completing, setCompleting] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const balanceRef = useRef(0);
-  const debounceTimer = useRef(null);
-  const particleId = useRef(0);
-
+  const timerRef = useRef(null);
   const isGuest = !user?.email;
+  const activePair = session
+    ? (MINING_PAIRS.find((p) => p.id === session.pair_id) || MINING_PAIRS[0])
+    : MINING_PAIRS[0];
 
+  /* ── Load balance from existing "mining" table ── */
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.email) { setLoading(false); return; }
     (async () => {
       const { data } = await supabase
         .from("mining")
         .select("balance")
         .eq("user_email", user.email)
         .single();
-      if (data?.balance != null) {
-        setBalance(data.balance);
-        balanceRef.current = data.balance;
-      }
+      if (data?.balance != null) setBalance(Number(data.balance));
     })();
   }, [user?.email]);
 
+  /* ── Load active session from "mining_sessions" table ── */
   useEffect(() => {
-    const id = setInterval(() => {
-      setEnergy((e) => Math.min(MAX_ENERGY, e + REGEN_RATE));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const syncToSupabase = useCallback(
-    (newBalance) => {
-      if (!user?.email) return;
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(async () => {
-        await supabase.from("mining").upsert(
-          { user_email: user.email, balance: newBalance, updated_at: new Date().toISOString() },
-          { onConflict: "user_email" }
-        );
-      }, SUPABASE_DEBOUNCE_MS);
-    },
-    [user?.email]
-  );
-
-  const handleTap = useCallback(
-    (e) => {
-      if (isGuest) {
-        setShowAuthGate(true);
-        return;
+    if (!user?.email) { setLoading(false); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("mining_sessions")
+        .select("*")
+        .eq("user_email", user.email)
+        .in("status", ["active", "complete"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        // Check if it finished while user was away
+        if (data.status === "active" && Date.now() >= data.end_time) {
+          const { data: updated } = await supabase
+            .from("mining_sessions")
+            .update({ status: "complete" })
+            .eq("id", data.id)
+            .select()
+            .single();
+          setSession(updated || { ...data, status: "complete" });
+        } else {
+          setSession(data);
+        }
       }
-      if (energy < ENERGY_COST) return;
+      setLoading(false);
+    })();
+  }, [user?.email]);
 
-      const earned = selectedPair.rate;
-      const newBalance = balanceRef.current + earned;
-      balanceRef.current = newBalance;
+  /* ── Timestamp-based countdown ticker ── */
+  useEffect(() => {
+    if (!session || session.status === "claimed") return;
+    clearInterval(timerRef.current);
 
-      setBalance(newBalance);
-      setEnergy((en) => Math.max(0, en - ENERGY_COST));
-      setSessionEarned((s) => s + earned);
-      setTapCount((t) => t + 1);
+    const tick = () => {
+      const now = Date.now();
+      const rem = Math.max(0, session.end_time - now);
+      const elp = Math.min(session.duration_ms, now - session.start_time);
+      setRemaining(rem);
+      setElapsed(elp);
 
-      syncToSupabase(newBalance);
+      if (rem <= 0 && session.status === "active") {
+        // Mark complete in DB
+        setSession((prev) => prev ? { ...prev, status: "complete" } : prev);
+        setCompleting(true);
+        supabase
+          .from("mining_sessions")
+          .update({ status: "complete" })
+          .eq("id", session.id)
+          .then(() => setTimeout(() => setCompleting(false), 2000));
+        clearInterval(timerRef.current);
+      }
+    };
 
-      const rect = e.currentTarget
-        ? e.currentTarget.getBoundingClientRect()
-        : { left: 0, top: 0, width: 0, height: 0 };
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const spread = 40;
-      const px = cx + (Math.random() - 0.5) * spread;
-      const py = cy + (Math.random() - 0.5) * spread;
+    tick();
+    timerRef.current = setInterval(tick, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [session?.id, session?.status]);
 
-      const id = particleId.current++;
-      setParticles((prev) => [...prev, { id, x: px, y: py, amount: earned }]);
-    },
-    [isGuest, energy, selectedPair, syncToSupabase]
-  );
+  /* ── Start a new mining session ── */
+  const handleStart = useCallback(async ({ pair, amount, durationMs, estimatedOutput }) => {
+    if (!user?.email) return;
+    setShowConfig(false);
 
-  const removeParticle = useCallback((id) => {
-    setParticles((prev) => prev.filter((p) => p.id !== id));
-  }, []);
+    const now = Date.now();
+    const newSession = {
+      user_email: user.email,
+      pair_id: pair.id,
+      pair_label: pair.label,
+      pair_color: pair.color,
+      amount,
+      duration_ms: durationMs,
+      start_time: now,
+      end_time: now + durationMs,
+      status: "active",
+      output: estimatedOutput,
+    };
+
+    const { data, error } = await supabase
+      .from("mining_sessions")
+      .insert(newSession)
+      .select()
+      .single();
+
+    if (!error && data) setSession(data);
+    else setSession({ ...newSession, id: `local-${now}` }); // graceful fallback
+  }, [user?.email]);
+
+  /* ── Claim completed session ── */
+  const handleClaim = useCallback(async () => {
+    if (!session) return;
+
+    const claimed = session.output || 0;
+    const newBalance = balance + claimed;
+
+    // Update session status
+    await supabase
+      .from("mining_sessions")
+      .update({ status: "claimed" })
+      .eq("id", session.id);
+
+    // Update balance in existing "mining" table
+    await supabase
+      .from("mining")
+      .upsert(
+        { user_email: user.email, balance: newBalance, updated_at: new Date().toISOString() },
+        { onConflict: "user_email" }
+      );
+
+    setBalance(newBalance);
+    setSession(null);
+    setRemaining(0);
+    setElapsed(0);
+  }, [session, balance, user?.email]);
+
+  /* ── Guest mine tap ── */
+  const handleMinePress = useCallback(() => {
+    if (isGuest) { setShowAuthModal(true); return; }
+    if (session && session.status !== "claimed") return; // already running
+    setShowConfig(true);
+  }, [isGuest, session]);
 
   const handleNavigate = useCallback((route) => {
-    setShowAuthGate(false);
+    setShowAuthModal(false);
     if (route === "register") onNavigateSignUp?.();
     else onNavigateSignIn?.();
   }, [onNavigateSignUp, onNavigateSignIn]);
 
-  const exhausted = !isGuest && energy < ENERGY_COST;
+  const hasActiveSession = session && session.status !== "claimed";
+  const isMiningActive = hasActiveSession && session.status === "active" && remaining > 0;
+  const isMiningComplete = hasActiveSession && (session.status === "complete" || remaining <= 0);
 
+  /* ──────────────── RENDER ──────────────── */
   return (
     <div
       style={{
@@ -1237,55 +1101,129 @@ export default function Mining({ user, onNavigateSignUp, onNavigateSignIn }) {
         overflow: "hidden",
       }}
     >
+      {/* ── Background orbs ── */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <div style={{ position: "absolute", top: "-10%", left: "-15%", width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, #7c3aed22 0%, transparent 70%)", filter: "blur(40px)" }} />
         <div style={{ position: "absolute", top: "5%", right: "-10%", width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, #a855f718 0%, transparent 70%)", filter: "blur(50px)" }} />
         <div style={{ position: "absolute", top: "25%", left: "50%", transform: "translateX(-50%)", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, #6d28d912 0%, transparent 65%)", filter: "blur(60px)" }} />
         <div style={{ position: "absolute", bottom: "8%", right: "10%", width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, #ec489914 0%, transparent 70%)", filter: "blur(40px)" }} />
+        {/* Active session pair glow */}
+        {isMiningActive && (
+          <motion.div
+            animate={{ opacity: [0.08, 0.16, 0.08] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            style={{
+              position: "absolute", top: "10%", left: "50%", transform: "translateX(-50%)",
+              width: 500, height: 500, borderRadius: "50%",
+              background: `radial-gradient(circle, ${activePair.color}33 0%, transparent 65%)`,
+              filter: "blur(50px)",
+            }}
+          />
+        )}
       </div>
 
-      <div style={{ padding: "18px 16px 14px", borderBottom: `1px solid ${C.border}`, background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`, position: "relative", zIndex: 1 }}>
+      {/* ── Header ── */}
+      <div
+        style={{
+          padding: "18px 20px 14px",
+          borderBottom: `1px solid ${C.border}`,
+          background: `linear-gradient(180deg, #0d0818ee, ${C.bg}ee)`,
+          position: "relative", zIndex: 1,
+        }}
+      >
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: C.text, letterSpacing: "-0.02em" }}>
-          Tap{" "}
+          GoldenVault{" "}
           <span style={{ color: C.gold2, textShadow: `0 0 20px ${C.gold}66` }}>Mining</span>
         </h1>
+        <div style={{ fontSize: 11, color: C.text4, marginTop: 2, letterSpacing: "0.06em" }}>
+          Session-based · Timestamp-anchored · Persistent
+        </div>
       </div>
 
-      <div style={{ paddingTop: 16, paddingBottom: 12 }}>
-        <PairSelector pairs={MINING_PAIRS} selected={selectedPair} onSelect={setSelectedPair} />
-      </div>
+      {/* ── Content ── */}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
 
-      <div style={{ paddingTop: 8, paddingBottom: 0, position: "relative" }}>
-        <TapCoin pair={selectedPair} onTap={handleTap} exhausted={exhausted} />
+        {/* Balance */}
+        {!isGuest && (
+          <div style={{ padding: "20px 0 8px" }}>
+            <BalanceStrip balance={balance} />
+          </div>
+        )}
+
+        {loading ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 280 }}>
+            <motion.div
+              animate={{ opacity: [0.3, 0.7, 0.3] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              style={{ fontSize: 13, color: C.text3, letterSpacing: "0.12em" }}
+            >
+              INITIALIZING...
+            </motion.div>
+          </div>
+        ) : hasActiveSession ? (
+          /* ── Active / Complete session ── */
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "24px 20px 0" }}>
+            {/* Mining Engine */}
+            <MiningCore
+              pair={activePair}
+              active={isMiningActive}
+              completing={completing}
+            />
+            <div style={{ marginTop: 28, width: "100%" }}>
+              <ActiveMiningPanel
+                session={session}
+                remaining={remaining}
+                elapsed={elapsed}
+                onClaim={handleClaim}
+              />
+            </div>
+          </div>
+        ) : (
+          /* ── Idle — MINE button ── */
+          <div style={{ paddingTop: isGuest ? 32 : 16 }}>
+            <IdleScreen
+              pair={MINING_PAIRS[0]}
+              onMine={handleMinePress}
+              isGuest={isGuest}
+            />
+          </div>
+        )}
+
+        {/* Guest sign-in prompt strip */}
         {isGuest && (
-          <div style={{ position: "absolute", top: 12, right: 24, display: "flex", alignItems: "center", gap: 5, background: "#0f0f0fcc", border: `1px solid ${C.border2}`, borderRadius: 20, padding: "5px 10px", backdropFilter: "blur(8px)" }}>
-            <Lock size={11} color={C.gold2} strokeWidth={2.5} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: C.gold2, letterSpacing: "0.08em" }}>SIGN IN TO MINE</span>
+          <div style={{ margin: "24px 20px 0", padding: "16px 18px", borderRadius: 16, background: `${C.gold}0a`, border: `1px solid ${C.gold}22`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Lock size={15} color={C.gold2} />
+              <span style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>Sign in to start mining</span>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => onNavigateSignIn?.()}
+              style={{ padding: "8px 14px", borderRadius: 10, border: `1px solid ${C.gold}44`, background: `${C.gold}18`, color: C.gold2, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: "0.06em" }}
+            >
+              SIGN IN
+            </motion.button>
           </div>
         )}
       </div>
 
-      <StatsStrip balance={balance} sessionEarned={sessionEarned} taps={tapCount} />
-
-      <div style={{ paddingTop: 20 }}>
-        <AssetInfo pair={selectedPair} />
-      </div>
-
-      <div style={{ paddingTop: 12 }}>
-        <EnergyBar energy={energy} max={MAX_ENERGY} />
-      </div>
-
+      {/* ── Config flyer ── */}
       <AnimatePresence>
-        {particles.map((p) => (
-          <TapParticle key={p.id} x={p.x} y={p.y} amount={p.amount} onDone={() => removeParticle(p.id)} />
-        ))}
+        {showConfig && (
+          <MiningConfigFlyer
+            pairs={MINING_PAIRS}
+            onStart={handleStart}
+            onClose={() => setShowConfig(false)}
+          />
+        )}
       </AnimatePresence>
 
+      {/* ── Auth modal ── */}
       <AnimatePresence>
-        {showAuthGate && (
+        {showAuthModal && (
           <AuthGateModal
-            pair={selectedPair}
-            onClose={() => setShowAuthGate(false)}
+            pair={MINING_PAIRS[0]}
+            onClose={() => setShowAuthModal(false)}
             onNavigate={handleNavigate}
           />
         )}
