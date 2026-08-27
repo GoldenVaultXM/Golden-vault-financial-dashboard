@@ -1838,27 +1838,19 @@ function AppShell() {
     setPage(p);
   }, [isAuthenticated, requireAuth, setPage]);
 
-  const renderPage = () => {
-    switch (page) {
-      case "home":     return <HomePage setPage={handleSetPage} />;
-      case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "trade":  return <Mining user={user} onAccountChange={(patch) => {
-  if (patch.balance !== undefined) setBalance(patch.balance);
-  if (patch.totalProfit !== undefined) setTotalProfit(patch.totalProfit);
-  if (patch.activePositions !== undefined) setActivePositions(patch.activePositions);
-}} />;
-      case "mining":   return <Mining
-  user={user}
-  onAccountChange={(patch) => setDashboardStats(prev => ({ ...prev, ...patch }))}
-/>
-      case "profile":  return <ProfilePage />;
-      case "news":     return <NewsPage onNewsCount={setNewsCount} />;
-      case "settings": return <SettingsPage setPage={handleSetPage} />;
-      case "support":  return <SupportPage />;
-      default:         return <HomePage setPage={handleSetPage} />;
-    }
-  };
-
+const renderPage = () => {
+  switch (page) {
+    case "home":     return <HomePage setPage={handleSetPage} />;
+    case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+    case "trade":    return <TradePage prices={prices} />;
+    case "mining":   return <Mining user={user} onAccountChange={() => {}} />;
+    case "profile":  return <ProfilePage />;
+    case "news":     return <NewsPage onNewsCount={setNewsCount} />;
+    case "settings": return <SettingsPage setPage={handleSetPage} />;
+    case "support":  return <SupportPage />;
+    default:         return <HomePage setPage={handleSetPage} />;
+  }
+};
   return (
     <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
