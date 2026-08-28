@@ -1092,96 +1092,208 @@ export default function Mining({ user }) {
   const [activeTab,    setActiveTab]    = useState("chart"); // chart | book | trades
   const [interval,     setInterval_]    = useState("1m");
   const [navTab,       setNavTab]       = useState("trade");
-  const syncTimer = useRef(null);
+  const syncTimer   = useRef(null);
+  const userIdRef   = useRef(null); // stores auth uuid
 
-  // Load balance from same table the Trade section uses (account_summary)
+  // ── 1. Load user ID + balance from account_summary (same table as Trade) ──
   useEffect(() => {
     if (!user?.email) return;
     (async () => {
       const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user?.id) return;
+      const uid = authData?.user?.id;
+      if (!uid) return;
+      userIdRef.current = uid;
+
       const { data } = await supabase
         .from("account_summary")
-        .select("balance")
-        .eq("id", authData.user.id)
+        .select("balance, total_profit, active_positions")
+        .eq("id", uid)
         .single();
-      if (data?.balance != null) setBalance(Number(data.balance));
+
+      if (data) {
+        setBalance(Number(data.balance ?? 0));
+      }
     })();
   }, [user?.email]);
 
-  const market = useMarket(pair);
-  const priceDir = market.price >= market.prevPrice ? "up" : "down";
-  const priceFlash = useFlash(market.price);
-
-  // Supabase sync orders
-  const persistOrders = useCallback((next) => {
-    if (!user?.email) return;
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(async () => {
-      await supabase.from("vault_orders").upsert(
-        next.map((o) => ({ ...o, email: user.email })),
-        { onConflict: "id" }
-      );
-    }, SUPABASE_DEBOUNCE);
-  }, [user]);
-
-  // Load persisted orders
+  // ── 2. Load persisted open orders from vault_orders ──
   useEffect(() => {
     if (!user?.email) return;
     (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const uid = authData?.user?.id;
+      if (!uid) return;
+      userIdRef.current = uid;
+
       const { data } = await supabase
         .from("vault_orders")
         .select("*")
-        .eq("email", user.email)
-        .order("createdAt", { ascending: false })
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false })
         .limit(50);
+
       if (data?.length) setOrders(data);
     })();
   }, [user?.email]);
 
-  // Market engine fills open orders
+  const market     = useMarket(pair);
+  const priceDir   = market.price >= market.prevPrice ? "up" : "down";
+  const priceFlash = useFlash(market.price);
+
+  // ── 3. Persist orders to vault_orders (debounced, uses user_id) ──
+  const persistOrders = useCallback((next) => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(async () => {
+      const rows = next.map((o) => ({
+        id:         o.id,
+        user_id:    uid,
+        pair:       o.pair,
+        type:       o.type,
+        price:      o.price,
+        amount:     o.amount,
+        total:      o.total,
+        fee:        o.fee,
+        filled:     o.filled ?? 0,
+        status:     o.status,
+        settled:    o.settled ?? false,
+        profit:     o.profit ?? null,
+        created_at: o.created_at ?? Date.now(),
+        closed_at:  o.closed_at ?? null,
+      }));
+      await supabase
+        .from("vault_orders")
+        .upsert(rows, { onConflict: "id" });
+    }, SUPABASE_DEBOUNCE);
+  }, []);
+
+  // ── 4. Write account changes to account_summary ──
+  const persistAccount = useCallback(async (patch) => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    await supabase
+      .from("account_summary")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", uid);
+  }, []);
+
+  // ── 5. Market engine fills open orders + credits profit ──
   useEffect(() => {
     if (!orders.length) return;
     setOrders((prev) => {
       let changed = false;
+      let profitDelta    = 0;
+      let positionDelta  = 0;
+
       const next = prev.map((o) => {
         if (o.status !== "open" && o.status !== "partial") return o;
         const mkt = market.price;
-        // Limit order: fill if market crosses limit price
-        if (o.type === "limit" && mkt <= o.price) {
-          const fillPct  = 0.3 + Math.random() * 0.7;
-          const newFilled = Math.min(o.amount, (o.filled || 0) + o.amount * fillPct * 0.25);
-          const status    = newFilled >= o.amount * 0.999 ? "filled" : "partial";
-          changed = true;
-          return { ...o, filled: newFilled, status };
-        }
-        // Market order: fill immediately
+
+        let updated = null;
         if (o.type === "market" && o.status === "open") {
-          changed = true;
-          return { ...o, filled: o.amount, status: "filled" };
+          updated = { ...o, filled: o.amount, status: "filled" };
+        } else if (o.type === "limit" && mkt <= o.price) {
+          const newFilled = Math.min(o.amount, (o.filled || 0) + o.amount * (0.3 + Math.random() * 0.7) * 0.25);
+          const status    = newFilled >= o.amount * 0.999 ? "filled" : "partial";
+          updated = { ...o, filled: newFilled, status };
         }
+
+        // Settle filled orders exactly once
+        if (updated?.status === "filled" && !o.settled) {
+          const profitPct = 0.001 + Math.random() * 0.019;
+          const profit    = parseFloat((updated.total * profitPct).toFixed(2));
+          profitDelta    += profit;
+          positionDelta  -= 1;
+          changed = true;
+          return { ...updated, settled: true, profit, closed_at: Date.now() };
+        }
+
+        if (updated) { changed = true; return updated; }
         return o;
       });
-      if (changed) { persistOrders(next); return next; }
+
+      if (changed) {
+        persistOrders(next);
+        // Update account_summary: credit profit, decrement active_positions
+        if (profitDelta > 0 || positionDelta !== 0) {
+          // Read current values then patch
+          (async () => {
+            const uid = userIdRef.current;
+            if (!uid) return;
+            const { data } = await supabase
+              .from("account_summary")
+              .select("total_profit, active_positions")
+              .eq("id", uid)
+              .single();
+            if (data) {
+              await persistAccount({
+                total_profit:     (Number(data.total_profit) + profitDelta),
+                active_positions: Math.max(0, Number(data.active_positions) + positionDelta),
+              });
+            }
+          })();
+        }
+        return next;
+      }
       return prev;
     });
   }, [market.tick]);
 
-  function handlePlaceOrder(order) {
+  // ── 6. Place order: debit balance + increment active_positions ──
+  async function handlePlaceOrder(order) {
+    const uid = userIdRef.current;
+    const cost = order.total + order.fee;
+
+    // Optimistic UI update
+    setBalance((b) => Math.max(0, b - cost));
     setOrders((prev) => {
       const next = [order, ...prev];
       persistOrders(next);
       return next;
     });
-    setBalance((b) => Math.max(0, b - order.total - order.fee));
+
+    // Write to account_summary
+    if (uid) {
+      const { data } = await supabase
+        .from("account_summary")
+        .select("balance, active_positions")
+        .eq("id", uid)
+        .single();
+      if (data) {
+        await persistAccount({
+          balance:          Math.max(0, Number(data.balance) - cost),
+          active_positions: Number(data.active_positions) + 1,
+        });
+      }
+    }
   }
 
-  function handleCancelOrder(id) {
+  // ── 7. Cancel order: restore balance ──
+  async function handleCancelOrder(id) {
+    const cancelled = orders.find((o) => o.id === id);
     setOrders((prev) => {
       const next = prev.map((o) => o.id === id ? { ...o, status: "cancelled" } : o);
       persistOrders(next);
       return next;
     });
+
+    // Refund to account_summary
+    if (cancelled && userIdRef.current) {
+      const refund = (cancelled.total || 0) + (cancelled.fee || 0);
+      const { data } = await supabase
+        .from("account_summary")
+        .select("balance, active_positions")
+        .eq("id", userIdRef.current)
+        .single();
+      if (data) {
+        setBalance(Number(data.balance) + refund);
+        await persistAccount({
+          balance:          Number(data.balance) + refund,
+          active_positions: Math.max(0, Number(data.active_positions) - 1),
+        });
+      }
+    }
   }
 
   const openCount = useMemo(() => orders.filter((o) => o.status === "open" || o.status === "partial").length, [orders]);
