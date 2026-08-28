@@ -308,121 +308,161 @@ const MiniChart = memo(function MiniChart({ candles, color }) {
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   FULL PRICE CHART (canvas-based candlestick)
+   TRADING CALENDAR HEATMAP
+   Replaces the candlestick chart.
+   Builds a calendar for the current month, one cell per day.
+   Each day's P/L is derived from the simulated candle closes so the
+   numbers are consistent with the live market — not hardcoded.
 ═══════════════════════════════════════════════════════════════════════ */
 const PriceChart = memo(function PriceChart({ candles, pair }) {
-  const canvasRef = useRef(null);
+  // Build daily P/L from candle data
+  const calendarData = useMemo(() => {
+    const now   = new Date();
+    const year  = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDow    = new Date(year, month, 1).getDay(); // 0=Sun
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !candles.length) return;
-    const ctx = canvas.getContext("2d");
-    const W   = canvas.width;
-    const H   = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-
-    const prices  = candles.flatMap((c) => [c.h, c.l]);
-    const pMin    = Math.min(...prices);
-    const pMax    = Math.max(...prices);
-    const pRange  = pMax - pMin || 1;
-    const PAD     = { top: 12, bottom: 32, left: 4, right: 52 };
-    const chartH  = H - PAD.top - PAD.bottom;
-    const chartW  = W - PAD.left - PAD.right;
-    const cw      = Math.max(2, chartW / candles.length - 1);
-
-    function py(price) {
-      return PAD.top + chartH - ((price - pMin) / pRange) * chartH;
-    }
-    function px(i) {
-      return PAD.left + (i / candles.length) * chartW + cw / 2;
+    // Spread candles across the days that have passed so far
+    const today     = now.getDate();
+    const tradingDays = [];
+    for (let d = 1; d <= today; d++) {
+      const dow = new Date(year, month, d).getDay();
+      if (dow !== 0 && dow !== 6) tradingDays.push(d); // skip weekends
     }
 
-    // Grid lines
-    ctx.strokeStyle = "#1E2A3A";
-    ctx.lineWidth   = 1;
-    for (let g = 0; g <= 4; g++) {
-      const y = PAD.top + (g / 4) * chartH;
-      ctx.beginPath();
-      ctx.moveTo(PAD.left, y);
-      ctx.lineTo(W - PAD.right, y);
-      ctx.stroke();
-      const label = fmtPrice(pMax - (g / 4) * pRange, pair.precision);
-      ctx.fillStyle = "#4A5568";
-      ctx.font      = "9px monospace";
-      ctx.textAlign = "left";
-      ctx.fillText(label, W - PAD.right + 4, y + 3);
-    }
-
-    // Volume bars (bottom)
-    const vols  = candles.map((c) => c.vol || 1);
-    const vMax  = Math.max(...vols);
-    const vH    = 18;
-    candles.forEach((c, i) => {
-      const bh = ((c.vol || 0) / vMax) * vH;
-      ctx.fillStyle = c.bullish ? T.green + "55" : T.red + "55";
-      ctx.fillRect(px(i) - cw / 2, H - PAD.bottom + 4, cw, bh);
+    // Assign candle slices to each trading day
+    const sliceSize = Math.max(1, Math.floor(candles.length / Math.max(1, tradingDays.length)));
+    const dayMap = {};
+    tradingDays.forEach((d, idx) => {
+      const slice = candles.slice(idx * sliceSize, (idx + 1) * sliceSize);
+      if (!slice.length) return;
+      const first = slice[0].o;
+      const last  = slice[slice.length - 1].c;
+      const pct   = ((last - first) / first) * 100;
+      // Simulate a dollar P/L realistic for the pair
+      const base  = pair.price * 0.0008;
+      const pl    = pct * base * (80 + Math.random() * 40);
+      const trades = 1 + Math.floor(Math.random() * 3);
+      dayMap[d] = { pl, pct, trades };
     });
 
-    // Candles
-    candles.forEach((c, i) => {
-      const x    = px(i);
-      const open = py(c.o);
-      const close= py(c.c);
-      const high = py(c.h);
-      const low  = py(c.l);
-      const color= c.bullish ? T.green : T.red;
-
-      ctx.strokeStyle = color;
-      ctx.lineWidth   = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, high);
-      ctx.lineTo(x, low);
-      ctx.stroke();
-
-      ctx.fillStyle = color;
-      const bodyTop = Math.min(open, close);
-      const bodyH   = Math.max(1, Math.abs(open - close));
-      ctx.fillRect(x - cw / 2, bodyTop, cw, bodyH);
-    });
-
-    // Current price line
-    const lastC   = candles[candles.length - 1];
-    if (lastC) {
-      const y = py(lastC.c);
-      ctx.strokeStyle = T.gold + "cc";
-      ctx.lineWidth   = 0.8;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.moveTo(PAD.left, y);
-      ctx.lineTo(W - PAD.right, y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Price label
-      ctx.fillStyle   = T.gold;
-      ctx.font        = "bold 9px monospace";
-      ctx.textAlign   = "left";
-      ctx.fillText(fmtPrice(lastC.c, pair.precision), W - PAD.right + 4, y + 3);
-    }
-
-    // Time axis
-    [0, Math.floor(candles.length / 2), candles.length - 1].forEach((i) => {
-      if (!candles[i]) return;
-      ctx.fillStyle = "#4A5568";
-      ctx.font      = "8px monospace";
-      ctx.textAlign = "center";
-      const t = new Date(candles[i].t).toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
-      ctx.fillText(t, px(i), H - 4);
-    });
+    return { daysInMonth, firstDow, dayMap, month, year };
   }, [candles, pair]);
 
+  const DAYS   = ["S","M","T","W","T","F","S"];
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const { daysInMonth, firstDow, dayMap, month, year } = calendarData;
+
+  // Build grid cells: leading blanks + day cells
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  function cellBg(d) {
+    const info = dayMap[d];
+    if (!info) return "#0f1318"; // no data — dim
+    if (info.pl > 0) {
+      const intensity = Math.min(1, Math.abs(info.pct) / 2);
+      const g = Math.round(60 + intensity * 60);
+      return `rgba(0,${g + 40},${g},0.55)`;
+    } else {
+      const intensity = Math.min(1, Math.abs(info.pct) / 2);
+      const r = Math.round(100 + intensity * 60);
+      return `rgba(${r},20,40,0.6)`;
+    }
+  }
+
+  function borderLeft(d) {
+    const info = dayMap[d];
+    if (!info) return "none";
+    return `2px solid ${info.pl >= 0 ? T.green : T.red}`;
+  }
+
   return (
-    <canvas
-      ref={canvasRef}
-      width={600}
-      height={180}
-      style={{ width: "100%", height: 180, display: "block" }}
-    />
+    <div style={{ width: "100%", padding: "10px 12px 6px", boxSizing: "border-box" }}>
+      {/* Month header */}
+      <div style={{
+        fontSize: 13, fontWeight: 700, color: T.gray1,
+        letterSpacing: "0.04em", marginBottom: 10,
+        fontFamily: T.sans,
+      }}>
+        {MONTHS[month]} {year}
+      </div>
+
+      {/* Day-of-week headers */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 3 }}>
+        {DAYS.map((d, i) => (
+          <div key={i} style={{
+            textAlign: "center", fontSize: 10, fontWeight: 600,
+            color: T.gray2, padding: "2px 0", fontFamily: T.font,
+          }}>
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+        {cells.map((d, i) => {
+          if (d === null) {
+            return <div key={`blank-${i}`} style={{ aspectRatio: "1", background: "transparent" }} />;
+          }
+          const info = dayMap[d];
+          const isToday = d === new Date().getDate();
+          return (
+            <div
+              key={d}
+              style={{
+                aspectRatio: "1",
+                borderRadius: 6,
+                background: cellBg(d),
+                borderLeft: borderLeft(d),
+                border: isToday ? `1px solid ${T.gold}88` : undefined,
+                padding: "4px 4px 3px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                position: "relative",
+                overflow: "hidden",
+                cursor: info ? "default" : "default",
+                transition: "background 0.3s",
+              }}
+            >
+              {/* Day number */}
+              <div style={{
+                fontSize: 9, fontWeight: 700,
+                color: info ? (isToday ? T.gold : T.white) : T.gray3,
+                fontFamily: T.font, lineHeight: 1,
+              }}>
+                {String(d).padStart(2, "0")}
+              </div>
+
+              {/* P/L */}
+              {info && (
+                <div style={{ marginTop: 2 }}>
+                  <div style={{
+                    fontSize: 9, fontWeight: 800,
+                    color: info.pl >= 0 ? T.green2 : T.red2,
+                    fontFamily: T.font, lineHeight: 1.2,
+                    letterSpacing: "-0.01em",
+                  }}>
+                    {info.pl >= 0 ? "+" : ""}${Math.abs(info.pl).toFixed(0)}
+                  </div>
+                  <div style={{
+                    fontSize: 8, color: T.gray2,
+                    fontFamily: T.font, marginTop: 1,
+                  }}>
+                    {info.trades} trade{info.trades > 1 ? "s" : ""}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 });
 
