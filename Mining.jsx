@@ -1070,7 +1070,7 @@ export default function Mining({ user }) {
       minHeight: "100dvh",
       display: "flex",
       flexDirection: "column",
-      background: T.bg0,
+      background: "#080808",
       fontFamily: T.sans,
       overflow: "hidden",
       position: "relative",
@@ -1078,38 +1078,7 @@ export default function Mining({ user }) {
       margin: "0 auto",
     }}>
 
-      {/* ────────────────────────────────
-          TOP NAV TABS
-      ──────────────────────────────── */}
-      <div style={{
-        display: "flex",
-        gap: 20,
-        padding: "12px 16px 0",
-        borderBottom: `1px solid ${T.border}`,
-        background: T.bg1,
-        flexShrink: 0,
-      }}>
-        {["Convert", "Spot", "Futures", "Options"].map((t) => (
-          <button
-            key={t}
-            onClick={() => t === "Spot" && setNavTab("trade")}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              padding: "0 0 10px",
-              fontSize: 13, fontWeight: t === "Spot" ? 700 : 500,
-              color: t === "Spot" ? T.white : T.gray2,
-              borderBottom: t === "Spot" ? `2px solid ${T.gold}` : "2px solid transparent",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            {t}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button style={{ background: "none", border: "none", cursor: "pointer", color: T.gray1, padding: "0 0 10px", WebkitTapHighlightColor: "transparent" }}>
-          <Settings2 size={16} />
-        </button>
-      </div>
+
 
       {/* ────────────────────────────────
           HEADER – Pair + Price
@@ -1321,47 +1290,7 @@ export default function Mining({ user }) {
         </div>
       </div>
 
-      {/* ────────────────────────────────
-          BOTTOM NAV
-      ──────────────────────────────── */}
-      <div style={{
-        display: "flex",
-        background: T.bg1,
-        borderTop: `1px solid ${T.border}`,
-        flexShrink: 0,
-        paddingBottom: "env(safe-area-inset-bottom, 8px)",
-      }}>
-        {[
-          { id: "home",    label: "Home",    Icon: Home },
-          { id: "markets", label: "Markets", Icon: LineChart },
-          { id: "trade",   label: "Trade",   Icon: Zap },
-          { id: "futures", label: "Futures", Icon: TrendingUp },
-          { id: "assets",  label: "Assets",  Icon: Wallet },
-        ].map(({ id, label, Icon }) => {
-          const active = navTab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setNavTab(id)}
-              style={{
-                flex: 1, display: "flex", flexDirection: "column",
-                alignItems: "center", gap: 3, padding: "8px 0 10px",
-                background: "none", border: "none", cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-                position: "relative",
-              }}
-            >
-              <Icon size={20} color={active ? T.gold : T.gray2} />
-              <span style={{ fontSize: 9, fontWeight: active ? 700 : 500, color: active ? T.gold : T.gray2, letterSpacing: "0.04em" }}>
-                {label}
-              </span>
-              {active && (
-                <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 20, height: 2, borderRadius: 1, background: T.gold }} />
-              )}
-            </button>
-          );
-        })}
-      </div>
+
 
       {/* ────────────────────────────────
           MODALS
