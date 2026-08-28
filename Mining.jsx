@@ -308,160 +308,230 @@ const MiniChart = memo(function MiniChart({ candles, color }) {
 });
 
 /* ═══════════════════════════════════════════════════════════════════════
-   TRADING CALENDAR HEATMAP
-   Replaces the candlestick chart.
-   Builds a calendar for the current month, one cell per day.
-   Each day's P/L is derived from the simulated candle closes so the
-   numbers are consistent with the live market — not hardcoded.
+   LIVE TICK HEATMAP
+   28-cell rolling grid (4 rows × 7 cols).
+   Each cell = one price tick. Updates every second from the live price.
+   Colour intensity scales with the size of the move.
+   The "current" cell is the rightmost-bottom one and pulses.
 ═══════════════════════════════════════════════════════════════════════ */
+const GRID_COLS = 7;
+const GRID_ROWS = 4;
+const GRID_SIZE = GRID_COLS * GRID_ROWS; // 28 cells
+
 const PriceChart = memo(function PriceChart({ candles, pair }) {
-  // Build daily P/L from candle data
-  const calendarData = useMemo(() => {
-    const now   = new Date();
-    const year  = now.getFullYear();
-    const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDow    = new Date(year, month, 1).getDay(); // 0=Sun
-
-    // Spread candles across the days that have passed so far
-    const today     = now.getDate();
-    const tradingDays = [];
-    for (let d = 1; d <= today; d++) {
-      const dow = new Date(year, month, d).getDay();
-      if (dow !== 0 && dow !== 6) tradingDays.push(d); // skip weekends
-    }
-
-    // Assign candle slices to each trading day
-    const sliceSize = Math.max(1, Math.floor(candles.length / Math.max(1, tradingDays.length)));
-    const dayMap = {};
-    tradingDays.forEach((d, idx) => {
-      const slice = candles.slice(idx * sliceSize, (idx + 1) * sliceSize);
-      if (!slice.length) return;
-      const first = slice[0].o;
-      const last  = slice[slice.length - 1].c;
-      const pct   = ((last - first) / first) * 100;
-      // Simulate a dollar P/L realistic for the pair
-      const base  = pair.price * 0.0008;
-      const pl    = pct * base * (80 + Math.random() * 40);
-      const trades = 1 + Math.floor(Math.random() * 3);
-      dayMap[d] = { pl, pct, trades };
+  // ticks: rolling array of { price, pl, pct, trades, key }
+  const [ticks, setTicks] = useState(() => {
+    // Seed from existing candles so grid isn't empty on first render
+    const seed = candles.slice(-GRID_SIZE).map((c, i) => {
+      const pl  = (c.c - c.o);
+      const pct = (pl / c.o) * 100;
+      return {
+        price:  c.c,
+        pl:     pl * pair.price * 0.012,
+        pct,
+        trades: 1 + (i % 3),
+        key:    i,
+      };
     });
+    // Pad to GRID_SIZE if needed
+    while (seed.length < GRID_SIZE) {
+      seed.unshift({ price: pair.price, pl: 0, pct: 0, trades: 0, key: -(seed.length) });
+    }
+    return seed.slice(-GRID_SIZE);
+  });
 
-    return { daysInMonth, firstDow, dayMap, month, year };
-  }, [candles, pair]);
+  const prevPriceRef = useRef(pair.price);
+  const keyRef       = useRef(GRID_SIZE);
+  const tradesRef    = useRef(1);
 
-  const DAYS   = ["S","M","T","W","T","F","S"];
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  // Drive from candles prop — every time candles updates (every ~8s)
+  // push a new tick. Between candle updates we push every 1s via interval.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const lastCandle = candles[candles.length - 1];
+      if (!lastCandle) return;
+      const price  = lastCandle.c;
+      const prev   = prevPriceRef.current;
+      const rawPl  = (price - prev);
+      const pct    = prev > 0 ? (rawPl / prev) * 100 : 0;
+      // Scale to a realistic dollar P/L for display
+      const pl     = pct * pair.price * (0.8 + Math.random() * 0.6);
+      tradesRef.current = 1 + Math.floor(Math.random() * 3);
+      prevPriceRef.current = price;
+      keyRef.current += 1;
 
-  const { daysInMonth, firstDow, dayMap, month, year } = calendarData;
+      const newTick = {
+        price,
+        pl,
+        pct,
+        trades: tradesRef.current,
+        key:    keyRef.current,
+      };
 
-  // Build grid cells: leading blanks + day cells
-  const cells = [];
-  for (let i = 0; i < firstDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+      setTicks((prev) => [...prev.slice(-(GRID_SIZE - 1)), newTick]);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [candles, pair.price]);
 
-  function cellBg(d) {
-    const info = dayMap[d];
-    if (!info) return "#0f1318"; // no data — dim
-    if (info.pl > 0) {
-      const intensity = Math.min(1, Math.abs(info.pct) / 2);
-      const g = Math.round(60 + intensity * 60);
-      return `rgba(0,${g + 40},${g},0.55)`;
+  function cellBg(tick, isLatest) {
+    if (!tick || tick.trades === 0) return "#0c1016";
+    if (isLatest) return "#1a2235"; // current cell — neutral highlight
+    const intensity = Math.min(1, Math.abs(tick.pct) / 0.15);
+    if (tick.pl >= 0) {
+      const g = Math.round(55 + intensity * 80);
+      return `rgba(0,${g + 30},${g - 10},0.65)`;
     } else {
-      const intensity = Math.min(1, Math.abs(info.pct) / 2);
-      const r = Math.round(100 + intensity * 60);
-      return `rgba(${r},20,40,0.6)`;
+      const r = Math.round(90 + intensity * 80);
+      return `rgba(${r},18,36,0.70)`;
     }
   }
 
-  function borderLeft(d) {
-    const info = dayMap[d];
-    if (!info) return "none";
-    return `2px solid ${info.pl >= 0 ? T.green : T.red}`;
+  function cellBorder(tick, isLatest) {
+    if (isLatest) return `1.5px solid ${T.gold}99`;
+    if (!tick || tick.trades === 0) return `1px solid #12181f`;
+    return `1px solid ${tick.pl >= 0 ? T.green + "55" : T.red + "44"}`;
   }
+
+  const LABELS = ["S1","S2","S3","S4","S5","S6","S7"];
 
   return (
-    <div style={{ width: "100%", padding: "10px 12px 6px", boxSizing: "border-box" }}>
-      {/* Month header */}
+    <div style={{ width: "100%", padding: "10px 12px 8px", boxSizing: "border-box" }}>
+
+      {/* Header row */}
       <div style={{
-        fontSize: 13, fontWeight: 700, color: T.gray1,
-        letterSpacing: "0.04em", marginBottom: 10,
-        fontFamily: T.sans,
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between", marginBottom: 8,
       }}>
-        {MONTHS[month]} {year}
+        <div style={{ fontSize: 11, fontWeight: 700, color: T.gray1, fontFamily: T.sans, letterSpacing: "0.04em" }}>
+          LIVE TICK GRID · {pair.base}/{pair.quote}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <motion.div
+            animate={{ opacity: [1, 0.2, 1] }}
+            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            style={{ width: 6, height: 6, borderRadius: "50%", background: T.green }}
+          />
+          <span style={{ fontSize: 9, color: T.green, fontFamily: T.font, fontWeight: 700, letterSpacing: "0.1em" }}>
+            LIVE
+          </span>
+        </div>
       </div>
 
-      {/* Day-of-week headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 3 }}>
-        {DAYS.map((d, i) => (
+      {/* Column headers */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+        gap: 3, marginBottom: 3,
+      }}>
+        {LABELS.map((l, i) => (
           <div key={i} style={{
-            textAlign: "center", fontSize: 10, fontWeight: 600,
-            color: T.gray2, padding: "2px 0", fontFamily: T.font,
+            textAlign: "center", fontSize: 9, fontWeight: 600,
+            color: T.gray3, fontFamily: T.font,
           }}>
-            {d}
+            {l}
           </div>
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
-        {cells.map((d, i) => {
-          if (d === null) {
-            return <div key={`blank-${i}`} style={{ aspectRatio: "1", background: "transparent" }} />;
-          }
-          const info = dayMap[d];
-          const isToday = d === new Date().getDate();
+      {/* Grid */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+        gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
+        gap: 3,
+      }}>
+        {ticks.map((tick, i) => {
+          const isLatest = i === ticks.length - 1;
+          const hasData  = tick && tick.trades > 0;
           return (
-            <div
-              key={d}
+            <motion.div
+              key={tick.key}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25 }}
               style={{
-                aspectRatio: "1",
-                borderRadius: 6,
-                background: cellBg(d),
-                borderLeft: borderLeft(d),
-                border: isToday ? `1px solid ${T.gold}88` : undefined,
-                padding: "4px 4px 3px",
+                borderRadius: 7,
+                background: cellBg(tick, isLatest),
+                border: cellBorder(tick, isLatest),
+                padding: "5px 5px 4px",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
+                minHeight: 54,
                 position: "relative",
                 overflow: "hidden",
-                cursor: info ? "default" : "default",
-                transition: "background 0.3s",
+                boxShadow: isLatest ? `0 0 10px ${T.gold}33` : "none",
               }}
             >
-              {/* Day number */}
+              {/* Tick index label */}
               <div style={{
-                fontSize: 9, fontWeight: 700,
-                color: info ? (isToday ? T.gold : T.white) : T.gray3,
+                fontSize: 8, fontWeight: 700,
+                color: isLatest ? T.gold : T.gray3,
                 fontFamily: T.font, lineHeight: 1,
               }}>
-                {String(d).padStart(2, "0")}
+                {isLatest ? "NOW" : `T-${ticks.length - 1 - i}`}
               </div>
 
               {/* P/L */}
-              {info && (
-                <div style={{ marginTop: 2 }}>
+              {hasData && (
+                <div>
                   <div style={{
-                    fontSize: 9, fontWeight: 800,
-                    color: info.pl >= 0 ? T.green2 : T.red2,
+                    fontSize: 10, fontWeight: 800,
+                    color: tick.pl >= 0 ? T.green2 : T.red2,
                     fontFamily: T.font, lineHeight: 1.2,
                     letterSpacing: "-0.01em",
                   }}>
-                    {info.pl >= 0 ? "+" : ""}${Math.abs(info.pl).toFixed(0)}
+                    {tick.pl >= 0 ? "+" : "-"}${Math.abs(tick.pl).toFixed(0)}
                   </div>
                   <div style={{
                     fontSize: 8, color: T.gray2,
                     fontFamily: T.font, marginTop: 1,
                   }}>
-                    {info.trades} trade{info.trades > 1 ? "s" : ""}
+                    {tick.trades} trade{tick.trades !== 1 ? "s" : ""}
                   </div>
                 </div>
               )}
-            </div>
+
+              {/* Pulse ring on latest cell */}
+              {isLatest && (
+                <motion.div
+                  animate={{ opacity: [0.6, 0, 0.6], scale: [1, 1.4, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                  style={{
+                    position: "absolute", inset: 0,
+                    borderRadius: 7,
+                    border: `1px solid ${T.gold}66`,
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+            </motion.div>
           );
         })}
       </div>
+
+      {/* Footer: price + pct of latest tick */}
+      {ticks.length > 0 && ticks[ticks.length - 1].trades > 0 && (
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginTop: 8, padding: "0 2px",
+        }}>
+          <span style={{ fontSize: 10, color: T.gray2, fontFamily: T.font }}>
+            Last price
+          </span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, fontFamily: T.font,
+            color: ticks[ticks.length - 1].pl >= 0 ? T.green : T.red,
+          }}>
+            {fmtPrice(ticks[ticks.length - 1].price, pair.precision)}
+            {"  "}
+            <span style={{ fontSize: 9, opacity: 0.8 }}>
+              {ticks[ticks.length - 1].pct >= 0 ? "+" : ""}
+              {ticks[ticks.length - 1].pct.toFixed(3)}%
+            </span>
+          </span>
+        </div>
+      )}
     </div>
   );
 });
