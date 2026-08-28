@@ -732,8 +732,11 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
           borderRadius: "20px 20px 0 0",
           border: `1px solid ${T.border2}`,
           borderBottom: "none",
-          padding: "24px 20px 44px",
+          padding: "24px 20px 0",
           position: "relative",
+          maxHeight: "92vh",
+          overflowY: "auto",
+          paddingBottom: "calc(28px + env(safe-area-inset-bottom, 20px))",
         }}
       >
         {/* Handle */}
@@ -914,10 +917,11 @@ function OrdersPanel({ orders, onCancel, onClose }) {
           borderRadius: "20px 20px 0 0",
           border: `1px solid ${T.border2}`,
           borderBottom: "none",
-          padding: "20px 0 44px",
-          maxHeight: "75vh",
+          padding: "20px 0 0",
+          maxHeight: "85vh",
           display: "flex",
           flexDirection: "column",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
         <div style={{ padding: "0 20px", marginBottom: 12 }}>
@@ -950,8 +954,15 @@ function OrdersPanel({ orders, onCancel, onClose }) {
           ))}
         </div>
 
+        {/* Scroll hint */}
+        {filtered.length > 2 && (
+          <div style={{ textAlign: "center", padding: "4px 0 0", fontSize: 10, color: T.gray3, letterSpacing: "0.08em" }}>
+            ↕ SCROLL TO SEE ALL
+          </div>
+        )}
+
         {/* List */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "12px 20px 0" }}>
+        <div style={{ overflowY: "auto", flex: 1, padding: "10px 20px 32px", WebkitOverflowScrolling: "touch" }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: T.gray2, fontSize: 13 }}>No orders</div>
           ) : filtered.map((o) => (
