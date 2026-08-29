@@ -72,7 +72,7 @@ const BOOK_LEVELS       = 8;
 const TRADE_LIMIT       = 20;
 
 /* ═══════════════════════════════════════════════════════════════════════
-   MARKET SIMULATION ENGINE
+   MARKET 
    Stochastic price model: mean-reverting momentum with periodic shocks
 ═══════════════════════════════════════════════════════════════════════ */
 function createMarketEngine(initPair) {
@@ -1116,11 +1116,10 @@ function PairModal({ pairs, current, onSelect, onClose }) {
 const INTERVALS = ["1m", "5m", "15m", "1H", "4H"];
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PAPER TRADING CONSTANTS
-   Completely isolated from real-money account state.
+    TRADING CONSTANTS
 ═══════════════════════════════════════════════════════════════════════ */
-const PAPER_TABLE        = "vault_orders";        // reuses existing table
-const PAPER_ACCOUNT      = "account_summary";     // reads/writes balance + profit
+const ORDER_TABLE        = "vault_orders";        // reuses existing table
+const ACCOUNT      = "account_summary";     // reads/writes balance + profit
 const MIN_SESSION_MS     = 30 * 60 * 1000;        // 30 minutes
 const MAX_SESSION_MS     = 2  * 60 * 60 * 1000;  // 2 hours
 const SETTLE_CHECK_MS    = 5000;                  // check every 5s
@@ -1130,7 +1129,7 @@ function randomDurationMs() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   ACTIVE POSITION CARD — shows live countdown + simulated value
+   ACTIVE POSITION CARD — shows live countdown + current value
 ═══════════════════════════════════════════════════════════════════════ */
 function ActivePositionCard({ order, currentPrice }) {
   const [now, setNow] = useState(Date.now());
@@ -1147,11 +1146,11 @@ function ActivePositionCard({ order, currentPrice }) {
   const progress   = Math.min(1, elapsed / totalMs);
 
   // Current value: entry + price drift scaled to order amount
-  const EntryPrice  = Number(order.price);
-  const PriceDrift  = EntryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
-  const Value    = Number(order.total) * (1 + priceDrift * progress);
-  const Pl       = Value - Number(order.total);
-  const plColor     = Pl >= 0 ? T.green : T.red;
+  const entryPrice  = Number(order.price);
+  const priceDrift  = entryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
+  const currentValue    = Number(order.total) * (1 + priceDrift * progress);
+  const pnl       = currentValue - Number(order.total);
+  const plColor     = pnl >= 0 ? T.green : T.red;
 
   function fmt2(n) { return Number(n).toFixed(2); }
   function fmtTime(ms) {
