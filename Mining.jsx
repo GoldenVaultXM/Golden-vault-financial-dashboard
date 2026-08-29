@@ -1266,13 +1266,13 @@ export default function Mining({ user }) {
     }, SUPABASE_DEBOUNCE);
   }, []);
 
-  /* ── LOAD account + orders on mount ── */
+  /* ── LOAD account + orders on every mount ── */
   useEffect(() => {
-    if (!user?.email) return;
+    let cancelled = false;
     (async () => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
-      if (!uid) return;
+      if (!uid || cancelled) return;
       userIdRef.current = uid;
 
       // Load account balance + profit
@@ -1281,21 +1281,25 @@ export default function Mining({ user }) {
         .select("balance, total_profit, active_positions")
         .eq("id", uid)
         .single();
-      if (acc) {
+      if (acc && !cancelled) {
         setBalance(Number(acc.balance ?? 0));
         setTotalProfit(Number(acc.total_profit ?? 0));
       }
 
-      // Load all orders
+      // Load ALL orders — active + history
       const { data: ord } = await supabase
         .from(PAPER_TABLE)
         .select("*")
         .eq("user_id", uid)
         .order("created_at", { ascending: false })
         .limit(100);
-      if (ord?.length) setOrders(ord);
+      if (!cancelled) {
+        setOrders(ord?.length ? ord : []);
+      }
     })();
-  }, [user?.email]);
+    // Cleanup: if component unmounts before async completes, ignore result
+    return () => { cancelled = true; };
+  }, []); // runs on every mount — intentional
 
   /* ── SESSION COMPLETION CHECKER ── */
   /* Runs every 5s, checks timestamps — survives refresh */
