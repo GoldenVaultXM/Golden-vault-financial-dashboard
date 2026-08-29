@@ -1493,6 +1493,7 @@ export default function Mining({ user }) {
         background: T.bg1,
         borderTop: `1px solid ${T.border}`,
         flexShrink: 0,
+        paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
       }}>
         {/* Open orders tab bar */}
         <div style={{ display: "flex", padding: "0 16px", gap: 20, borderBottom: `1px solid ${T.border}` }}>
