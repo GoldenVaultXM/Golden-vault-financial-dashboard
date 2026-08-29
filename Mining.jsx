@@ -1116,223 +1116,343 @@ function PairModal({ pairs, current, onSelect, onClose }) {
 const INTERVALS = ["1m", "5m", "15m", "1H", "4H"];
 
 /* ═══════════════════════════════════════════════════════════════════════
+   PAPER TRADING CONSTANTS
+   Completely isolated from real-money account state.
+═══════════════════════════════════════════════════════════════════════ */
+const PAPER_TABLE        = "vault_orders";        // reuses existing table
+const PAPER_ACCOUNT      = "account_summary";     // reads/writes balance + profit
+const MIN_SESSION_MS     = 30 * 60 * 1000;        // 30 minutes
+const MAX_SESSION_MS     = 2  * 60 * 60 * 1000;  // 2 hours
+const SETTLE_CHECK_MS    = 5000;                  // check every 5s
+
+function randomDurationMs() {
+  return MIN_SESSION_MS + Math.floor(Math.random() * (MAX_SESSION_MS - MIN_SESSION_MS));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ACTIVE POSITION CARD — shows live countdown + simulated value
+═══════════════════════════════════════════════════════════════════════ */
+function ActivePositionCard({ order, currentPrice }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const endTime    = Number(order.end_time);
+  const startTime  = Number(order.created_at);
+  const totalMs    = endTime - startTime;
+  const elapsed    = Math.min(now - startTime, totalMs);
+  const remaining  = Math.max(0, endTime - now);
+  const progress   = Math.min(1, elapsed / totalMs);
+
+  // Simulated current value: entry + price drift scaled to order amount
+  const entryPrice  = Number(order.price);
+  const priceDrift  = entryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
+  const simValue    = Number(order.total) * (1 + priceDrift * progress);
+  const simPl       = simValue - Number(order.total);
+  const plColor     = simPl >= 0 ? T.green : T.red;
+
+  function fmt2(n) { return Number(n).toFixed(2); }
+  function fmtTime(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return `${h}h ${String(m % 60).padStart(2,"0")}m`;
+    return `${String(m).padStart(2,"0")}m ${String(s % 60).padStart(2,"0")}s`;
+  }
+
+  return (
+    <div style={{ background: T.bg3, borderRadius: 12, padding: "14px 16px", marginBottom: 10, border: `1px solid ${T.border2}` }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: T.white }}>{order.pair}</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: T.gold, background: T.goldDim, borderRadius: 4, padding: "2px 6px", letterSpacing: "0.08em" }}>ACTIVE</span>
+        </div>
+        <motion.div animate={{ opacity: [1, 0.3, 1] }} transition={{ repeat: Infinity, duration: 1.4 }}
+          style={{ width: 7, height: 7, borderRadius: "50%", background: T.green }} />
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        {[
+          ["INVESTED",  `$${fmt2(order.total)}`],
+          ["SIM VALUE", `$${fmt2(simValue)}`,    plColor],
+          ["SIM P/L",   `${simPl >= 0 ? "+" : ""}$${fmt2(simPl)}`, plColor],
+        ].map(([label, val, col]) => (
+          <div key={label}>
+            <div style={{ fontSize: 9, color: T.gray2, letterSpacing: "0.1em", marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: col || T.white, fontVariantNumeric: "tabular-nums" }}>{val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 4, borderRadius: 2, background: T.border, overflow: "hidden", marginBottom: 6 }}>
+        <motion.div animate={{ width: `${Math.round(progress * 100)}%` }} transition={{ duration: 1 }}
+          style={{ height: "100%", borderRadius: 2, background: `linear-gradient(90deg, ${T.gold}88, ${T.gold})` }} />
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 10, color: T.gray2 }}>{Math.round(progress * 100)}% complete</span>
+        <span style={{ fontSize: 10, color: T.gold, fontFamily: T.font, fontWeight: 700 }}>
+          {remaining > 0 ? `${fmtTime(remaining)} remaining` : "Completing..."}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    ROOT – TRADING TERMINAL
 ═══════════════════════════════════════════════════════════════════════ */
 export default function Mining({ user }) {
-  const [pair,         setPair]         = useState(PAIRS[0]);
-  const [balance,      setBalance]      = useState(0);
-  const [orders,       setOrders]       = useState([]);
-  const [showOrder,    setShowOrder]    = useState(false);
-  const [showOrders,   setShowOrders]   = useState(false);
-  const [showPairs,    setShowPairs]    = useState(false);
-  const [activeTab,    setActiveTab]    = useState("chart"); // chart | book | trades
-  const [interval,     setInterval_]    = useState("1m");
-  const [navTab,       setNavTab]       = useState("trade");
-  const syncTimer   = useRef(null);
-  const userIdRef   = useRef(null); // stores auth uuid
+  const [pair,       setPair]       = useState(PAIRS[0]);
+  const [balance,    setBalance]    = useState(0);
+  const [totalProfit,setTotalProfit]= useState(0);
+  const [orders,     setOrders]     = useState([]);
+  const [showOrder,  setShowOrder]  = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
+  const [showPairs,  setShowPairs]  = useState(false);
+  const [activeTab,  setActiveTab]  = useState("chart");
+  const [interval,   setInterval_]  = useState("1m");
+  const [showPositions, setShowPositions] = useState(false);
 
-  // ── 1. Load user ID + balance from account_summary (same table as Trade) ──
-  useEffect(() => {
-    if (!user?.email) return;
-    (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData?.user?.id;
-      if (!uid) return;
-      userIdRef.current = uid;
-
-      const { data } = await supabase
-        .from("account_summary")
-        .select("balance, total_profit, active_positions")
-        .eq("id", uid)
-        .single();
-
-      if (data) {
-        setBalance(Number(data.balance ?? 0));
-      }
-    })();
-  }, [user?.email]);
-
-  // ── 2. Load persisted open orders from vault_orders ──
-  useEffect(() => {
-    if (!user?.email) return;
-    (async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      const uid = authData?.user?.id;
-      if (!uid) return;
-      userIdRef.current = uid;
-
-      const { data } = await supabase
-        .from("vault_orders")
-        .select("*")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (data?.length) setOrders(data);
-    })();
-  }, [user?.email]);
+  const userIdRef  = useRef(null);
+  const syncTimer  = useRef(null);
+  const settleRef  = useRef(null);
 
   const market     = useMarket(pair);
   const priceDir   = market.price >= market.prevPrice ? "up" : "down";
   const priceFlash = useFlash(market.price);
 
-  // ── 3. Persist orders to vault_orders (debounced, uses user_id) ──
-  const persistOrders = useCallback((next) => {
-    const uid = userIdRef.current;
-    if (!uid) return;
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(async () => {
-      const rows = next.map((o) => ({
-        id:         o.id,
-        user_id:    uid,
-        pair:       o.pair,
-        type:       o.type,
-        price:      o.price,
-        amount:     o.amount,
-        total:      o.total,
-        fee:        o.fee,
-        filled:     o.filled ?? 0,
-        status:     o.status,
-        settled:    o.settled ?? false,
-        profit:     o.profit ?? null,
-        created_at: o.created_at ?? Date.now(),
-        closed_at:  o.closed_at ?? null,
-      }));
-      await supabase
-        .from("vault_orders")
-        .upsert(rows, { onConflict: "id" });
-    }, SUPABASE_DEBOUNCE);
-  }, []);
-
-  // ── 4. Write account changes to account_summary ──
+  /* ── WRITE account patch to Supabase ── */
   const persistAccount = useCallback(async (patch) => {
     const uid = userIdRef.current;
     if (!uid) return;
     await supabase
-      .from("account_summary")
+      .from(PAPER_ACCOUNT)
       .update({ ...patch, updated_at: new Date().toISOString() })
       .eq("id", uid);
   }, []);
 
-  // ── 5. Market engine fills open orders + credits profit ──
+  /* ── WRITE orders to vault_orders (debounced) ── */
+  const persistOrders = useCallback((rows) => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    clearTimeout(syncTimer.current);
+    syncTimer.current = setTimeout(async () => {
+      await supabase.from(PAPER_TABLE).upsert(
+        rows.map((o) => ({
+          id:         o.id,
+          user_id:    uid,
+          pair:       o.pair,
+          type:       o.type       ?? "market",
+          price:      o.price      ?? 0,
+          amount:     o.amount     ?? 0,
+          total:      o.total      ?? 0,
+          fee:        o.fee        ?? 0,
+          filled:     o.filled     ?? 0,
+          status:     o.status,
+          settled:    o.settled    ?? false,
+          profit:     o.profit     ?? null,
+          created_at: o.created_at ?? Date.now(),
+          closed_at:  o.closed_at  ?? null,
+          end_time:   o.end_time   ?? null,
+        })),
+        { onConflict: "id" }
+      );
+    }, SUPABASE_DEBOUNCE);
+  }, []);
+
+  /* ── LOAD account + orders on mount ── */
   useEffect(() => {
-    if (!orders.length) return;
-    setOrders((prev) => {
-      let changed = false;
-      let profitDelta    = 0;
-      let positionDelta  = 0;
+    if (!user?.email) return;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) return;
+      userIdRef.current = uid;
 
-      const next = prev.map((o) => {
-        if (o.status !== "open" && o.status !== "partial") return o;
-        const mkt = market.price;
+      // Load account balance + profit
+      const { data: acc } = await supabase
+        .from(PAPER_ACCOUNT)
+        .select("balance, total_profit, active_positions")
+        .eq("id", uid)
+        .single();
+      if (acc) {
+        setBalance(Number(acc.balance ?? 0));
+        setTotalProfit(Number(acc.total_profit ?? 0));
+      }
 
-        let updated = null;
-        if (o.type === "market" && o.status === "open") {
-          updated = { ...o, filled: o.amount, status: "filled" };
-        } else if (o.type === "limit" && mkt <= o.price) {
-          const newFilled = Math.min(o.amount, (o.filled || 0) + o.amount * (0.3 + Math.random() * 0.7) * 0.25);
-          const status    = newFilled >= o.amount * 0.999 ? "filled" : "partial";
-          updated = { ...o, filled: newFilled, status };
-        }
+      // Load all orders
+      const { data: ord } = await supabase
+        .from(PAPER_TABLE)
+        .select("*")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (ord?.length) setOrders(ord);
+    })();
+  }, [user?.email]);
 
-        // Settle filled orders exactly once
-        if (updated?.status === "filled" && !o.settled) {
-          const profitPct = 0.001 + Math.random() * 0.019;
-          const profit    = parseFloat((updated.total * profitPct).toFixed(2));
-          profitDelta    += profit;
-          positionDelta  -= 1;
-          changed = true;
-          return { ...updated, settled: true, profit, closed_at: Date.now() };
-        }
+  /* ── SESSION COMPLETION CHECKER ── */
+  /* Runs every 5s, checks timestamps — survives refresh */
+  useEffect(() => {
+    clearInterval(settleRef.current);
+    settleRef.current = setInterval(async () => {
+      const uid = userIdRef.current;
+      if (!uid) return;
+      const now = Date.now();
 
-        if (updated) { changed = true; return updated; }
-        return o;
-      });
+      setOrders((prev) => {
+        const toSettle = prev.filter(
+          (o) => o.status === "active" && !o.settled && Number(o.end_time) <= now
+        );
+        if (!toSettle.length) return prev;
 
-      if (changed) {
+        let totalNewProfit = 0;
+
+        const next = prev.map((o) => {
+          if (!toSettle.find((s) => s.id === o.id)) return o;
+          // Market-based P/L: price drift during session
+          const entryPrice = Number(o.price);
+          const exitPrice  = market.price;
+          const priceDrift = entryPrice > 0 ? (exitPrice - entryPrice) / entryPrice : 0;
+          const pl         = parseFloat((Number(o.total) * priceDrift).toFixed(2));
+          totalNewProfit  += pl;
+          return {
+            ...o,
+            status:     "settled",
+            settled:    true,
+            profit:     pl,
+            closed_at:  now,
+            exit_price: exitPrice,
+          };
+        });
+
+        // Persist settled orders
         persistOrders(next);
-        // Update account_summary: credit profit, decrement active_positions
-        if (profitDelta > 0 || positionDelta !== 0) {
-          // Read current values then patch
+
+        // Credit profit to account — async, outside setState
+        if (totalNewProfit !== 0) {
           (async () => {
-            const uid = userIdRef.current;
-            if (!uid) return;
             const { data } = await supabase
-              .from("account_summary")
+              .from(PAPER_ACCOUNT)
               .select("total_profit, active_positions")
               .eq("id", uid)
               .single();
             if (data) {
-              await persistAccount({
-                total_profit:     (Number(data.total_profit) + profitDelta),
-                active_positions: Math.max(0, Number(data.active_positions) + positionDelta),
-              });
+              const newProfit   = Number(data.total_profit) + totalNewProfit;
+              const newPositions = Math.max(0, Number(data.active_positions) - toSettle.length);
+              await persistAccount({ total_profit: newProfit, active_positions: newPositions });
+              setTotalProfit(newProfit);
             }
           })();
         }
+
         return next;
-      }
-      return prev;
-    });
-  }, [market.tick]);
+      });
+    }, SETTLE_CHECK_MS);
 
-  // ── 6. Place order: debit balance + increment active_positions ──
-  async function handlePlaceOrder(order) {
+    return () => clearInterval(settleRef.current);
+  }, [market.price, persistOrders, persistAccount]);
+
+  /* ── PLACE ORDER ── */
+  const handlePlaceOrder = useCallback(async (order) => {
     const uid = userIdRef.current;
-    const cost = order.total + order.fee;
+    const cost = Number(order.total) + Number(order.fee);
 
-    // Optimistic UI update
+    // Generate session timestamps
+    const now      = Date.now();
+    const duration = randomDurationMs();
+    const endTime  = now + duration;
+
+    const newOrder = {
+      ...order,
+      id:         `PT-${now}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,
+      user_id:    uid,
+      status:     "active",
+      settled:    false,
+      profit:     null,
+      created_at: now,
+      end_time:   endTime,
+      closed_at:  null,
+      filled:     order.amount,
+      price:      market.price,
+    };
+
+    // Optimistic UI
     setBalance((b) => Math.max(0, b - cost));
-    setOrders((prev) => {
-      const next = [order, ...prev];
-      persistOrders(next);
-      return next;
-    });
+    setOrders((prev) => [newOrder, ...prev]);
 
-    // Write to account_summary
+    // Persist order immediately (no debounce — placement must not be lost)
     if (uid) {
-      const { data } = await supabase
-        .from("account_summary")
+      await supabase.from(PAPER_TABLE).insert({
+        id:         newOrder.id,
+        user_id:    uid,
+        pair:       newOrder.pair,
+        type:       newOrder.type ?? "market",
+        price:      newOrder.price,
+        amount:     newOrder.amount,
+        total:      newOrder.total,
+        fee:        newOrder.fee,
+        filled:     newOrder.amount,
+        status:     "active",
+        settled:    false,
+        profit:     null,
+        created_at: now,
+        end_time:   endTime,
+        closed_at:  null,
+      });
+
+      // Debit balance + increment active_positions in account_summary
+      const { data: acc } = await supabase
+        .from(PAPER_ACCOUNT)
         .select("balance, active_positions")
         .eq("id", uid)
         .single();
-      if (data) {
+      if (acc) {
         await persistAccount({
-          balance:          Math.max(0, Number(data.balance) - cost),
-          active_positions: Number(data.active_positions) + 1,
+          balance:          Math.max(0, Number(acc.balance) - cost),
+          active_positions: Number(acc.active_positions) + 1,
         });
       }
     }
-  }
+  }, [market.price, persistAccount]);
 
-  // ── 7. Cancel order: restore balance ──
-  async function handleCancelOrder(id) {
+  /* ── CANCEL ORDER ── */
+  const handleCancelOrder = useCallback(async (id) => {
+    const uid       = userIdRef.current;
     const cancelled = orders.find((o) => o.id === id);
-    setOrders((prev) => {
-      const next = prev.map((o) => o.id === id ? { ...o, status: "cancelled" } : o);
-      persistOrders(next);
-      return next;
-    });
+    if (!cancelled || cancelled.status === "settled") return;
 
-    // Refund to account_summary
-    if (cancelled && userIdRef.current) {
-      const refund = (cancelled.total || 0) + (cancelled.fee || 0);
-      const { data } = await supabase
-        .from("account_summary")
+    setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "cancelled" } : o));
+
+    if (uid) {
+      await supabase.from(PAPER_TABLE).update({ status: "cancelled" }).eq("id", id);
+      const refund = Number(cancelled.total) + Number(cancelled.fee);
+      const { data: acc } = await supabase
+        .from(PAPER_ACCOUNT)
         .select("balance, active_positions")
-        .eq("id", userIdRef.current)
+        .eq("id", uid)
         .single();
-      if (data) {
-        setBalance(Number(data.balance) + refund);
+      if (acc) {
+        const newBalance = Number(acc.balance) + refund;
+        setBalance(newBalance);
         await persistAccount({
-          balance:          Number(data.balance) + refund,
-          active_positions: Math.max(0, Number(data.active_positions) - 1),
+          balance:          newBalance,
+          active_positions: Math.max(0, Number(acc.active_positions) - 1),
         });
       }
     }
-  }
+  }, [orders, persistAccount]);
 
-  const openCount = useMemo(() => orders.filter((o) => o.status === "open" || o.status === "partial").length, [orders]);
+  /* ── DERIVED ── */
+  const activeOrders  = useMemo(() => orders.filter((o) => o.status === "active"),  [orders]);
+  const historyOrders = useMemo(() => orders.filter((o) => o.status === "settled" || o.status === "cancelled"), [orders]);
+  const openCount     = activeOrders.length;
 
   return (
     <div style={{
@@ -1495,65 +1615,46 @@ export default function Mining({ user }) {
         flexShrink: 0,
         paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
       }}>
-        {/* Open orders tab bar */}
+        {/* Tab bar */}
         <div style={{ display: "flex", padding: "0 16px", gap: 20, borderBottom: `1px solid ${T.border}` }}>
-          <button
-            onClick={() => setShowOrders(true)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              padding: "10px 0",
-              fontSize: 12, fontWeight: 700, color: T.white,
-              borderBottom: `2px solid ${T.gold}`,
-              display: "flex", alignItems: "center", gap: 6,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Open Orders
+          <button onClick={() => setShowPositions(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontSize: 12, fontWeight: 700, color: T.white, borderBottom: `2px solid ${T.gold}`, display: "flex", alignItems: "center", gap: 6, WebkitTapHighlightColor: "transparent" }}>
+            Active Positions
             {openCount > 0 && (
-              <span style={{ background: T.gold, color: "#000", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: "1px 6px" }}>
-                {openCount}
-              </span>
+              <span style={{ background: T.gold, color: "#000", fontSize: 9, fontWeight: 700, borderRadius: 10, padding: "1px 6px" }}>{openCount}</span>
             )}
           </button>
-          <button
-            onClick={() => setShowOrders(true)}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontSize: 12, color: T.gray1, borderBottom: "2px solid transparent", WebkitTapHighlightColor: "transparent" }}
-          >
+          <button onClick={() => setShowOrders(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontSize: 12, color: T.gray1, borderBottom: "2px solid transparent", WebkitTapHighlightColor: "transparent" }}>
             History
-          </button>
-          <button
-            onClick={() => setShowOrders(true)}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: "10px 0", fontSize: 12, color: T.gray1, borderBottom: "2px solid transparent", WebkitTapHighlightColor: "transparent" }}
-          >
-            Trades
           </button>
         </div>
 
-        {/* Status row + PLACE ORDER CTA */}
+        {/* Balance + PLACE ORDER */}
         <div style={{ padding: "10px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          {/* Balance info */}
           <div>
-            <div style={{ fontSize: 10, color: T.gray2, fontFamily: T.font, marginBottom: 2 }}>Available</div>
+            <div style={{ fontSize: 9, color: T.gray2, fontFamily: T.font, marginBottom: 1, letterSpacing: "0.1em" }}>
+              PAPER BALANCE
+            </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.white, fontFamily: T.font }}>
-              {fmtPrice(balance, 2)} <span style={{ color: T.gray1 }}>USDT</span>
+              ${Number(balance).toFixed(2)} <span style={{ color: T.gray1, fontSize: 10 }}>USDT</span>
+            </div>
+            <div style={{ fontSize: 9, color: totalProfit >= 0 ? T.green : T.red, fontFamily: T.font, marginTop: 1 }}>
+              Profit: {totalProfit >= 0 ? "+" : ""}${Number(totalProfit).toFixed(2)}
             </div>
           </div>
 
-          {/* PLACE ORDER button */}
-          <button
-            onClick={() => setShowOrder(true)}
+          <button onClick={() => setShowOrder(true)}
             style={{
-              flex: 1, maxWidth: 220,
-              padding: "14px 0",
+              flex: 1, maxWidth: 220, padding: "14px 0",
               borderRadius: 10, border: "none",
               background: `linear-gradient(90deg, ${T.green} 0%, #00A060 100%)`,
-              color: "#000", fontSize: 14, fontWeight: 700,
+              color: "#000", fontSize: 13, fontWeight: 800,
               letterSpacing: "0.06em", cursor: "pointer",
               boxShadow: `0 4px 18px ${T.green}44`,
               WebkitTapHighlightColor: "transparent",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}
-          >
+            }}>
             <Zap size={15} fill="#000" color="#000" />
             PLACE ORDER
           </button>
@@ -1578,11 +1679,52 @@ export default function Mining({ user }) {
         )}
       </AnimatePresence>
 
+      {/* Active Positions Panel */}
+      <AnimatePresence>
+        {showPositions && (
+          <motion.div
+            key="positions-panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(9,12,16,0.94)", backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: "calc(62px + env(safe-area-inset-bottom, 0px))" }}
+            onPointerDown={() => setShowPositions(false)}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 480, background: T.bg2, borderRadius: 20, border: `1px solid ${T.border2}`, padding: "20px 0 20px", maxHeight: "78vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
+              <div style={{ padding: "0 20px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.border}` }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.white }}>Active Positions</div>
+                  <div style={{ fontSize: 10, color: T.gold, letterSpacing: "0.12em", marginTop: 2 }}>PAPER TRADING · SIMULATED</div>
+                </div>
+                <button onClick={() => setShowPositions(false)} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.gray1 }}>
+                  <X size={14} />
+                </button>
+              </div>
+              <div style={{ overflowY: "auto", flex: 1, padding: "14px 20px", WebkitOverflowScrolling: "touch" }}>
+                {activeOrders.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: T.gray2, fontSize: 13 }}>No active positions</div>
+                ) : activeOrders.map((o) => (
+                  <ActivePositionCard key={o.id} order={o} currentPrice={market.price} />
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Order History Panel */}
       <AnimatePresence>
         {showOrders && (
           <OrdersPanel
             key="orders-panel"
-            orders={orders}
+            orders={historyOrders}
             onCancel={handleCancelOrder}
             onClose={() => setShowOrders(false)}
           />
