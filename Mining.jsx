@@ -1146,12 +1146,12 @@ function ActivePositionCard({ order, currentPrice }) {
   const remaining  = Math.max(0, endTime - now);
   const progress   = Math.min(1, elapsed / totalMs);
 
-  // Simulated current value: entry + price drift scaled to order amount
-  const entryPrice  = Number(order.price);
-  const priceDrift  = entryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
-  const simValue    = Number(order.total) * (1 + priceDrift * progress);
-  const simPl       = simValue - Number(order.total);
-  const plColor     = simPl >= 0 ? T.green : T.red;
+  // Current value: entry + price drift scaled to order amount
+  const EntryPrice  = Number(order.price);
+  const PriceDrift  = EntryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
+  const Value    = Number(order.total) * (1 + priceDrift * progress);
+  const Pl       = Value - Number(order.total);
+  const plColor     = Pl >= 0 ? T.green : T.red;
 
   function fmt2(n) { return Number(n).toFixed(2); }
   function fmtTime(ms) {
