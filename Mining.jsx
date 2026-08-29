@@ -732,13 +732,15 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
           borderRadius: "20px 20px 0 0",
           border: `1px solid ${T.border2}`,
           borderBottom: "none",
-          padding: "24px 20px 0",
           position: "relative",
           maxHeight: "92vh",
-          overflowY: "auto",
-          paddingBottom: "calc(28px + env(safe-area-inset-bottom, 20px))",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
+        {/* Scrollable content */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "24px 20px 0", WebkitOverflowScrolling: "touch" }}>
+
         {/* Handle */}
         <div style={{ width: 36, height: 3, borderRadius: 2, background: T.border2, margin: "0 auto 20px" }} />
 
@@ -857,23 +859,49 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
           <div style={{ color: T.red, fontSize: 12, marginBottom: 10, textAlign: "center", fontWeight: 600 }}>{error}</div>
         )}
 
-        <button
-          onClick={handleConfirm}
-          disabled={submitted}
-          style={{
-            width: "100%", padding: "16px",
-            borderRadius: 10, border: "none",
-            background: submitted ? T.green + "88" : `linear-gradient(90deg, ${T.green} 0%, #00A060 100%)`,
-            color: "#000", fontSize: 15, fontWeight: 700,
-            letterSpacing: "0.04em", cursor: submitted ? "default" : "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            boxShadow: submitted ? "none" : `0 4px 20px ${T.green}44`,
-            transition: "all 0.2s",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          {submitted ? <><CheckCircle2 size={18} /> Placed!</> : "CONFIRM ORDER"}
-        </button>
+        </div>{/* end scrollable */}
+
+        {/* ── STICKY CONFIRM BUTTON — always visible ── */}
+        <div style={{
+          padding: "14px 20px",
+          paddingBottom: "calc(14px + env(safe-area-inset-bottom, 16px))",
+          background: T.bg2,
+          borderTop: `1px solid ${T.border}`,
+          flexShrink: 0,
+        }}>
+          {error && (
+            <div style={{ color: T.red, fontSize: 12, marginBottom: 10, textAlign: "center", fontWeight: 600 }}>{error}</div>
+          )}
+          <button
+            onClick={handleConfirm}
+            disabled={submitted || amount <= 0 || total > balance}
+            style={{
+              width: "100%", padding: "17px",
+              borderRadius: 12, border: "none",
+              background: submitted
+                ? T.green + "88"
+                : (amount <= 0 || total > balance)
+                  ? T.bg4
+                  : `linear-gradient(90deg, ${T.green} 0%, #00A060 100%)`,
+              color: (amount <= 0 || total > balance) && !submitted ? T.gray2 : "#000",
+              fontSize: 15, fontWeight: 800,
+              letterSpacing: "0.06em",
+              cursor: (submitted || amount <= 0 || total > balance) ? "default" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: (amount > 0 && total <= balance && !submitted) ? `0 4px 24px ${T.green}55` : "none",
+              transition: "all 0.2s",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {submitted
+              ? <><CheckCircle2 size={18} /> Order Placed!</>
+              : amount <= 0
+                ? "Enter Amount to Continue"
+                : total > balance
+                  ? "Insufficient Balance"
+                  : `CONFIRM ORDER · $${fmtPrice(total, 2)}`}
+          </button>
+        </div>
       </motion.div>
     </motion.div>
   );
