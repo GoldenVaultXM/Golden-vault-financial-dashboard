@@ -716,7 +716,11 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
         position: "fixed", inset: 0, zIndex: 200,
         background: "rgba(9,12,16,0.90)",
         backdropFilter: "blur(10px)",
-        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        // Push entire modal above the app's bottom nav bar (≈60px) + safe area
+        paddingBottom: "calc(62px + env(safe-area-inset-bottom, 0px))",
       }}
       onPointerDown={onClose}
     >
@@ -729,17 +733,17 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
         style={{
           width: "100%", maxWidth: 480,
           background: T.bg2,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: 20,
           border: `1px solid ${T.border2}`,
-          borderBottom: "none",
           position: "relative",
-          maxHeight: "92vh",
+          maxHeight: "78vh",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
         }}
       >
         {/* Scrollable content */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "24px 20px 0", WebkitOverflowScrolling: "touch" }}>
+        <div style={{ overflowY: "auto", flex: 1, padding: "20px 20px 0", WebkitOverflowScrolling: "touch" }}>
 
         {/* Handle */}
         <div style={{ width: 36, height: 3, borderRadius: 2, background: T.border2, margin: "0 auto 20px" }} />
@@ -863,8 +867,7 @@ function PlaceOrderModal({ pair, currentPrice, onClose, onSubmit, balance }) {
 
         {/* ── STICKY CONFIRM BUTTON — always visible ── */}
         <div style={{
-          padding: "14px 20px",
-          paddingBottom: "calc(14px + env(safe-area-inset-bottom, 16px))",
+          padding: "14px 20px 18px",
           background: T.bg2,
           borderTop: `1px solid ${T.border}`,
           flexShrink: 0,
@@ -930,7 +933,13 @@ function OrdersPanel({ orders, onCancel, onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(9,12,16,0.94)", backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(9,12,16,0.94)",
+        backdropFilter: "blur(10px)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        paddingBottom: "calc(62px + env(safe-area-inset-bottom, 0px))",
+      }}
       onPointerDown={onClose}
     >
       <motion.div
@@ -942,14 +951,13 @@ function OrdersPanel({ orders, onCancel, onClose }) {
         style={{
           width: "100%", maxWidth: 480,
           background: T.bg2,
-          borderRadius: "20px 20px 0 0",
+          borderRadius: 20,
           border: `1px solid ${T.border2}`,
-          borderBottom: "none",
-          padding: "20px 0 0",
-          maxHeight: "85vh",
+          padding: "20px 0 20px",
+          maxHeight: "78vh",
           display: "flex",
           flexDirection: "column",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          overflow: "hidden",
         }}
       >
         <div style={{ padding: "0 20px", marginBottom: 12 }}>
