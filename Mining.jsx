@@ -1123,7 +1123,7 @@ const PAPER_TABLE        = "vault_orders";        // reuses existing table
 const PAPER_ACCOUNT      = "account_summary";     // reads/writes balance + profit
 const MIN_SESSION_MS     = 30 * 60 * 1000;        // 30 minutes
 const MAX_SESSION_MS     = 2  * 60 * 60 * 1000;  // 2 hours
-const SETTLE_CHECK_MS    = 5000;                  // check every 5s
+const SETTLE_CHECK_MS    = 1000;                  // check every 1s
 
 function randomDurationMs() {
   return MIN_SESSION_MS + Math.floor(Math.random() * (MAX_SESSION_MS - MIN_SESSION_MS));
@@ -1314,89 +1314,111 @@ export default function Mining({ user }) {
         .limit(100);
       if (!cancelled) {
         setOrders(ord?.length ? ord : []);
+        // Immediately settle any orders that completed while away
+        setTimeout(() => runSettlement(), 800);
       }
     })();
     // Cleanup: if component unmounts before async completes, ignore result
     return () => { cancelled = true; };
   }, []); // runs on every mount — intentional
 
-  /* ── SESSION COMPLETION CHECKER ── */
-  /* Runs every 5s, checks timestamps — survives refresh */
+  /* ── SETTLE FUNCTION — called on mount + every 1s ── */
+  const runSettlement = useCallback(async () => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+    const now = Date.now();
+
+    setOrders((prev) => {
+      const toSettle = prev.filter(
+        (o) => o.status === "active" && !o.settled && Number(o.end_time) <= now + 2000
+      );
+      if (!toSettle.length) return prev;
+
+      let totalNewProfit = 0;
+
+      const next = prev.map((o) => {
+        if (!toSettle.find((s) => s.id === o.id)) return o;
+        const invested   = Number(o.total);
+        const seed       = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
+        const multiplier = 7 + seed * 3;
+        const finalValue = invested * multiplier;
+        const pl         = parseFloat((finalValue - invested).toFixed(2));
+        totalNewProfit  += pl;
+        return {
+          ...o,
+          status:    "settled",
+          settled:   true,
+          profit:    pl,
+          closed_at: now,
+        };
+      });
+
+      // Persist settled orders immediately — no debounce
+      (async () => {
+        await supabase.from(PAPER_TABLE).upsert(
+          next
+            .filter((o) => toSettle.find((s) => s.id === o.id))
+            .map((o) => ({
+              id:         o.id,
+              user_id:    uid,
+              pair:       o.pair,
+              type:       o.type       ?? "market",
+              price:      o.price      ?? 0,
+              amount:     o.amount     ?? 0,
+              total:      o.total      ?? 0,
+              fee:        o.fee        ?? 0,
+              filled:     o.filled     ?? 0,
+              status:     "settled",
+              settled:    true,
+              profit:     o.profit,
+              created_at: o.created_at ?? now,
+              closed_at:  o.closed_at  ?? now,
+              end_time:   o.end_time   ?? null,
+            })),
+          { onConflict: "id" }
+        );
+      })();
+
+      // Credit profit + update account_summary
+      if (totalNewProfit > 0 || toSettle.length > 0) {
+        (async () => {
+          const { data } = await supabase
+            .from(PAPER_ACCOUNT)
+            .select("total_profit, active_positions, total_invested, current_value")
+            .eq("id", uid)
+            .single();
+          if (data) {
+            const settledFinalValue = toSettle.reduce((sum, o) => {
+              const inv  = Number(o.total);
+              const seed = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
+              return sum + inv * (7 + seed * 3);
+            }, 0);
+            const settledInvested = toSettle.reduce((s, o) => s + Number(o.total), 0);
+            const newProfit      = Number(data.total_profit) + totalNewProfit;
+            const newPositions   = Math.max(0, Number(data.active_positions) - toSettle.length);
+            const newInvested    = Math.max(0, Number(data.total_invested) - settledInvested);
+            const newCurrent     = Math.max(0, Number(data.current_value) - settledInvested + settledFinalValue);
+            await persistAccount({
+              total_profit:     newProfit,
+              active_positions: newPositions,
+              total_invested:   newInvested,
+              current_value:    newCurrent,
+            });
+            setTotalProfit(newProfit);
+          }
+        })();
+      }
+
+      return next;
+    });
+  }, [persistAccount]);
+
+  /* ── SESSION COMPLETION CHECKER — runs every 1s ── */
   useEffect(() => {
     clearInterval(settleRef.current);
-    settleRef.current = setInterval(async () => {
-      const uid = userIdRef.current;
-      if (!uid) return;
-      const now = Date.now();
-
-      setOrders((prev) => {
-        const toSettle = prev.filter(
-          (o) => o.status === "active" && !o.settled && Number(o.end_time) <= now
-        );
-        if (!toSettle.length) return prev;
-
-        let totalNewProfit = 0;
-
-        const next = prev.map((o) => {
-          if (!toSettle.find((s) => s.id === o.id)) return o;
-          // Always-profitable result: 7x–10x of invested amount
-          const invested   = Number(o.total);
-          const seed       = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
-          const multiplier = 7 + seed * 3; // consistent 7x–10x per order
-          const finalValue = invested * multiplier;
-          const pl         = parseFloat((finalValue - invested).toFixed(2));
-          totalNewProfit  += pl;
-          return {
-            ...o,
-            status:    "settled",
-            settled:   true,
-            profit:    pl,
-            closed_at: now,
-          };
-        });
-
-        // Persist settled orders
-        persistOrders(next);
-
-        // Credit profit + update current_value to account_summary
-        if (totalNewProfit !== 0 || toSettle.length > 0) {
-          (async () => {
-            const { data } = await supabase
-              .from(PAPER_ACCOUNT)
-              .select("total_profit, active_positions, total_invested, current_value")
-              .eq("id", uid)
-              .single();
-            if (data) {
-              // final value of settled orders
-              const settledFinalValue = toSettle.reduce((sum, o) => {
-                const inv  = Number(o.total);
-                const seed = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
-                return sum + inv * (7 + seed * 3);
-              }, 0);
-              const settledInvested = toSettle.reduce((s, o) => s + Number(o.total), 0);
-
-              const newProfit      = Number(data.total_profit) + totalNewProfit;
-              const newPositions   = Math.max(0, Number(data.active_positions) - toSettle.length);
-              const newInvested    = Math.max(0, Number(data.total_invested) - settledInvested);
-              const newCurrent     = Math.max(0, Number(data.current_value) - settledInvested + settledFinalValue);
-
-              await persistAccount({
-                total_profit:     newProfit,
-                active_positions: newPositions,
-                total_invested:   newInvested,
-                current_value:    newCurrent,
-              });
-              setTotalProfit(newProfit);
-            }
-          })();
-        }
-
-        return next;
-      });
-    }, SETTLE_CHECK_MS);
-
+    settleRef.current = setInterval(runSettlement, SETTLE_CHECK_MS);
     return () => clearInterval(settleRef.current);
-  }, [market.price, persistOrders, persistAccount]);
+  }, [runSettlement]);
 
   /* ── PLACE ORDER ── */
   const handlePlaceOrder = useCallback(async (order) => {
