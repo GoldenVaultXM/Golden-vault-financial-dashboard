@@ -1178,8 +1178,8 @@ function ActivePositionCard({ order, currentPrice }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
         {[
           ["INVESTED",  `$${fmt2(order.total)}`],
-          ["SIM VALUE", `$${fmt2(simValue)}`,    plColor],
-          ["SIM P/L",   `${simPl >= 0 ? "+" : ""}$${fmt2(simPl)}`, plColor],
+          ["CURRENT VALUE", `$${fmt2(simValue)}`,    plColor],
+          ["PNL",           `${simPl >= 0 ? "+" : ""}$${fmt2(simPl)}`, plColor],
         ].map(([label, val, col]) => (
           <div key={label}>
             <div style={{ fontSize: 9, color: T.gray2, letterSpacing: "0.1em", marginBottom: 2 }}>{label}</div>
@@ -1232,10 +1232,13 @@ export default function Mining({ user }) {
   const persistAccount = useCallback(async (patch) => {
     const uid = userIdRef.current;
     if (!uid) return;
-    await supabase
+    const { error } = await supabase
       .from(PAPER_ACCOUNT)
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq("id", uid);
+      .upsert(
+        { id: uid, ...patch, updated_at: new Date().toISOString() },
+        { onConflict: "id" }
+      );
+    if (error) console.error("persistAccount error:", error.message);
   }, []);
 
   /* ── WRITE orders to vault_orders (debounced) ── */
@@ -1711,7 +1714,6 @@ export default function Mining({ user }) {
               <div style={{ padding: "0 20px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.border}` }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: T.white }}>Active Positions</div>
-                  <div style={{ fontSize: 10, color: T.gold, letterSpacing: "0.12em", marginTop: 2 }}>PAPER TRADING · SIMULATED</div>
                 </div>
                 <button onClick={() => setShowPositions(false)} style={{ background: T.bg3, border: `1px solid ${T.border}`, borderRadius: "50%", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.gray1 }}>
                   <X size={14} />
