@@ -1222,6 +1222,7 @@ export default function Mining({ user }) {
   const userIdRef  = useRef(null);
   const syncTimer  = useRef(null);
   const settleRef  = useRef(null);
+  const balanceRef = useRef(0); // mirrors balance state — prevents stale closure on place order
 
   const market     = useMarket(pair);
   const priceDir   = market.price >= market.prevPrice ? "up" : "down";
@@ -1282,7 +1283,9 @@ export default function Mining({ user }) {
         .eq("id", uid)
         .single();
       if (acc && !cancelled) {
-        setBalance(Number(acc.balance ?? 0));
+        const b = Number(acc.balance ?? 0);
+        setBalance(b);
+        balanceRef.current = b;
         setTotalProfit(Number(acc.total_profit ?? 0));
       }
 
@@ -1387,8 +1390,7 @@ export default function Mining({ user }) {
       price:      market.price,
     };
 
-    // Optimistic UI
-    setBalance((b) => Math.max(0, b - cost));
+    // Optimistic UI — orders only; balance handled via balanceRef after persist
     setOrders((prev) => [newOrder, ...prev]);
 
     // Persist order immediately (no debounce — placement must not be lost)
@@ -1411,18 +1413,22 @@ export default function Mining({ user }) {
         closed_at:  null,
       });
 
-      // Debit balance + increment active_positions in account_summary
+      // Write debited balance to DB immediately using current state value
+      // balanceRef tracks the true current balance so we never re-read stale DB value
+      const newBalance = Math.max(0, balanceRef.current - cost);
+      balanceRef.current = newBalance;
+      setBalance(newBalance);
+
       const { data: acc } = await supabase
         .from(PAPER_ACCOUNT)
-        .select("balance, active_positions")
+        .select("active_positions")
         .eq("id", uid)
         .single();
-      if (acc) {
-        await persistAccount({
-          balance:          Math.max(0, Number(acc.balance) - cost),
-          active_positions: Number(acc.active_positions) + 1,
-        });
-      }
+
+      await persistAccount({
+        balance:          newBalance,
+        active_positions: Number(acc?.active_positions ?? 0) + 1,
+      });
     }
   }, [market.price, persistAccount]);
 
