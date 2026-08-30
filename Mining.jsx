@@ -1358,18 +1358,34 @@ export default function Mining({ user }) {
         // Persist settled orders
         persistOrders(next);
 
-        // Credit profit to account — async, outside setState
-        if (totalNewProfit !== 0) {
+        // Credit profit + update current_value to account_summary
+        if (totalNewProfit !== 0 || toSettle.length > 0) {
           (async () => {
             const { data } = await supabase
               .from(PAPER_ACCOUNT)
-              .select("total_profit, active_positions")
+              .select("total_profit, active_positions, total_invested, current_value")
               .eq("id", uid)
               .single();
             if (data) {
-              const newProfit   = Number(data.total_profit) + totalNewProfit;
-              const newPositions = Math.max(0, Number(data.active_positions) - toSettle.length);
-              await persistAccount({ total_profit: newProfit, active_positions: newPositions });
+              // final value of settled orders
+              const settledFinalValue = toSettle.reduce((sum, o) => {
+                const inv  = Number(o.total);
+                const seed = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
+                return sum + inv * (7 + seed * 3);
+              }, 0);
+              const settledInvested = toSettle.reduce((s, o) => s + Number(o.total), 0);
+
+              const newProfit      = Number(data.total_profit) + totalNewProfit;
+              const newPositions   = Math.max(0, Number(data.active_positions) - toSettle.length);
+              const newInvested    = Math.max(0, Number(data.total_invested) - settledInvested);
+              const newCurrent     = Math.max(0, Number(data.current_value) - settledInvested + settledFinalValue);
+
+              await persistAccount({
+                total_profit:     newProfit,
+                active_positions: newPositions,
+                total_invested:   newInvested,
+                current_value:    newCurrent,
+              });
               setTotalProfit(newProfit);
             }
           })();
@@ -1437,13 +1453,15 @@ export default function Mining({ user }) {
 
       const { data: acc } = await supabase
         .from(PAPER_ACCOUNT)
-        .select("active_positions")
+        .select("active_positions, total_invested, current_value")
         .eq("id", uid)
         .single();
 
       await persistAccount({
         balance:          newBalance,
         active_positions: Number(acc?.active_positions ?? 0) + 1,
+        total_invested:   Number(acc?.total_invested ?? 0) + invested,
+        current_value:    Number(acc?.current_value ?? 0) + invested,
       });
     }
   }, [market.price, persistAccount]);
