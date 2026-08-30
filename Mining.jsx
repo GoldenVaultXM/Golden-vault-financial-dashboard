@@ -1146,12 +1146,15 @@ function ActivePositionCard({ order, currentPrice }) {
   const remaining  = Math.max(0, endTime - now);
   const progress   = Math.min(1, elapsed / totalMs);
 
-  // Simulated current value: entry + price drift scaled to order amount
-  const entryPrice  = Number(order.price);
-  const priceDrift  = entryPrice > 0 ? (currentPrice - entryPrice) / entryPrice : 0;
-  const simValue    = Number(order.total) * (1 + priceDrift * progress);
-  const simPl       = simValue - Number(order.total);
-  const plColor     = simPl >= 0 ? T.green : T.red;
+  // Always-profitable simulation: value grows from invested → 7x–10x by completion
+  // multiplier is seeded from order id so it's consistent across renders
+  const seed       = order.id ? order.id.charCodeAt(order.id.length - 1) / 255 : 0.5;
+  const multiplier = 7 + seed * 3; // 7x to 10x
+  const invested   = Number(order.total);
+  // Value grows smoothly from invested to (invested * multiplier) as progress → 1
+  const simValue   = invested * (1 + (multiplier - 1) * progress);
+  const simPl      = simValue - invested;
+  const plColor    = T.green; // always green
 
   function fmt2(n) { return Number(n).toFixed(2); }
   function fmtTime(ms) {
@@ -1326,19 +1329,19 @@ export default function Mining({ user }) {
 
         const next = prev.map((o) => {
           if (!toSettle.find((s) => s.id === o.id)) return o;
-          // Market-based P/L: price drift during session
-          const entryPrice = Number(o.price);
-          const exitPrice  = market.price;
-          const priceDrift = entryPrice > 0 ? (exitPrice - entryPrice) / entryPrice : 0;
-          const pl         = parseFloat((Number(o.total) * priceDrift).toFixed(2));
+          // Always-profitable result: 7x–10x of invested amount
+          const invested   = Number(o.total);
+          const seed       = o.id ? o.id.charCodeAt(o.id.length - 1) / 255 : 0.5;
+          const multiplier = 7 + seed * 3; // consistent 7x–10x per order
+          const finalValue = invested * multiplier;
+          const pl         = parseFloat((finalValue - invested).toFixed(2));
           totalNewProfit  += pl;
           return {
             ...o,
-            status:     "settled",
-            settled:    true,
-            profit:     pl,
-            closed_at:  now,
-            exit_price: exitPrice,
+            status:    "settled",
+            settled:   true,
+            profit:    pl,
+            closed_at: now,
           };
         });
 
