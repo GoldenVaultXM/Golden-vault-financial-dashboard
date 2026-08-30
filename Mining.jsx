@@ -1146,15 +1146,25 @@ function ActivePositionCard({ order, currentPrice }) {
   const remaining  = Math.max(0, endTime - now);
   const progress   = Math.min(1, elapsed / totalMs);
 
-  // Always-profitable simulation: value grows from invested → 7x–10x by completion
-  // multiplier is seeded from order id so it's consistent across renders
+  // Seed consistent multiplier (7x–10x) from order id
   const seed       = order.id ? order.id.charCodeAt(order.id.length - 1) / 255 : 0.5;
-  const multiplier = 7 + seed * 3; // 7x to 10x
+  const multiplier = 7 + seed * 3; // 7x–10x final target
   const invested   = Number(order.total);
-  // Value grows smoothly from invested to (invested * multiplier) as progress → 1
-  const simValue   = invested * (1 + (multiplier - 1) * progress);
+
+  // Realistic price-like movement: oscillates up/down but is guaranteed
+  // to reach multiplier by end. Uses sine waves + noise seeded from elapsed time.
+  const t          = progress; // 0 → 1
+  const trendLine  = t * (multiplier - 1); // core upward drift toward target
+  // Oscillation amplitude shrinks as we approach end so it converges
+  const amplitude  = (1 - t * 0.85) * 0.6;
+  const noise1     = Math.sin(t * 18 + seed * 6) * amplitude;
+  const noise2     = Math.sin(t * 31 + seed * 3) * amplitude * 0.4;
+  const noise3     = Math.sin(t * 7  + seed * 9) * amplitude * 0.25;
+  const totalGain  = Math.max(0, trendLine + noise1 + noise2 + noise3);
+  const simValue   = invested * (1 + totalGain);
   const simPl      = simValue - invested;
-  const plColor    = T.green; // always green
+  const plPct      = ((simValue - invested) / invested * 100).toFixed(2);
+  const plColor    = simPl >= 0 ? T.green : T.red;
 
   function fmt2(n) { return Number(n).toFixed(2); }
   function fmtTime(ms) {
@@ -1180,9 +1190,9 @@ function ActivePositionCard({ order, currentPrice }) {
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
         {[
-          ["INVESTED",  `$${fmt2(order.total)}`],
-          ["CURRENT VALUE", `$${fmt2(simValue)}`,    plColor],
-          ["PNL",           `${simPl >= 0 ? "+" : ""}$${fmt2(simPl)}`, plColor],
+          ["INVESTED",      `$${fmt2(invested)}`],
+          ["CURRENT VALUE", `$${fmt2(simValue)}`, plColor],
+          ["PNL",           `${simPl >= 0 ? "+" : ""}${plPct}%`, plColor],
         ].map(([label, val, col]) => (
           <div key={label}>
             <div style={{ fontSize: 9, color: T.gray2, letterSpacing: "0.1em", marginBottom: 2 }}>{label}</div>
@@ -1199,8 +1209,8 @@ function ActivePositionCard({ order, currentPrice }) {
 
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <span style={{ fontSize: 10, color: T.gray2 }}>{Math.round(progress * 100)}% complete</span>
-        <span style={{ fontSize: 10, color: T.gold, fontFamily: T.font, fontWeight: 700 }}>
-          {remaining > 0 ? `${fmtTime(remaining)} remaining` : "Completing..."}
+        <span style={{ fontSize: 10, color: plColor, fontFamily: T.font, fontWeight: 700 }}>
+          {simPl >= 0 ? "+" : ""}{plPct}%
         </span>
       </div>
     </div>
