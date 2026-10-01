@@ -1223,9 +1223,9 @@ function BusinessSectors({ onViewAll }) {
       style={{
         marginTop: 14,
         padding: "26px 0 20px",
-        background: "linear-gradient(160deg,#0a1020 0%,#060812 100%)",
-        borderRadius: 16,
-        border: "1px solid #14202e",
+        background: "transparent",
+border: "none",
+borderRadius: 0,
         overflow: "hidden",
         fontFamily: "'Inter','Segoe UI',Roboto,Arial,sans-serif",
       }}
