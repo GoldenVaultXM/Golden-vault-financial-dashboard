@@ -1365,10 +1365,13 @@ function HomePage({ setPage }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
       </SlideIn>
-      <SlideIn direction="left" delay={0}>
+<SlideIn direction="left" delay={0}>
   <InvestmentSection onExplore={handleCTA} />
 </SlideIn>
-      <SlideIn direction="right" delay={100}>
+<SlideIn direction="left" delay={0}>
+  <BusinessSectors onViewAll={handleCTA} />
+</SlideIn>
+        <SlideIn direction="right" delay={100}>
 {(() => {
   const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
   const ICONS = {
