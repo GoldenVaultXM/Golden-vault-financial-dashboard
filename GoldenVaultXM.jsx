@@ -1195,7 +1195,156 @@ function InvestmentSection({ onExplore }) {
     </div>
   );
 }
+/* ── Business Sectors ─────────────────────────────────────────────
+ * Paste this ABOVE `function HomePage` in GoldenVaultXM.jsx.
+ * Images go in your /public/sectors/ folder (see file names below).
+ */
+const SECTORS = [
+  { name: "Real Estate Development", img: "/sectors/real-estate.jpg",   icon: "🏢", color: "#22d3ee" },
+  { name: "Agriculture",             img: "/sectors/agriculture.jpg",   icon: "🌱", color: "#22c55e" },
+  { name: "Poultry Farming",         img: "/sectors/poultry.jpg",       icon: "🐔", color: "#fbbf24" },
+  { name: "Oil & Gas",               img: "/sectors/oil-gas.jpg",       icon: "🛢️", color: "#ec4899" },
+  { name: "Mining",                  img: "/sectors/mining.jpg",        icon: "⛏️", color: "#f59e0b" },
+  { name: "Logistics & Transportation", img: "/sectors/logistics.jpg",  icon: "🚚", color: "#22d3ee" },
+  { name: "Technology",              img: "/sectors/technology.jpg",    icon: "💻", color: "#3b82f6" },
+  { name: "E-commerce",              img: "/sectors/ecommerce.jpg",     icon: "🛍️", color: "#ec4899" },
+  { name: "Manufacturing",           img: "/sectors/manufacturing.jpg", icon: "🏭", color: "#3b82f6" },
+  { name: "Renewable Energy",        img: "/sectors/renewable.jpg",     icon: "☀️", color: "#10b981" },
+  { name: "Food & Hospitality",      img: "/sectors/food.jpg",          icon: "🍽️", color: "#f59e0b" },
+  { name: "Construction",            img: "/sectors/construction.jpg",  icon: "🏗️", color: "#a3a3a3" },
+  { name: "Import / Export",         img: "/sectors/import-export.jpg", icon: "🚢", color: "#3b82f6" },
+  { name: "Healthcare",              img: "/sectors/healthcare.jpg",    icon: "🏥", color: "#60a5fa" },
+];
 
+function BusinessSectors({ onViewAll }) {
+  const PURPLE = "#8b3cf7";
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: "26px 0 20px",
+        background: "linear-gradient(160deg,#0a1020 0%,#060812 100%)",
+        borderRadius: 16,
+        border: "1px solid #14202e",
+        overflow: "hidden",
+        fontFamily: "'Inter','Segoe UI',Roboto,Arial,sans-serif",
+      }}
+    >
+      <style>{`.sector-scroll::-webkit-scrollbar{display:none}`}</style>
+
+      {/* Left panel: heading + button */}
+      <div style={{ padding: "0 18px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", color: "#22d3ee", textTransform: "uppercase" }}>
+          Real projects. Real impact.
+        </div>
+        <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.05, letterSpacing: "-0.02em", marginTop: 10, color: "#fff" }}>
+          Business <span style={{ color: PURPLE }}>Sectors</span>
+        </div>
+        <div style={{ fontSize: 14, color: "#d4d8e0", lineHeight: 1.55, marginTop: 14, maxWidth: 320 }}>
+          Invest in growing industries and be part of real-world success stories.
+        </div>
+        <button
+          onClick={onViewAll}
+          style={{
+            marginTop: 18,
+            background: PURPLE,
+            color: "#fff",
+            border: "none",
+            borderRadius: 999,
+            padding: "13px 24px",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          View All Sections <span style={{ fontSize: 16 }}>→</span>
+        </button>
+      </div>
+
+      {/* Sideways-scrolling cards: 3 rows, scrolls horizontally */}
+      <div
+        className="sector-scroll"
+        style={{
+          marginTop: 22,
+          display: "grid",
+          gridTemplateRows: "repeat(3, auto)",
+          gridAutoFlow: "column",
+          gridAutoColumns: "158px",
+          gap: 10,
+          overflowX: "auto",
+          padding: "0 18px 6px",
+          scrollSnapType: "x proximity",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {SECTORS.map((s) => (
+          <div
+            key={s.name}
+            onClick={onViewAll}
+            style={{
+              scrollSnapAlign: "start",
+              borderRadius: 12,
+              overflow: "hidden",
+              cursor: "pointer",
+              background: "#0a1226",
+              border: "1px solid rgba(96,165,250,0.35)",
+              boxShadow: "0 0 12px rgba(59,130,246,0.12)",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Real-life photo */}
+            <img
+              src={s.img}
+              alt={s.name}
+              loading="lazy"
+              style={{ width: "100%", height: 84, objectFit: "cover", display: "block" }}
+            />
+            {/* Icon + name under the photo */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                minHeight: 46,
+                background: "linear-gradient(180deg,#0c1630,#08101f)",
+              }}
+            >
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  flexShrink: 0,
+                  borderRadius: 7,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 13,
+                  background: `${s.color}28`,
+                }}
+              >
+                {s.icon}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", lineHeight: 1.2 }}>{s.name}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Then, inside HomePage, right after the InvestmentSection block
+ * (the </SlideIn> on ~line 1221), add:
+ *
+ *   <SlideIn direction="left" delay={0}>
+ *     <BusinessSectors onViewAll={handleCTA} />
+ *   </SlideIn>
+ */
+        
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
   const [tab, setTab] = useState("1m");
