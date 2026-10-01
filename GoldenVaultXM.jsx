@@ -54,13 +54,19 @@ function LayoutProvider({ children }) {
   const [mode, setMode] = useState(getMode);
 
   useEffect(() => {
+    let raf = 0;
     const onResize = () => {
-      const next = getMode();
-      setMode(prev => prev !== next ? next : prev);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const next = getMode();
+        setMode(prev => (prev !== next ? next : prev));
+      });
     };
     window.addEventListener("resize", onResize);
-    applyLayoutCSS(getMode());
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   useEffect(() => {
