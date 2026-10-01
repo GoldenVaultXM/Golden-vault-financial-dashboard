@@ -1357,7 +1357,7 @@ function HomePage({ setPage }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <SlideIn direction="left" delay={0}>
-      <div style={{ background: `linear-gradient(160deg,#1a0f00 0%,${C.bg} 65%)`, borderRadius: 16, border: `1px solid ${C.gold}22`, padding: "28px 20px", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: `linear-gradient(160deg,rgba(26,15,0,0.80) 0%,rgba(8,8,8,0.72) 65%), url(/hero-bg.jpg) center/cover no-repeat`,
         <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: `radial-gradient(${C.gold}18,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
         <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} /> System Online // Live Data </div>
         <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}><div style={{ color: C.text }}>PRECISION</div><div style={{ color: C.gold }}>VELOCITY</div><div style={{ color: C.text }}>INSIGHT.</div></div>
