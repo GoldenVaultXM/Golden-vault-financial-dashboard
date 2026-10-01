@@ -1093,7 +1093,7 @@ function InvestmentSection({ onExplore }) {
       style={{
         marginTop: 14,
         padding: "22px 0 14px",
-        background: "linear-gradient(160deg,#0a1220 0%,#060a14 100%)",
+        background: `linear-gradient(180deg,rgba(8,12,20,0.78) 0%,rgba(8,12,20,0.88) 100%), url(./investment-bg.jpg) center top/cover no-repeat`,
         borderRadius: 16,
         border: "1px solid #14202e",
         overflow: "hidden",
