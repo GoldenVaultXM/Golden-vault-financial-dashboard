@@ -1065,6 +1065,130 @@ function SlideIn({ direction = "left", delay = 0, children }) {
     </div>
   );
 }
+const INVEST_OPTIONS = [
+  { title: "Forex Trading", desc: "Trade global currencies 24/5.", icon: "💱", color: "#3b82f6" },
+  { title: "Cryptocurrency", desc: "Invest in top digital assets.", icon: "₿", color: "#22c55e" },
+  { title: "Gold & Precious Metals", desc: "Stable value, long-term wealth.", icon: "🥇", color: "#f59e0b" },
+  { title: "Stocks & ETFs", desc: "Own shares in top companies.", icon: "📈", color: "#06b6d4" },
+  { title: "Real Estate", desc: "Build wealth through property.", icon: "🏠", color: "#f97316" },
+  { title: "Agriculture & Farming", desc: "Invest in food security and growth.", icon: "🌱", color: "#22c55e" },
+  { title: "Oil & Commodities", desc: "Profit from global demand.", icon: "🛢️", color: "#a3a3a3" },
+  { title: "Mining", desc: "Tap into natural resources.", icon: "⛏️", color: "#7c3aed" },
+  { title: "AI / Automated Trading", desc: "Smarter trades, better results.", icon: "🤖", color: "#3b82f6" },
+  { title: "Bonds & Fixed Income", desc: "Stable returns, lower risk.", icon: "📄", color: "#60a5fa" },
+  { title: "Business Funding", desc: "Support businesses, get returns.", icon: "🤝", color: "#f59e0b" },
+  { title: "Renewable Energy", desc: "Invest in a cleaner, brighter future.", icon: "☀️", color: "#10b981" },
+];
+
+function InvestmentSection({ onExplore }) {
+  const ACCENT = "#1de9b6";
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        padding: "22px 0 14px",
+        background: "linear-gradient(160deg,#0a1220 0%,#060a14 100%)",
+        borderRadius: 16,
+        border: "1px solid #14202e",
+        overflow: "hidden",
+      }}
+    >
+      <style>{`.inv-scroll::-webkit-scrollbar{display:none}`}</style>
+
+      {/* Header */}
+      <div style={{ padding: "0 18px" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.2em", color: "#22d3ee", textTransform: "uppercase" }}>
+          More ways to grow
+        </div>
+        <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginTop: 10, color: "#fff" }}>
+          Investment
+          <br />
+          <span style={{ color: ACCENT }}>Opportunities</span>
+        </div>
+        <div style={{ fontSize: 13, color: "#d4d8e0", lineHeight: 1.55, marginTop: 14, maxWidth: 320 }}>
+          Explore a wide range of investment options with high potential returns and multiple income streams.
+        </div>
+        <button
+          onClick={onExplore}
+          style={{
+            marginTop: 18,
+            background: ACCENT,
+            color: "#04130f",
+            border: "none",
+            borderRadius: 999,
+            padding: "13px 24px",
+            fontWeight: 800,
+            fontSize: 14,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          Explore All Options <span style={{ fontSize: 16 }}>→</span>
+        </button>
+      </div>
+
+      {/* Sliding cards: 3 rows, scrolls sideways */}
+      <div
+        className="inv-scroll"
+        style={{
+          marginTop: 20,
+          display: "grid",
+          gridTemplateRows: "repeat(3, auto)",
+          gridAutoFlow: "column",
+          gridAutoColumns: "230px",
+          gap: 10,
+          overflowX: "auto",
+          scrollSnapType: "x proximity",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          padding: "4px 18px 10px",
+        }}
+      >
+        {INVEST_OPTIONS.map(o => (
+          <div
+            key={o.title}
+            onClick={onExplore}
+            style={{
+              scrollSnapAlign: "start",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "14px 14px",
+              borderRadius: 14,
+              cursor: "pointer",
+              background: `linear-gradient(145deg, ${o.color}26, #0a1020 65%)`,
+              border: `1px solid ${o.color}77`,
+              boxSizing: "border-box",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                flexShrink: 0,
+                borderRadius: "50%",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 26,
+                background: `radial-gradient(circle, ${o.color}44, transparent 70%)`,
+              }}
+            >
+              {o.icon}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", lineHeight: 1.2 }}>{o.title}</div>
+              <div style={{ fontSize: 11, color: "#9aa3b2", lineHeight: 1.4, marginTop: 4 }}>{o.desc}</div>
+            </div>
+            <div style={{ position: "absolute", right: 12, bottom: 8, color: o.color, fontWeight: 800, fontSize: 14 }}>→</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
@@ -1086,6 +1210,9 @@ function HomePage({ setPage }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
       </div>
       </SlideIn>
+      <SlideIn direction="left" delay={0}>
+  <InvestmentSection onExplore={handleCTA} />
+</SlideIn>
       <SlideIn direction="right" delay={100}>
 {(() => {
   const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
