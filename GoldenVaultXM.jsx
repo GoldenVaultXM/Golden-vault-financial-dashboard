@@ -172,18 +172,18 @@ function applyLayoutCSS(mode, theme = "dark") {
     document.head.insertBefore(tag, document.head.firstChild);
   }
   tag.textContent = `
-    html { background: ${bg} !important; overflow-x: hidden !important; }
+    html { background: ${bg} !important; overflow-x: clip !important; }
     body {
       background: ${bg} !important; margin: 0 !important; padding: 0 !important;
       width: 100% !important; min-width: 0 !important; max-width: 100% !important;
-      overflow-x: hidden !important;
+      overflow-x: clip !important;
       -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
     }
     .gvxm-shell {
       width: 100% !important; max-width: ${w}px !important; min-width: 0 !important;
-      margin: 0 auto !important; overflow-x: hidden !important; box-sizing: border-box !important;
+      margin: 0 auto !important; overflow-x: clip !important; box-sizing: border-box !important;
     }
-    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
+    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: clip !important; }
   `;
 }
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
