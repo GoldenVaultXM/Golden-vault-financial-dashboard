@@ -1091,7 +1091,7 @@ function HomePage({ setPage }) {
   const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
   const ICONS = {
     user: (<svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="#0a1230" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="19" cy="14" r="8" /><path d="M4 42c0-9 7-14 15-14 3 0 5 .5 7 1.5" /><path d="M36 26l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#0a1230" /></svg>),
-    coins: (<svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="#1a0f08" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="17" cy="35" rx="11" ry="5" /><path d="M6 35v-8c0 3 5 5 11 5s11-2 11-5v8" /><ellipse cx="17" cy="27" rx="11" ry="5" /><ellipse cx="31" cy="13" rx="11" ry="5" /><path d="M20 13v8c0 3 5 5 11 5s11-2 11-5v-8" /></svg>),
+    coins: (<svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="#2a1500" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="17" cy="35" rx="11" ry="5" /><path d="M6 35v-8c0 3 5 5 11 5s11-2 11-5v8" /><ellipse cx="17" cy="27" rx="11" ry="5" /><ellipse cx="31" cy="13" rx="11" ry="5" /><path d="M20 13v8c0 3 5 5 11 5s11-2 11-5v-8" /></svg>),
     crown: (<svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="#1a0612" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14l9 11 9-17 9 17 9-11-3 24H9z" /><path d="M9 43h30" /></svg>),
     diamond: (<svg width="26" height="26" viewBox="0 0 48 48" fill="none" stroke="#06122e" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6h24l9 13-21 25L3 19z" /><path d="M3 19h42" /><path d="M17 19l7 25 7-25-7-13z" /></svg>),
   };
@@ -1100,9 +1100,9 @@ function HomePage({ setPage }) {
       bg: "linear-gradient(135deg,#ffffff 0%,#e6f1ff 55%,#c6e4ff 100%)", ink: "#0a1230",
       pill: "linear-gradient(90deg,#a9dcff,#7ec8f7)", check: "#1d9bf0", btn: "#0b1f4a", iconBg: "#dcebfb",
       features: ["Live trading bot", "96 hours of mining", "Net Profit / Growth %300"] },
-    { name: "Standard", range: "$500 - $999", icon: "coins", base: "#fbbf24",
-      bg: "linear-gradient(135deg,#fcd34d 0%,#fbbf24 45%,#f59e0b 100%)", ink: "#1a0f08",
-      pill: "linear-gradient(90deg,#fb923c,#f97316)", check: "#f97316", btn: "#1a0f08", iconBg: "#fbbf4a",
+    { name: "Standard", range: "$500 - $999", icon: "coins", base: "#ffb703",
+      bg: "linear-gradient(135deg,#ffd35a 0%,#ffbd1f 45%,#ff9d0a 100%)", ink: "#2a1500",
+      pill: "linear-gradient(90deg,#ff8a3d,#f26a0f)", check: "#f26a0f", btn: "#2a1500", iconBg: "#ffd36b",
       features: ["Live trading bot", "120 hours of mining", "Net Profit / Growth %500", "Personal account manager"] },
     { name: "Premium", range: "$1,000 - $4,999", icon: "crown", base: "#f9a8d4",
       bg: "linear-gradient(135deg,#fbcfe8 0%,#f9a8d4 50%,#f472b6 100%)", ink: "#1a0612",
@@ -1120,8 +1120,17 @@ function HomePage({ setPage }) {
       <path d="M5.5 10.5l3 3 6-6.5" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+  const CSS = `
+.gvp-card{background-color:var(--base)!important;background-image:var(--bg)!important;color:var(--ink)!important;border:none!important;font-family:${FONT}!important}
+.gvp-card .gvp-name,.gvp-card .gvp-feat,.gvp-card .gvp-feat span{color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;font-family:${FONT}!important;text-shadow:none!important}
+.gvp-card .gvp-pill{background:var(--pill)!important;color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;font-family:${FONT}!important;opacity:1!important;-webkit-background-clip:border-box!important;background-clip:border-box!important}
+.gvp-card .gvp-pill span{color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important}
+.gvp-card .gvp-btn{background:var(--btn)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-family:${FONT}!important;opacity:1!important}
+.gvp-card .gvp-btn span{color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important}
+`;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, fontFamily: FONT }}>
+      <style>{CSS}</style>
       <div style={{ padding: "6px 0 2px" }}>
         <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.05, color: "#fff", letterSpacing: "-0.02em", fontFamily: FONT }}>Investment Plan /</div>
         <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.02em", fontFamily: FONT, background: "linear-gradient(90deg,#ff4fd8,#c084fc,#8b5cf6)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}>Subscription Package</div>
@@ -1135,24 +1144,24 @@ function HomePage({ setPage }) {
         </div>
       </div>
       {PLANS.map(p => (
-        <div key={p.name} style={{ position: "relative", isolation: "isolate", backgroundColor: p.base, backgroundImage: p.bg, borderRadius: 22, padding: "14px 12px 14px 14px", display: "grid", gridTemplateColumns: "1.2fr 1fr", alignItems: "stretch", boxShadow: "0 0 0 1px #ffffff55 inset, 0 8px 28px rgba(0,0,0,.35)", overflow: "hidden", fontFamily: FONT }}>
+        <div key={p.name} className="gvp-card" style={{ "--base": p.base, "--bg": p.bg, "--ink": p.ink, "--pill": p.pill, "--btn": p.btn, position: "relative", isolation: "isolate", borderRadius: 22, padding: "14px 12px 14px 14px", display: "grid", gridTemplateColumns: "1.2fr 1fr", alignItems: "stretch", boxShadow: "0 8px 28px rgba(0,0,0,.35)", overflow: "hidden" }}>
           <div style={{ position: "absolute", right: 0, bottom: 0, width: "46%", height: "55%", zIndex: 0, pointerEvents: "none", background: "linear-gradient(135deg,transparent 52%,#ffffff55 52% 60%,transparent 60% 68%,#ffffff33 68% 74%,transparent 74% 82%,#ffffff22 82% 86%,transparent 86%)" }} />
           <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 10, paddingRight: 10, borderRight: `1.5px solid ${p.ink}40`, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 46, height: 46, borderRadius: "50%", background: p.iconBg, flexShrink: 0, display: "grid", placeItems: "center" }}>{ICONS[p.icon]}</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: p.ink, lineHeight: 1, letterSpacing: "-0.03em", fontFamily: FONT }}>{p.name}</div>
+              <div className="gvp-name" style={{ fontSize: 24, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.03em" }}>{p.name}</div>
             </div>
-            <div style={{ alignSelf: "flex-start", background: p.pill, color: p.ink, fontWeight: 900, fontSize: 12, borderRadius: 20, padding: "6px 11px", whiteSpace: "nowrap", fontFamily: FONT }}>
-              {p.range}{p.max && <span style={{ fontSize: 9, fontWeight: 800, marginLeft: 3 }}>max</span>}
+            <div className="gvp-pill" style={{ alignSelf: "flex-start", fontWeight: 900, fontSize: 12, borderRadius: 20, padding: "6px 11px", whiteSpace: "nowrap" }}>
+              <span>{p.range}</span>{p.max && <span style={{ fontSize: 9, fontWeight: 800, marginLeft: 3 }}>max</span>}
             </div>
-            <button onClick={handleCTA} style={{ width: "100%", background: p.btn, color: "#fff", border: "none", borderRadius: 24, padding: "11px 12px", fontWeight: 800, fontSize: 12.5, fontFamily: FONT, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 14px rgba(0,0,0,.3)" }}>
-              <span style={{ color: "#fff" }}>Get Started</span>
+            <button className="gvp-btn" onClick={handleCTA} style={{ width: "100%", border: "none", borderRadius: 24, padding: "11px 12px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 14px rgba(0,0,0,.3)" }}>
+              <span>Get Started</span>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
           </div>
           <div style={{ position: "relative", zIndex: 1, paddingLeft: 12, display: "flex", flexDirection: "column", justifyContent: "space-evenly", gap: 8, minWidth: 0 }}>
             {p.features.map(f => (
-              <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 11.5, fontWeight: 600, color: p.ink, lineHeight: 1.3, fontFamily: FONT }}>
+              <div key={f} className="gvp-feat" style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: 11.5, fontWeight: 600, lineHeight: 1.3 }}>
                 <Check color={p.check} /><span>{f}</span>
               </div>
             ))}
