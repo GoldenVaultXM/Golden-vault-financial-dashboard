@@ -1350,28 +1350,58 @@ function HomePage({ setPage }) {
   const [tab, setTab] = useState("1m");
   const TABS = ["1m", "5m", "15m", "1h", "4h", "D"];
   const chartData = Array.from({ length: 40 }, (_, i) => { const base = 4680 + Math.sin(i * 0.4) * 40 + i * 1.2; const o = base + (Math.random() - 0.5) * 10; return { i, v: o + (Math.random() - 0.5) * 15 }; });
-  const STATS = [{ val: "$2.4B+", label: "Daily Volume" }, { val: "150K+", label: "Active Traders" }, { val: "200+", label: "Pairs" }, { val: "24/7", label: "Support" },];
-  const INFRA = [{ icon: TrendingUp, title: "Advanced Trading", desc: "Institutional-grade tools and real-time analytics" }, { icon: Shield, title: "Bank-Level Security", desc: "Multi-layer encryption and cold storage protection" }, { icon: Zap, title: "Lightning Execution", desc: "Sub-millisecond order routing across deep liquidity" }, { icon: Globe, title: "Global Access", desc: "Trade 24/7 across forex, crypto, and commodities" },];
-  const STEPS = [{ n: "01", icon: Users, title: "Register", desc: "Create a secure account in minutes with identity verification." }, { n: "02", icon: TrendingUp, title: "Deposit Funds", desc: "Fund via bank transfer, credit card, or cryptocurrency." }, { n: "03", icon: BarChart2, title: "Start Trading", desc: "Access real-time data across all major asset classes." }, { n: "04", icon: ArrowUpFromLine, title: "Withdraw", desc: "Fast withdrawals to your preferred payment method." },];
+  const STATS = [{ val: "$2.4B+", label: "Daily Volume" }, { val: "150K+", label: "Active Traders" }, { val: "200+", label: "Pairs" }, { val: "24/7", label: "Support" }];
+  const INFRA = [{ icon: TrendingUp, title: "Advanced Trading", desc: "Institutional-grade tools and real-time analytics" }, { icon: Shield, title: "Bank-Level Security", desc: "Multi-layer encryption and cold storage protection" }, { icon: Zap, title: "Lightning Execution", desc: "Sub-millisecond order routing across deep liquidity" }, { icon: Globe, title: "Global Access", desc: "Trade 24/7 across forex, crypto, and commodities" }];
+  const STEPS = [{ n: "01", icon: Users, title: "Register", desc: "Create a secure account in minutes with identity verification." }, { n: "02", icon: TrendingUp, title: "Deposit Funds", desc: "Fund via bank transfer, credit card, or cryptocurrency." }, { n: "03", icon: BarChart2, title: "Start Trading", desc: "Access real-time data across all major asset classes." }, { n: "04", icon: ArrowUpFromLine, title: "Withdraw", desc: "Fast withdrawals to your preferred payment method." }];
   const handleCTA = () => { if (requireAuth("signup")) setPage("trade"); };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <SlideIn direction="left" delay={0}>
-      <div style={{ background: `linear-gradient(160deg,rgba(26,15,0,0.80) 0%,rgba(8,8,8,0.72) 65%), url(/hero-bg.jpg) center/cover no-repeat`,
-        <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: `radial-gradient(${C.gold}18,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
-        <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}><span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} /> System Online // Live Data </div>
-        <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}><div style={{ color: C.text }}>PRECISION</div><div style={{ color: C.gold }}>VELOCITY</div><div style={{ color: C.text }}>INSIGHT.</div></div>
-        <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}> Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems. </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}><Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}> INITIALIZE TRADING </Btn><Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}> EXPLORE MARKETS <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}><div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} /></div> </Btn></div>
-      </div>
+        <div
+          style={{
+            background: `linear-gradient(160deg,rgba(26,15,0,0.80) 0%,rgba(8,8,8,0.72) 65%), url(./hero-bg.jpg) center/cover no-repeat`,
+            borderRadius: 24,
+            padding: 24,
+            position: "relative",
+            overflow: "hidden",
+            border: `1px solid ${C.gold}22`,
+          }}
+        >
+          <div style={{ position: "absolute", top: -20, right: -20, width: 150, height: 150, background: `radial-gradient(${C.gold}18,transparent 70%)`, borderRadius: "50%", pointerEvents: "none" }} />
+          <div style={{ fontSize: 11, color: C.green, letterSpacing: "0.14em", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, display: "inline-block", animation: "pulse 1.5s infinite" }} />
+            System Online // Live Data
+          </div>
+          <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 18 }}>
+            <div style={{ color: C.text }}>PRECISION</div>
+            <div style={{ color: C.gold }}>VELOCITY</div>
+            <div style={{ color: C.text }}>INSIGHT.</div>
+          </div>
+          <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 14, fontSize: 13, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}>
+            Experience access to institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures, Commodities, and NFT ecosystems.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <Btn variant="white" onClick={handleCTA} style={{ width: "100%" }}>INITIALIZE TRADING</Btn>
+            <Btn variant="purple" onClick={handleCTA} style={{ width: "100%" }}>
+              EXPLORE MARKETS
+              <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #ffffff55", display: "grid", placeItems: "center" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", border: "2px solid #fff" }} />
+              </div>
+            </Btn>
+          </div>
+        </div>
       </SlideIn>
-<SlideIn direction="left" delay={0}>
-  <InvestmentSection onExplore={handleCTA} />
-</SlideIn>
-<SlideIn direction="left" delay={0}>
-  <BusinessSectors onViewAll={handleCTA} />
-</SlideIn>
-        <SlideIn direction="right" delay={100}>
+
+      <SlideIn direction="left" delay={0}>
+        <InvestmentSection onExplore={handleCTA} />
+      </SlideIn>
+
+      <SlideIn direction="left" delay={0}>
+        <BusinessSectors onViewAll={handleCTA} />
+      </SlideIn>
+
+      <SlideIn direction="right" delay={100}>
 {(() => {
   const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
   const ICONS = {
