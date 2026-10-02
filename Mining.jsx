@@ -1521,7 +1521,7 @@ export default function Mining({ user }) {
   const openCount     = activeOrders.length;
 
   return (
-    <div style={{
+    <div className="vault-root" style={{
       minHeight: "100dvh",
       display: "flex",
       flexDirection: "column",
@@ -1538,7 +1538,7 @@ export default function Mining({ user }) {
       {/* ────────────────────────────────
           HEADER – Pair + Price
       ──────────────────────────────── */}
-      <div style={{
+      <div className="vault-header" style={{
         background: T.bg1,
         padding: "10px 16px 10px",
         borderBottom: `1px solid ${T.border}`,
@@ -1589,10 +1589,10 @@ export default function Mining({ user }) {
       {/* ────────────────────────────────
           MAIN CONTENT AREA
       ──────────────────────────────── */}
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div className="vault-main" style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
         {/* ── View toggle tabs ── */}
-        <div style={{
+        <div className="vault-tabs" style={{
           display: "flex",
           padding: "0 16px",
           gap: 16,
@@ -1675,7 +1675,7 @@ export default function Mining({ user }) {
       {/* ────────────────────────────────
           BOTTOM DOCK
       ──────────────────────────────── */}
-      <div style={{
+      <div className="vault-dock" style={{
         background: T.bg1,
         borderTop: `1px solid ${T.border}`,
         flexShrink: 0,
@@ -1697,7 +1697,7 @@ export default function Mining({ user }) {
         </div>
 
         {/* Balance + PLACE ORDER */}
-        <div style={{ padding: "10px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div className="vault-actions" style={{ padding: "10px 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 9, color: T.gray2, fontFamily: T.font, marginBottom: 1, letterSpacing: "0.1em" }}>
               PAPER BALANCE
