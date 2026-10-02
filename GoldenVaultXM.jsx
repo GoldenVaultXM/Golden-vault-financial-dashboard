@@ -41,7 +41,7 @@ const useAuth = () => useContext(AuthContext);
  *  • No localStorage, no manual toggle — the browser switch is the ONLY trigger.
  */
 const LAYOUT_BREAKPOINT = 768;
-const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
+const LAYOUT_WIDTHS = { mobile: 600, desktop: 1920 };
 
 const LayoutContext = createContext(null);
 const useLayout = () => useContext(LayoutContext);
@@ -874,7 +874,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   return (
   <>
     <div style={{ height: 59 }} />
-    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1200, boxSizing: "border-box", zIndex: 100, background: C.bg, borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1920, boxSizing: "border-box", zIndex: 100, background: C.bg, borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
@@ -1345,7 +1345,43 @@ borderRadius: 0,
  *     <BusinessSectors onViewAll={handleCTA} />
  *   </SlideIn>
  */
-        
+function DesktopHome({ setPage }) {
+  const { requireAuth } = useAuth();
+  const go = () => { if (requireAuth("signup")) setPage("trade"); };
+  const wrap = { maxWidth: 1360, margin: "0 auto", padding: "0 48px", boxSizing: "border-box" };
+  const stats = [["$2.4B+", "Daily Volume"], ["150K+", "Active Traders"], ["200+", "Instruments"], ["24/7", "Support"]];
+  return (
+    <div style={{ width: "100%", fontFamily: "'Inter','Segoe UI',Roboto,Arial,sans-serif" }}>
+      <section style={{ background: `linear-gradient(90deg,rgba(8,8,8,0.92) 0%,rgba(8,8,8,0.6) 100%), url(./hero-bg.jpg) center/cover`, padding: "110px 0 90px" }}>
+        <div style={{ ...wrap, display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 60, alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 13, color: C.green, letterSpacing: "0.14em", fontWeight: 700 }}>● SYSTEM ONLINE // LIVE DATA</div>
+            <div style={{ fontSize: 84, fontWeight: 900, lineHeight: 1.02, letterSpacing: "-0.03em", marginTop: 18 }}>
+              <div style={{ color: C.text }}>PRECISION</div>
+              <div style={{ color: C.gold }}>VELOCITY</div>
+              <div style={{ color: C.text }}>INSIGHT.</div>
+            </div>
+            <div style={{ fontSize: 18, color: C.text2, lineHeight: 1.6, maxWidth: 560, marginTop: 24 }}>
+              Institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures and Commodities.
+            </div>
+            <div style={{ display: "flex", gap: 16, marginTop: 36 }}>
+              <button onClick={go} style={{ background: C.gold, color: "#000", border: "none", borderRadius: 12, padding: "16px 34px", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Initialize Trading</button>
+              <button onClick={() => setPage("markets")} style={{ background: "transparent", color: C.text, border: `1.5px solid ${C.border2}`, borderRadius: 12, padding: "16px 34px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>Explore Markets</button>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {stats.map(([v, l]) => (
+              <div key={l} style={{ background: "rgba(20,20,20,0.85)", border: `1px solid ${C.border2}`, borderRadius: 18, padding: "30px 24px" }}>
+                <div style={{ fontSize: 34, fontWeight: 900, color: C.gold }}>{v}</div>
+                <div style={{ fontSize: 13, color: C.text2, marginTop: 6 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      </div>
+  );
+}
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
   const [tab, setTab] = useState("1m");
