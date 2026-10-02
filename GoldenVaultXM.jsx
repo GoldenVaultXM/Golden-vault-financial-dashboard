@@ -872,7 +872,9 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   ];
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+  <>
+    <div style={{ height: 59 }} />
+    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1200, boxSizing: "border-box", zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
 
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -880,8 +882,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
         <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
           <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
         </div>
-      </div>
-
+     </div>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 
         {/* Bell */}
@@ -1003,9 +1004,9 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
         </>
       )}
     </header>
+    </>
   );
 }
-
 
 function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
