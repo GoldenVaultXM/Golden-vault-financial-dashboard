@@ -874,8 +874,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   return (
   <>
     <div style={{ height: 59 }} />
-    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1200, boxSizing: "border-box", zIndex: 100, background: `${C.bg}f0`, backdropFilter: "blur(16px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-
+    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1200, boxSizing: "border-box", zIndex: 100, background: C.bg, borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
