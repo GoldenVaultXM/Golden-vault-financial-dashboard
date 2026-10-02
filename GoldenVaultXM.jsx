@@ -1298,7 +1298,7 @@ borderRadius: 0,
           >
             {/* Real-life photo */}
             <img
-              src={s.img}
+              src={s.img.replace(".jpg", "-1.jpg")}
               alt={s.name}
               loading="lazy"
               style={{ width: "100%", height: 84, objectFit: "cover", display: "block" }}
