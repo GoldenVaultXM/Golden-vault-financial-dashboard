@@ -1532,8 +1532,31 @@ export default function Mining({ user }) {
       maxWidth: 480,
       margin: "0 auto",
     }}>
-
-
+<style>{`
+  @media (min-width: 1024px) {
+    .vault-root {
+      max-width: 1500px !important;
+      width: 100% !important;
+      height: 100dvh;
+      min-height: 0 !important;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .vault-header { grid-column: 1 / -1; padding: 14px 24px !important; }
+    .vault-main { grid-column: 1; grid-row: 2; min-height: 0; overflow-y: auto !important; }
+    .vault-tabs { display: none !important; }
+    .vault-dock {
+      grid-column: 2; grid-row: 2;
+      border-top: none !important;
+      border-left: 1px solid #1E2A3A;
+      padding-bottom: 16px !important;
+      overflow-y: auto;
+    }
+    .vault-actions { flex-direction: column !important; align-items: stretch !important; gap: 14px; }
+    .vault-actions > button { max-width: none !important; width: 100%; flex: none !important; }
+  }
+`}</style>
 
       {/* ────────────────────────────────
           HEADER – Pair + Price
