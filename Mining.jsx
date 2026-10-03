@@ -352,13 +352,13 @@ const PriceChart = memo(function PriceChart({ candles, pair }) {
       if (!lastCandle) return;
       const price  = lastCandle.c;
       const prev   = prevPriceRef.current;
-      const rawPl  = (price - prev);
-      const pct    = prev > 0 ? (rawPl / prev) * 100 : 0;
-      // Scale to a realistic dollar P/L for display
-      const pl     = pct * pair.price * (0.8 + Math.random() * 0.6);
-      tradesRef.current = 1 + Math.floor(Math.random() * 3);
-      prevPriceRef.current = price;
-      keyRef.current += 1;
+      const up     = Math.random() < 0.75;
+const mag    = 0.02 + Math.random() * 0.13;
+const pct    = up ? mag : -mag;
+const pl     = pct * 40000 * (0.8 + Math.random() * 0.6);
+tradesRef.current = 1 + Math.floor(Math.random() * 3);
+prevPriceRef.current = price;
+keyRef.current += 1;
 
       const newTick = {
         price,
