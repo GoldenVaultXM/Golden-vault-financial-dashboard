@@ -1529,7 +1529,7 @@ export default function Mining({ user }) {
       fontFamily: T.sans,
       overflow: "hidden",
       position: "relative",
-      maxWidth: 480,
+      maxWidth: "none",
       margin: "0 auto",
     }}>
 <style>{`
