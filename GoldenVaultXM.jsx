@@ -1444,25 +1444,25 @@ function DesktopHome({ setPage }) {
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.55, color: C.text2, maxWidth: 640, marginTop: 32 }}>
               Institutional-grade trading infrastructure, built for precision, performance and global market reach.
-            </div>
-            <div style={{ display: "flex", gap: 18, marginTop: 44 }}>
-              <button
-                className="dh-btn"
-                onClick={go}
-                style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "20px 40px", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
-              >
-                Start trading
-              </button>
-              <button
-                className="dh-btn"
-                onClick={() => setPage("markets")}
-                style={{ background: "transparent", color: C.text, border: `2px solid ${C.gold2}`, borderRadius: 14, padding: "18px 38px", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
-              >
-                Explore markets
-              </button>
-            </div>
+            </div>  
           </div>
-
+          <div style={{ display: "flex", flexDirection: "column", gap: 28, paddingLeft: 40, borderLeft: `1px solid ${C.gold}55` }}>
+  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <button
+      className="dh-btn"
+      onClick={go}
+      style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "22px 0", fontSize: 19, fontWeight: 900, cursor: "pointer", width: "100%" }}
+    >
+      Start trading
+    </button>
+    <button
+      className="dh-btn"
+      onClick={() => setPage("markets")}
+      style={{ background: "transparent", color: C.text, border: `2px solid ${C.gold2}`, borderRadius: 14, padding: "20px 0", fontSize: 19, fontWeight: 900, cursor: "pointer", width: "100%" }}
+    >
+      Explore markets
+    </button>
+  </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
             {stats.map(([v, l]) => (
               <div
@@ -1478,6 +1478,7 @@ function DesktopHome({ setPage }) {
                 <div style={{ fontSize: 16, fontWeight: 800, color: C.text2, marginTop: 8 }}>{l}</div>
               </div>
             ))}
+          </div>
           </div>
         </div>
       </section>
