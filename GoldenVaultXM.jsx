@@ -1345,43 +1345,344 @@ borderRadius: 0,
  *     <BusinessSectors onViewAll={handleCTA} />
  *   </SlideIn>
  */
+/* ── DESKTOP HOME ─────────────────────────────────────────────
+ * Replaces the old `function DesktopHome` (lines 1348–1384) in GoldenVaultXM.jsx.
+ * Uses only things that already exist in that file:
+ *   C, Btn, SlideIn, useAuth, INVEST_OPTIONS, SECTORS,
+ *   and the lucide icons Shield, Zap, Globe, TrendingUp, Activity, Target.
+ * ------------------------------------------------------------ */
+
+const DH_PLANS = [
+  { name: "Juvenile", range: "$400 – $1,999", color: "#93c5fd",
+    feats: ["Live trading bot", "96 hours of mining", "Net Profit / Growth %300"] },
+  { name: "Standard", range: "$2,000 – $9,999", color: "#ffb703",
+    feats: ["Live trading bot", "120 hours of mining", "Net Profit / Growth %500", "Personal account manager"] },
+  { name: "Premium", range: "$10,000 – $49,999", color: "#f9a8d4",
+    feats: ["Live trading bot", "168 hours of mining", "Net Profit / Growth %800", "Personal account manager"] },
+  { name: "Ultra", range: "$50,000 – $1,000,000", color: "#7dd3fc", top: true,
+    feats: ["Live trading bot", "Unlimited mining (priority)", "Net Profit / Growth %1,500+", "Dedicated account manager"] },
+];
+
+const DH_STEPS = [
+  { t: "Register", d: "Create your secure account in minutes." },
+  { t: "Verify", d: "Confirm your identity and protect your funds." },
+  { t: "Fund", d: "Deposit crypto to your wallet." },
+  { t: "Trade", d: "Open positions and watch them grow." },
+];
+
+const DH_CSS = `
+  .dh-lift { transition: transform .25s ease, box-shadow .25s ease; }
+  .dh-lift:hover { transform: translateY(-6px); box-shadow: 0 24px 60px rgba(0,0,0,.55); }
+  .dh-btn { transition: transform .2s ease, filter .2s ease; }
+  .dh-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .dh-btn:focus-visible, .dh-lift:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .dh-lift, .dh-btn { transition: none; }
+    .dh-lift:hover, .dh-btn:hover { transform: none; }
+  }
+`;
+
+function DhHead({ title, accent, sub }) {
+  return (
+    <div style={{ maxWidth: 760, marginBottom: 48 }}>
+      <div style={{ fontSize: "clamp(36px, 4vw, 60px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.03em", color: C.text }}>
+        {title} <span style={{ color: C.gold3 }}>{accent}</span>
+      </div>
+      {sub && (
+        <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.55, color: C.text2, marginTop: 18 }}>
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DesktopHome({ setPage }) {
   const { requireAuth } = useAuth();
   const go = () => { if (requireAuth("signup")) setPage("trade"); };
-  const wrap = { maxWidth: 1360, margin: "0 auto", padding: "0 48px", boxSizing: "border-box" };
-  const stats = [["$2.4B+", "Daily Volume"], ["150K+", "Active Traders"], ["200+", "Instruments"], ["24/7", "Support"]];
+
+  const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
+  const wrap = { maxWidth: 1600, margin: "0 auto", padding: "0 56px", boxSizing: "border-box", width: "100%" };
+  const section = { padding: "96px 0", borderTop: `1px solid ${C.border}` };
+  const gold = `linear-gradient(90deg, ${C.gold3}, ${C.gold2} 50%, ${C.gold})`;
+
+  const stats = [
+    ["$2.4B+", "Daily volume"],
+    ["150K+", "Active traders"],
+    ["200+", "Instruments"],
+    ["24/7", "Support"],
+  ];
+
+  const why = [
+    { icon: TrendingUp, t: "Advanced trading", d: "Institutional-grade tools and real-time analytics on every pair." },
+    { icon: Shield, t: "Protected accounts", d: "Encrypted, verified and monitored around the clock." },
+    { icon: Zap, t: "Instant execution", d: "Orders reach the market in milliseconds, not minutes." },
+    { icon: Globe, t: "Global markets", d: "Forex, crypto, stocks, indices, commodities, futures and bonds." },
+  ];
+
   return (
-    <div style={{ width: "100%", fontFamily: "'Inter','Segoe UI',Roboto,Arial,sans-serif" }}>
-      <section style={{ background: `linear-gradient(90deg,rgba(8,8,8,0.92) 0%,rgba(8,8,8,0.6) 100%), url(./hero-bg.jpg) center/cover`, padding: "110px 0 90px" }}>
-        <div style={{ ...wrap, display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 60, alignItems: "center" }}>
+    <div style={{ width: "100%", fontFamily: FONT, color: C.text }}>
+      <style>{DH_CSS}</style>
+
+      {/* HERO */}
+      <section
+        style={{
+          background: `linear-gradient(90deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.62) 100%), url(./hero-bg.jpg) center/cover no-repeat`,
+          padding: "120px 0 110px",
+        }}
+      >
+        <div style={{ ...wrap, display: "grid", gridTemplateColumns: "1.25fr 0.75fr", gap: 72, alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 13, color: C.green, letterSpacing: "0.14em", fontWeight: 700 }}>● SYSTEM ONLINE // LIVE DATA</div>
-            <div style={{ fontSize: 84, fontWeight: 900, lineHeight: 1.02, letterSpacing: "-0.03em", marginTop: 18 }}>
-              <div style={{ color: C.text }}>PRECISION</div>
-              <div style={{ color: C.gold }}>VELOCITY</div>
-              <div style={{ color: C.text }}>INSIGHT.</div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 15, fontWeight: 800, color: C.green }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: C.green }} />
+              System online. Live market data.
             </div>
-            <div style={{ fontSize: 18, color: C.text2, lineHeight: 1.6, maxWidth: 560, marginTop: 24 }}>
-              Institutional-grade trading infrastructure engineered for precision, performance, and global market reach across Forex, Crypto, Futures and Commodities.
+            <div style={{ fontSize: "clamp(56px, 7.2vw, 120px)", fontWeight: 900, lineHeight: 0.98, letterSpacing: "-0.045em", marginTop: 24 }}>
+              <div style={{ color: C.text }}>Precision.</div>
+              <div style={{ background: gold, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}>Velocity.</div>
+              <div style={{ color: C.text }}>Insight.</div>
             </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 36 }}>
-              <button onClick={go} style={{ background: C.gold, color: "#000", border: "none", borderRadius: 12, padding: "16px 34px", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Initialize Trading</button>
-              <button onClick={() => setPage("markets")} style={{ background: "transparent", color: C.text, border: `1.5px solid ${C.border2}`, borderRadius: 12, padding: "16px 34px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>Explore Markets</button>
+            <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.55, color: C.text2, maxWidth: 640, marginTop: 32 }}>
+              Institutional-grade trading infrastructure, built for precision, performance and global market reach.
+            </div>
+            <div style={{ display: "flex", gap: 18, marginTop: 44 }}>
+              <button
+                className="dh-btn"
+                onClick={go}
+                style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "20px 40px", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
+              >
+                Start trading
+              </button>
+              <button
+                className="dh-btn"
+                onClick={() => setPage("markets")}
+                style={{ background: "transparent", color: C.text, border: `2px solid ${C.gold2}`, borderRadius: 14, padding: "18px 38px", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
+              >
+                Explore markets
+              </button>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
             {stats.map(([v, l]) => (
-              <div key={l} style={{ background: "rgba(20,20,20,0.85)", border: `1px solid ${C.border2}`, borderRadius: 18, padding: "30px 24px" }}>
-                <div style={{ fontSize: 34, fontWeight: 900, color: C.gold }}>{v}</div>
-                <div style={{ fontSize: 13, color: C.text2, marginTop: 6 }}>{l}</div>
+              <div
+                key={l}
+                style={{
+                  background: "rgba(20,20,20,0.88)",
+                  border: `1px solid ${C.gold}55`,
+                  borderRadius: 20,
+                  padding: "34px 28px",
+                }}
+              >
+                <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: "-0.03em", color: C.gold3 }}>{v}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text2, marginTop: 8 }}>{l}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
-      </div>
+
+      {/* WHY GOLDEN VAULT */}
+      <section style={section}>
+        <div style={wrap}>
+          <DhHead
+            title="Built for serious traders."
+            accent="Run like a vault."
+            sub="Every tool you need to trade with confidence, in one place."
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+            {why.map(({ icon: Icon, t, d }) => (
+              <div key={t} className="dh-lift" style={{ background: C.card, border: `1px solid ${C.border2}`, borderRadius: 22, padding: 34 }}>
+                <div style={{ width: 60, height: 60, borderRadius: 16, background: `${C.gold}22`, display: "grid", placeItems: "center" }}>
+                  <Icon size={28} color={C.gold3} />
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, marginTop: 24, letterSpacing: "-0.02em" }}>{t}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6, color: C.text2, marginTop: 10 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* INVESTMENT OPPORTUNITIES */}
+      <section style={{ ...section, background: C.card }}>
+        <div style={wrap}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 32 }}>
+            <DhHead
+              title="More ways to grow."
+              accent="Investment opportunities."
+              sub="Explore a wide range of options with high potential returns and multiple income streams."
+            />
+            <button
+              className="dh-btn"
+              onClick={go}
+              style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "18px 34px", fontSize: 17, fontWeight: 900, cursor: "pointer", marginBottom: 48, flexShrink: 0 }}
+            >
+              Explore all options
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
+            {INVEST_OPTIONS.map((o) => (
+              <div
+                key={o.title}
+                className="dh-lift"
+                onClick={go}
+                style={{
+                  cursor: "pointer",
+                  background: `linear-gradient(145deg, ${o.color}26, #0a1020 65%)`,
+                  border: `1px solid ${o.color}77`,
+                  borderRadius: 20,
+                  padding: 28,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 14,
+                  minHeight: 190,
+                }}
+              >
+                <div style={{ width: 56, height: 56, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 28, background: `radial-gradient(circle, ${o.color}44, transparent 70%)` }}>
+                  {o.icon}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: "#fff" }}>{o.title}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5, color: "#b4bccb" }}>{o.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BUSINESS SECTORS */}
+      <section style={section}>
+        <div style={wrap}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 32 }}>
+            <DhHead
+              title="Real projects."
+              accent="Real impact."
+              sub="Invest in growing industries and be part of real-world success stories."
+            />
+            <button
+              className="dh-btn"
+              onClick={go}
+              style={{ background: "#8b3cf7", color: "#fff", border: "none", borderRadius: 14, padding: "18px 34px", fontSize: 17, fontWeight: 900, cursor: "pointer", marginBottom: 48, flexShrink: 0 }}
+            >
+              View all sectors
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 22 }}>
+            {SECTORS.slice(0, 8).map((s) => (
+              <div
+                key={s.name}
+                className="dh-lift"
+                onClick={go}
+                style={{
+                  cursor: "pointer",
+                  minHeight: 260,
+                  borderRadius: 22,
+                  border: `1px solid ${s.color}55`,
+                  backgroundImage: `linear-gradient(180deg, rgba(8,8,8,0.05) 25%, rgba(8,8,8,0.94) 100%), url(${s.img.replace(".jpg", "-1.jpg")})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  padding: 26,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 26 }}>{s.icon}</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: "#fff", lineHeight: 1.15 }}>{s.name}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PLANS */}
+      <section style={{ ...section, background: C.card }}>
+        <div style={wrap}>
+          <DhHead
+            title="Choose your plan."
+            accent="Grow at your pace."
+            sub="Four tiers, each with a live trading bot working for you."
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, alignItems: "stretch" }}>
+            {DH_PLANS.map((p) => (
+              <div
+                key={p.name}
+                className="dh-lift"
+                style={{
+                  background: C.bg,
+                  border: `2px solid ${p.top ? p.color : p.color + "55"}`,
+                  borderRadius: 24,
+                  padding: 34,
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: p.top ? `0 0 60px ${p.color}22` : "none",
+                }}
+              >
+                <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-0.03em", color: p.color }}>{p.name}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, marginTop: 10, color: C.text }}>
+                  {p.range}
+                  {p.top && <span style={{ fontSize: 13, fontWeight: 800, marginLeft: 8, color: C.text2 }}>max</span>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14, margin: "28px 0", flex: 1 }}>
+                  {p.feats.map((f) => (
+                    <div key={f} style={{ display: "flex", gap: 10, fontSize: 16, fontWeight: 800, lineHeight: 1.4, color: C.text }}>
+                      <span style={{ color: p.color, fontWeight: 900 }}>✓</span>
+                      {f}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="dh-btn"
+                  onClick={go}
+                  style={{ background: p.color, color: "#0b1220", border: "none", borderRadius: 14, padding: "17px 0", fontSize: 17, fontWeight: 900, cursor: "pointer", width: "100%" }}
+                >
+                  Get started
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* GET STARTED STEPS */}
+      <section style={section}>
+        <div style={wrap}>
+          <DhHead title="Get started in" accent="four steps." sub="From sign-up to your first trade in minutes." />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+            {DH_STEPS.map((s, i) => (
+              <div key={s.t} style={{ borderTop: `4px solid ${C.gold2}`, paddingTop: 24 }}>
+                <div style={{ fontSize: 64, fontWeight: 900, letterSpacing: "-0.04em", color: C.gold3, lineHeight: 1 }}>{i + 1}</div>
+                <div style={{ fontSize: 26, fontWeight: 900, marginTop: 16, letterSpacing: "-0.02em" }}>{s.t}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.55, color: C.text2, marginTop: 8 }}>{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CALL TO ACTION */}
+      <section style={{ padding: "110px 0", background: `linear-gradient(135deg, #130c00, #0d0800)`, borderTop: `1px solid ${C.gold}44` }}>
+        <div style={{ ...wrap, textAlign: "center" }}>
+          <div style={{ fontSize: "clamp(40px, 5vw, 76px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.05 }}>
+            Your next trade starts <span style={{ color: C.gold3 }}>here.</span>
+          </div>
+          <div style={{ fontSize: 21, fontWeight: 700, color: C.text2, marginTop: 20 }}>
+            Join 150K+ traders on Golden Vault XM.
+          </div>
+          <button
+            className="dh-btn"
+            onClick={go}
+            style={{ background: gold, color: "#000", border: "none", borderRadius: 16, padding: "22px 56px", fontSize: 20, fontWeight: 900, cursor: "pointer", marginTop: 40 }}
+          >
+            Create your account
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
+
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
   const [tab, setTab] = useState("1m");
