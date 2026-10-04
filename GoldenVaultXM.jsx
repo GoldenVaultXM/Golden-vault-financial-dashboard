@@ -1107,7 +1107,7 @@ function AppBackground() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: -1,
+        zIndex: 0,
         pointerEvents: "none",
         background: "#080808",
         overflow: "hidden",
@@ -2812,7 +2812,6 @@ const renderPage = () => {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
       `}</style>
-      <AppBackground />
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -2828,12 +2827,17 @@ const renderPage = () => {
 
 export default function GoldenVaultXM() {
   return (
-    <LayoutProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
-      </ThemeProvider>
-    </LayoutProvider>
+    <>
+      <AppBackground />
+      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
+        <LayoutProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppShell />
+            </AuthProvider>
+          </ThemeProvider>
+        </LayoutProvider>
+      </div>
+    </>
   );
 }
