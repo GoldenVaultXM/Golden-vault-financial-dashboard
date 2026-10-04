@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+import { createPortal } from "react-dom";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu, ExternalLink, } from "lucide-react";
 import Mining from "./Mining";
@@ -184,6 +185,7 @@ function applyLayoutCSS(mode, theme = "dark") {
       margin: 0 auto !important; overflow-x: clip !important; box-sizing: border-box !important;
     }
     #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: clip !important; }
+    #root { background: transparent !important; }
   `;
 }
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
@@ -1101,13 +1103,13 @@ function AppBackground() {
     img.src = BG_IMAGES[(idx + 1) % BG_IMAGES.length];
   }, [idx]);
 
-  return (
+  return createPortal(
     <div
       aria-hidden="true"
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 0,
+        zIndex: -1,
         pointerEvents: "none",
         background: "#080808",
         overflow: "hidden",
@@ -1132,7 +1134,8 @@ function AppBackground() {
         );
       })}
       <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.72)" }} />
-    </div>
+    </div>,
+    document.body
   );
 }
 function InvestmentSection({ onExplore }) {
