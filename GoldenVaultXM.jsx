@@ -1,30 +1,9 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
-import { createPortal } from "react-dom";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, } from "recharts";
 import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, ArrowDownToLine, ArrowUpFromLine, FileBarChart, CheckCircle2, Menu, X, ChevronRight, Bell, Settings, LogOut, Home, Search, Lock, Award, BookOpen, Mail, Phone, MapPin, Eye, EyeOff, UserPlus, LogIn, AlertCircle, RefreshCw, Users, Newspaper, Cpu, ExternalLink, } from "lucide-react";
 import Mining from "./Mining";
 import { supabase } from './supabaseClient';
 import ProfilePage from './ProfilePage';
-/* GVXM DEBUG - remove later */
-if (typeof window !== "undefined" && !window.__gvxmDebug) {
-  window.__gvxmDebug = true;
-  const box = document.createElement("div");
-  box.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:rgba(0,0,0,.92);color:#0f0;font:11px/1.4 monospace;padding:8px;white-space:pre-wrap;pointer-events:none";
-  const log = (m) => { box.textContent += m + "\n"; };
-  const mount = () => { if (document.body && !box.parentNode) document.body.appendChild(box); };
-  window.addEventListener("error", (e) => { mount(); log("ERROR: " + e.message + " @ line " + e.lineno); });
-  window.addEventListener("unhandledrejection", (e) => { mount(); log("PROMISE: " + ((e.reason && e.reason.message) || e.reason)); });
-  setTimeout(() => {
-    mount();
-    const q = (s) => document.querySelector(s);
-    const r = (el) => (el ? Math.round(el.getBoundingClientRect().width) + "x" + Math.round(el.getBoundingClientRect().height) : "MISSING");
-    log("screen " + innerWidth + " | shell " + r(q(".gvxm-shell")) + " | header " + r(q("header")) + " | main " + r(q("main")));
-    const top = document.elementFromPoint(innerWidth / 2, 90);
-    if (top) log("on top at y=90: <" + top.tagName.toLowerCase() + "> id=" + top.id + " class=" + String(top.className).slice(0, 40));
-    const sh = q(".gvxm-shell");
-    if (sh) { const cs = getComputedStyle(sh); log("shell opacity " + cs.opacity + " | visibility " + cs.visibility + " | display " + cs.display); }
-  }, 2500);
-}
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const DARK_TOKENS = {
   bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
@@ -62,7 +41,7 @@ const useAuth = () => useContext(AuthContext);
  *  • No localStorage, no manual toggle — the browser switch is the ONLY trigger.
  */
 const LAYOUT_BREAKPOINT = 768;
-const LAYOUT_WIDTHS = { mobile: 600, desktop: 1920 };
+const LAYOUT_WIDTHS = { mobile: 600, desktop: 1200 };
 
 const LayoutContext = createContext(null);
 const useLayout = () => useContext(LayoutContext);
@@ -193,18 +172,18 @@ function applyLayoutCSS(mode, theme = "dark") {
     document.head.insertBefore(tag, document.head.firstChild);
   }
   tag.textContent = `
-    html { background: ${bg} !important; overflow-x: hidden !important; }
+    html { background: ${bg} !important; overflow-x: clip !important; }
     body {
       background: ${bg} !important; margin: 0 !important; padding: 0 !important;
       width: 100% !important; min-width: 0 !important; max-width: 100% !important;
-      overflow-x: hidden !important;
+      overflow-x: clip !important;
       -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
     }
     .gvxm-shell {
       width: 100% !important; max-width: ${w}px !important; min-width: 0 !important;
-      margin: 0 auto !important; overflow-x: hidden !important; box-sizing: border-box !important;
+      margin: 0 auto !important; overflow-x: clip !important; box-sizing: border-box !important;
     }
-    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
+    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: clip !important; }
   `;
 }
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
@@ -895,7 +874,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   return (
   <>
     <div style={{ height: 59 }} />
-    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1920, boxSizing: "border-box", zIndex: 100, background: C.bg, borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <header style={{ position: "fixed", top: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 1200, boxSizing: "border-box", zIndex: 100, background: C.bg, borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
@@ -1030,8 +1009,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
 
 function BottomNav({ page, setPage, newsCount }) {
   const { isAuthenticated, requireAuth } = useAuth();
-  const { width, mode } = useLayout();
-  if (mode === "desktop") return null;
+  const { width } = useLayout();
   const TABS = [{ id: "home", icon: Home, label: "Home" }, { id: "markets", icon: BarChart2, label: "Markets" }, { id: "trade", icon: Zap, label: "Trade" }, { id: "news", icon: Newspaper, label: "News" }, { id: "settings", icon: Settings, label: "More" },];  return (
     <nav className="gvxm-shell" style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: width, minWidth: 0, background: `${C.bg}f2`, backdropFilter: "blur(16px)", borderTop: `1px solid ${C.border}`, display: "flex", padding: "8px 0 20px", zIndex: 50 }}>
       {TABS.map(t => {
@@ -1107,98 +1085,7 @@ const INVEST_OPTIONS = [
   { title: "Business Funding", desc: "Support businesses, get returns.", icon: "🤝", color: "#f59e0b" },
   { title: "Renewable Energy", desc: "Invest in a cleaner, brighter future.", icon: "☀️", color: "#10b981" },
 ];
-const BG_IMAGES = Array.from({ length: 40 }, (_, i) => `/bg${i + 1}.webp`);
 
-function AppBackground() {
-  const [idx, setIdx] = useState(0);
-
-  useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % BG_IMAGES.length), 5000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    const img = new Image();
-    img.src = BG_IMAGES[(idx + 1) % BG_IMAGES.length];
-  }, [idx]);
-
-  return createPortal(
-    <div
-      aria-hidden="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: -1,
-        pointerEvents: "none",
-        background: "#080808",
-        overflow: "hidden",
-      }}
-    >
-      {BG_IMAGES.map((src, i) => {
-        const near = i === idx || i === (idx + BG_IMAGES.length - 1) % BG_IMAGES.length;
-        return (
-          <div
-            key={src}
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: near ? `url(${src})` : "none",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              opacity: i === idx ? 1 : 0,
-              transition: "opacity 1.5s ease-in-out",
-              willChange: "opacity",
-            }}
-          />
-        );
-      })}
-      <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.72)" }} />
-    </div>,
-    document.body
-  );
-}
-function CanvasBackground() {
-  useEffect(() => {
-    const root = document.documentElement;
-    const st = document.createElement("style");
-    st.textContent =
-      "@property --bga{syntax:'<number>';inherits:false;initial-value:0.72}html{--bga:0.72;transition:--bga .7s ease}";
-    document.head.appendChild(st);
-
-    let i = 0;
-    const show = () => {
-      root.style.setProperty(
-        "background-image",
-        `linear-gradient(rgba(8,8,8,var(--bga)),rgba(8,8,8,var(--bga))), url(${BG_IMAGES[i]})`,
-        "important"
-      );
-    };
-    root.style.setProperty("background-size", "cover", "important");
-    root.style.setProperty("background-position", "center", "important");
-    root.style.setProperty("background-repeat", "no-repeat", "important");
-    root.style.setProperty("background-attachment", "fixed", "important");
-    show();
-
-    let t2;
-    const t1 = setInterval(() => {
-      root.style.setProperty("--bga", "1");
-      t2 = setTimeout(() => {
-        i = (i + 1) % BG_IMAGES.length;
-        new Image().src = BG_IMAGES[(i + 1) % BG_IMAGES.length];
-        show();
-        root.style.setProperty("--bga", "0.72");
-      }, 700);
-    }, 5000);
-
-    return () => {
-      clearInterval(t1);
-      clearTimeout(t2);
-      st.remove();
-      ["background-image", "background-size", "background-position", "background-repeat", "background-attachment", "--bga"].forEach(p => root.style.removeProperty(p));
-    };
-  }, []);
-  return null;
-}
 function InvestmentSection({ onExplore }) {
   const ACCENT = "#1de9b6";
   return (
@@ -1411,7 +1298,7 @@ borderRadius: 0,
           >
             {/* Real-life photo */}
             <img
-              src={s.img.replace(".jpg", "-1.jpg")}
+              src={s.img}
               alt={s.name}
               loading="lazy"
               style={{ width: "100%", height: 84, objectFit: "cover", display: "block" }}
@@ -1449,190 +1336,7 @@ borderRadius: 0,
     </div>
   );
 }
-/* ── SECTOR DETAILS (long version) ────────────────────────────
- * Replaces the earlier SECTOR_INFO + SectorDetails.
- * Each sector has three parts: what it is, how it works, why it matters.
- * ------------------------------------------------------------ */
 
-const SECTOR_INFO = {
-  "Real Estate Development": {
-    what: "Real estate development turns land into finished places: apartment blocks, offices, retail centres and gated communities. Developers buy or lease land, secure permits, design the project, build it, then sell or rent the units.",
-    how: "Capital funds each stage, from land and architects to materials and contractors. Projects are delivered in phases, so completed units can be sold or leased while later phases are still being built.",
-    why: "Cities keep growing and people always need homes and workplaces. Property is a physical asset with lasting value, though timelines, permits and local demand all affect results.",
-  },
-  "Agriculture": {
-    what: "Agriculture covers growing crops such as grains, vegetables and fruit, and supplying them to processors, wholesalers and retailers. Modern farms use irrigation, quality seed, fertiliser and machinery to raise the yield of every hectare.",
-    how: "Funds pay for seed, land preparation, labour, equipment and storage. Each season runs from planting to harvest, and the crop is sold into local and regional markets.",
-    why: "Food demand is constant and grows with the population. Weather, pests and market prices can swing a season's outcome, which is why good planning and storage matter.",
-  },
-  "Poultry Farming": {
-    what: "Poultry farms raise chickens for eggs and meat. Birds live in managed sheds with controlled feed, water, temperature and vaccination programmes.",
-    how: "Investment covers housing, chicks, feed, veterinary care and distribution. Broilers reach market weight within weeks and laying hens produce eggs every day, so income arrives in short, repeating cycles.",
-    why: "Chicken and eggs are among the most affordable proteins, so demand is steady. Feed prices and disease control are the main risks, and strong management keeps both in check.",
-  },
-  "Oil & Gas": {
-    what: "Oil and gas companies find, extract, refine and distribute fuels, along with the raw materials used in plastics, fertiliser and chemicals. The work spans exploration, drilling, processing and supply.",
-    how: "It is capital-heavy: surveys, rigs, pipelines and refineries cost a lot, and revenue comes from selling output at market prices.",
-    why: "Transport, power and industry still run largely on these fuels, so global demand is large. Prices move with supply, politics and the energy transition, so this sector can be volatile.",
-  },
-  "Mining": {
-    what: "Mining extracts minerals and metals such as gold, copper, iron ore and coal from the earth. Operations include surveying, excavation, crushing, processing and shipping.",
-    how: "Funds pay for equipment, labour, permits and site safety. Output is sold to smelters, manufacturers and traders at commodity prices.",
-    why: "Phones, cars, buildings and power grids all depend on mined materials. Commodity prices and regulation drive results, so costs and site quality matter.",
-  },
-  "Logistics & Transportation": {
-    what: "Logistics moves goods from where they are made to where they are needed, using trucks, rail, ships, aircraft, warehouses and tracking software.",
-    how: "Investment goes into vehicles, drivers, fuel, storage space and routing technology. Revenue comes from freight and delivery contracts, which often repeat month after month.",
-    why: "Every product in a shop or at your door travelled through this chain. Growing online shopping and trade keep demand high, while fuel costs and vehicle use shape margins.",
-  },
-  "Technology": {
-    what: "Technology businesses build software, apps, cloud services, hardware and data tools that other companies and consumers pay to use.",
-    how: "Funds cover engineers, product design, servers, security and marketing. Many products earn recurring subscription income, and one product can serve many customers at low extra cost.",
-    why: "Almost every industry now depends on digital tools. Competition is intense and products must keep improving, so execution and customer retention are what count.",
-  },
-  "E-commerce": {
-    what: "E-commerce sells products through websites and apps, either from its own stock or through a marketplace of independent sellers.",
-    how: "Money goes into inventory, site and payments technology, marketing, warehousing and delivery. Revenue comes from each sale, and repeat buyers lower the cost of winning customers.",
-    why: "Shopping keeps moving online, and a store can reach customers well beyond one town. Margins depend on logistics, returns and advertising costs.",
-  },
-  "Manufacturing": {
-    what: "Manufacturers turn raw materials into finished goods: packaged food, drinks, clothing, building materials, electronics and machinery.",
-    how: "Capital buys machinery, factory space, materials and skilled workers. Output is sold to retailers, distributors and other businesses, and scale lowers the cost of each unit.",
-    why: "Local production creates jobs and supplies markets reliably. Success depends on quality control, a steady supply of inputs and efficient production lines.",
-  },
-  "Renewable Energy": {
-    what: "Renewable energy projects generate power from sunlight, wind, water and other sources that renew naturally, such as solar farms and wind turbines.",
-    how: "Most of the cost comes upfront, for panels, turbines, land and grid connection. After that, running costs are low and electricity is sold to the grid or to businesses, often under long contracts.",
-    why: "Governments and companies are shifting toward cleaner power, and demand for electricity keeps rising. Policy changes and project permits are the main factors to watch.",
-  },
-  "Food & Hospitality": {
-    what: "This sector covers restaurants, cafés, hotels, catering and event venues: any business that feeds, hosts and entertains people.",
-    how: "Funds pay for premises, kitchens, furnishing, staff, supplies and marketing. Income comes from daily sales, bookings and events, so busy locations earn steadily.",
-    why: "People eat out and travel all year, and strong brands build loyal customers. Location, service quality and food costs decide how well a venue performs.",
-  },
-  "Construction": {
-    what: "Construction companies build roads, bridges, housing, offices and public facilities, managing design, materials, labour and safety on each site.",
-    how: "Projects are funded in stages: site preparation, materials, equipment hire and wages. Payment follows milestones as the work is completed and approved.",
-    why: "Growing populations and ageing infrastructure create steady demand for new building and repair. Cost control and on-time delivery protect margins.",
-  },
-  "Import / Export": {
-    what: "Import and export businesses buy goods in one country and sell them in another, handling sourcing, shipping, customs paperwork and delivery.",
-    how: "Capital buys stock, pays freight and insurance, and covers duties. Profit comes from the gap between purchase price and resale price, so reliable suppliers and buyers are key.",
-    why: "No country produces everything it needs, so trade is constant. Exchange rates, tariffs and shipping delays can affect results.",
-  },
-  "Healthcare": {
-    what: "Healthcare businesses run clinics, laboratories, diagnostic centres, pharmacies and medical services that help people stay well and recover.",
-    how: "Funds pay for premises, medical equipment, qualified staff, licences and supplies. Revenue comes from consultations, tests, treatments and pharmacy sales.",
-    why: "Demand for care is steady in every economy and rises as populations age. Licensing, quality standards and skilled staff are central to running it well.",
-  },
-};
-
-const SECTOR_PARTS = [
-  ["what", "What it is"],
-  ["how", "How it works"],
-  ["why", "Why it matters"],
-];
-
-function SectorDetails({ onViewAll }) {
-  return (
-    <div style={{ padding: "34px 18px 10px" }}>
-      <div style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.02em", color: "#fff" }}>
-        Every sector, explained
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.55, color: "#d4d8e0", marginTop: 10, maxWidth: 560 }}>
-        See what each industry does, how it earns, and why it matters.
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
-          gap: 18,
-          marginTop: 24,
-        }}
-      >
-        {SECTORS.map((s) => {
-          const info = SECTOR_INFO[s.name] || {};
-          return (
-            <div
-              key={s.name}
-              style={{
-                borderRadius: 18,
-                overflow: "hidden",
-                background: "#0a1226",
-                border: `1px solid ${s.color}66`,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <div
-                style={{
-                  height: 170,
-                  backgroundImage: `linear-gradient(180deg, rgba(8,8,8,0) 40%, rgba(10,18,38,1) 100%), url(${s.img.replace(".jpg", "-1.jpg")})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              />
-              <div style={{ padding: "6px 20px 22px", display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 40, height: 40, flexShrink: 0, borderRadius: 10,
-                      display: "grid", placeItems: "center", fontSize: 21,
-                      background: `${s.color}28`,
-                    }}
-                  >
-                    {s.icon}
-                  </div>
-                  <div style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.2, color: "#fff" }}>{s.name}</div>
-                </div>
-
-                {SECTOR_PARTS.map(([key, label]) => (
-                  <div key={key}>
-                    <div style={{ fontSize: 14, fontWeight: 900, color: s.color, marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.65, color: "#c3c9d6" }}>{info[key]}</div>
-                  </div>
-                ))}
-
-                <button
-                  onClick={onViewAll}
-                  style={{
-                    alignSelf: "flex-start", marginTop: 4,
-                    background: "transparent", color: s.color,
-                    border: `1.5px solid ${s.color}`, borderRadius: 999,
-                    padding: "10px 20px", fontSize: 13, fontWeight: 800, cursor: "pointer",
-                  }}
-                >
-                  Invest in this sector
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: "#7d8596", marginTop: 20 }}>
-        Returns are backed by a transparent investment structure, with your account protected by industry-standard security and encryption. Invest with confidence and join a trusted community focused on sustainable growth🎖️.
-      </div>
-    </div>
-  );
-}
-function SectorsPage({ setPage }) {
-  const { requireAuth } = useAuth();
-  const go = () => { if (requireAuth("signup")) setPage("trade"); };
-  useEffect(() => { window.scrollTo(0, 0); }, []);
-  return (
-    <div style={{ paddingTop: 20 }}>
-      <button
-        onClick={() => setPage("home")}
-        style={{ background: "none", border: "none", color: C.gold3, fontSize: 15, fontWeight: 800, cursor: "pointer", padding: "0 18px" }}
-      >
-        ← Back to home
-      </button>
-      <SectorDetails onViewAll={go} />
-    </div>
-  );
-}
 /* ── Then, inside HomePage, right after the InvestmentSection block
  * (the </SlideIn> on ~line 1221), add:
  *
@@ -1640,345 +1344,7 @@ function SectorsPage({ setPage }) {
  *     <BusinessSectors onViewAll={handleCTA} />
  *   </SlideIn>
  */
-/* ── DESKTOP HOME ─────────────────────────────────────────────
- * Replaces the old `function DesktopHome` (lines 1348–1384) in GoldenVaultXM.jsx.
- * Uses only things that already exist in that file:
- *   C, Btn, SlideIn, useAuth, INVEST_OPTIONS, SECTORS,
- *   and the lucide icons Shield, Zap, Globe, TrendingUp, Activity, Target.
- * ------------------------------------------------------------ */
-
-const DH_PLANS = [
-  { name: "Juvenile", range: "$400 – $1,999", color: "#93c5fd",
-    feats: ["Live trading bot", "96 hours of mining", "Net Profit / Growth %300"] },
-  { name: "Standard", range: "$2,000 – $9,999", color: "#ffb703",
-    feats: ["Live trading bot", "120 hours of mining", "Net Profit / Growth %500", "Personal account manager"] },
-  { name: "Premium", range: "$10,000 – $49,999", color: "#f9a8d4",
-    feats: ["Live trading bot", "168 hours of mining", "Net Profit / Growth %800", "Personal account manager"] },
-  { name: "Ultra", range: "$50,000 – $1,000,000", color: "#7dd3fc", top: true,
-    feats: ["Live trading bot", "Unlimited mining (priority)", "Net Profit / Growth %1,500+", "Dedicated account manager"] },
-];
-
-const DH_STEPS = [
-  { t: "Register", d: "Create your secure account in minutes." },
-  { t: "Verify", d: "Confirm your identity and protect your funds." },
-  { t: "Fund", d: "Deposit crypto to your wallet." },
-  { t: "Trade", d: "Open positions and watch them grow." },
-];
-
-const DH_CSS = `
-  .dh-lift { transition: transform .25s ease, box-shadow .25s ease; }
-  .dh-lift:hover { transform: translateY(-6px); box-shadow: 0 24px 60px rgba(0,0,0,.55); }
-  .dh-btn { transition: transform .2s ease, filter .2s ease; }
-  .dh-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
-  .dh-btn:focus-visible, .dh-lift:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) {
-    .dh-lift, .dh-btn { transition: none; }
-    .dh-lift:hover, .dh-btn:hover { transform: none; }
-  }
-`;
-
-function DhHead({ title, accent, sub }) {
-  return (
-    <div style={{ maxWidth: 760, marginBottom: 48 }}>
-      <div style={{ fontSize: "clamp(36px, 4vw, 60px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: "-0.03em", color: C.text }}>
-        {title} <span style={{ color: C.gold3 }}>{accent}</span>
-      </div>
-      {sub && (
-        <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.55, color: C.text2, marginTop: 18 }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DesktopHome({ setPage }) {
-  const { requireAuth } = useAuth();
-  const go = () => { if (requireAuth("signup")) setPage("trade"); };
-
-  const FONT = "'Inter','Segoe UI',Roboto,Arial,sans-serif";
-  const wrap = { maxWidth: 1600, margin: "0 auto", padding: "0 56px", boxSizing: "border-box", width: "100%" };
-  const section = { padding: "96px 0", borderTop: `1px solid ${C.border}` };
-  const gold = `linear-gradient(90deg, ${C.gold3}, ${C.gold2} 50%, ${C.gold})`;
-
-  const stats = [
-    ["$2.4B+", "Daily volume"],
-    ["150K+", "Active traders"],
-    ["200+", "Instruments"],
-    ["24/7", "Support"],
-  ];
-
-  const why = [
-    { icon: TrendingUp, t: "Advanced trading", d: "Institutional-grade tools and real-time analytics on every pair." },
-    { icon: Shield, t: "Protected accounts", d: "Encrypted, verified and monitored around the clock." },
-    { icon: Zap, t: "Instant execution", d: "Orders reach the market in milliseconds, not minutes." },
-    { icon: Globe, t: "Global markets", d: "Forex, crypto, stocks, indices, commodities, futures and bonds." },
-  ];
-
-  return (
-    <div style={{ width: "100%", fontFamily: FONT, color: C.text }}>
-      <style>{DH_CSS}</style>
-
-      {/* HERO */}
-      <section
-        style={{
-          background: `linear-gradient(90deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.62) 100%), url(./hero-bg.jpg) center/cover no-repeat`,
-          padding: "120px 0 110px",
-        }}
-      >
-        <div style={{ ...wrap, display: "grid", gridTemplateColumns: "1.25fr 0.75fr", gap: 72, alignItems: "center" }}>
-          <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, fontSize: 15, fontWeight: 800, color: C.green }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: C.green }} />
-              System online. Live market data.
-            </div>
-            <div style={{ fontSize: "clamp(56px, 7.2vw, 120px)", fontWeight: 900, lineHeight: 0.98, letterSpacing: "-0.045em", marginTop: 24 }}>
-              <div style={{ color: C.text }}>Precision.</div>
-              <div style={{ background: gold, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}>Velocity.</div>
-              <div style={{ color: C.text }}>Insight.</div>
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.55, color: C.text2, maxWidth: 640, marginTop: 32 }}>
-              Institutional-grade trading infrastructure, built for precision, performance and global market reach.
-            </div>  
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 28, paddingLeft: 40, borderLeft: `1px solid ${C.gold}55` }}>
-  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-    <button
-      className="dh-btn"
-      onClick={go}
-      style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "22px 0", fontSize: 19, fontWeight: 900, cursor: "pointer", width: "100%" }}
-    >
-      Start trading
-    </button>
-    <button
-      className="dh-btn"
-      onClick={() => setPage("markets")}
-      style={{ background: "transparent", color: C.text, border: `2px solid ${C.gold2}`, borderRadius: 14, padding: "20px 0", fontSize: 19, fontWeight: 900, cursor: "pointer", width: "100%" }}
-    >
-      Explore markets
-    </button>
-  </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-            {stats.map(([v, l]) => (
-              <div
-                key={l}
-                style={{
-                  background: "rgba(20,20,20,0.88)",
-                  border: `1px solid ${C.gold}55`,
-                  borderRadius: 20,
-                  padding: "34px 28px",
-                }}
-              >
-                <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: "-0.03em", color: C.gold3 }}>{v}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.text2, marginTop: 8 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY GOLDEN VAULT */}
-      <section style={section}>
-        <div style={wrap}>
-          <DhHead
-            title="Built for serious traders."
-            accent="Run like a vault."
-            sub="Every tool you need to trade with confidence, in one place."
-          />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
-            {why.map(({ icon: Icon, t, d }) => (
-              <div key={t} className="dh-lift" style={{ background: C.card, border: `1px solid ${C.border2}`, borderRadius: 22, padding: 34 }}>
-                <div style={{ width: 60, height: 60, borderRadius: 16, background: `${C.gold}22`, display: "grid", placeItems: "center" }}>
-                  <Icon size={28} color={C.gold3} />
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 900, marginTop: 24, letterSpacing: "-0.02em" }}>{t}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.6, color: C.text2, marginTop: 10 }}>{d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* INVESTMENT OPPORTUNITIES */}
-      <section style={{ ...section, background: C.card }}>
-        <div style={wrap}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 32 }}>
-            <DhHead
-              title="More ways to grow."
-              accent="Investment opportunities."
-              sub="Explore a wide range of options with high potential returns and multiple income streams."
-            />
-            <button
-              className="dh-btn"
-              onClick={go}
-              style={{ background: gold, color: "#000", border: "none", borderRadius: 14, padding: "18px 34px", fontSize: 17, fontWeight: 900, cursor: "pointer", marginBottom: 48, flexShrink: 0 }}
-            >
-              Explore all options
-            </button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
-            {INVEST_OPTIONS.map((o) => (
-              <div
-                key={o.title}
-                className="dh-lift"
-                onClick={go}
-                style={{
-                  cursor: "pointer",
-                  background: `linear-gradient(145deg, ${o.color}26, #0a1020 65%)`,
-                  border: `1px solid ${o.color}77`,
-                  borderRadius: 20,
-                  padding: 28,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 14,
-                  minHeight: 190,
-                }}
-              >
-                <div style={{ width: 56, height: 56, borderRadius: "50%", display: "grid", placeItems: "center", fontSize: 28, background: `radial-gradient(circle, ${o.color}44, transparent 70%)` }}>
-                  {o.icon}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: "#fff" }}>{o.title}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.5, color: "#b4bccb" }}>{o.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* BUSINESS SECTORS */}
-      <section style={section}>
-        <div style={wrap}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 32 }}>
-            <DhHead
-              title="Real projects."
-              accent="Real impact."
-              sub="Invest in growing industries and be part of real-world success stories."
-            />
-            <button
-              className="dh-btn"
-              onClick={go}
-              style={{ background: "#8b3cf7", color: "#fff", border: "none", borderRadius: 14, padding: "18px 34px", fontSize: 17, fontWeight: 900, cursor: "pointer", marginBottom: 48, flexShrink: 0 }}
-            >
-              View all sectors
-            </button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 22 }}>
-            {SECTORS.slice(0, 8).map((s) => (
-              <div
-                key={s.name}
-                className="dh-lift"
-                onClick={go}
-                style={{
-                  cursor: "pointer",
-                  minHeight: 260,
-                  borderRadius: 22,
-                  border: `1px solid ${s.color}55`,
-                  backgroundImage: `linear-gradient(180deg, rgba(8,8,8,0.05) 25%, rgba(8,8,8,0.94) 100%), url(${s.img.replace(".jpg", "-1.jpg")})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  padding: 26,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 26 }}>{s.icon}</span>
-                  <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: "#fff", lineHeight: 1.15 }}>{s.name}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PLANS */}
-      <section style={{ ...section, background: C.card }}>
-        <div style={wrap}>
-          <DhHead
-            title="Choose your plan."
-            accent="Grow at your pace."
-            sub="Four tiers, each with a live trading bot working for you."
-          />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, alignItems: "stretch" }}>
-            {DH_PLANS.map((p) => (
-              <div
-                key={p.name}
-                className="dh-lift"
-                style={{
-                  background: C.bg,
-                  border: `2px solid ${p.top ? p.color : p.color + "55"}`,
-                  borderRadius: 24,
-                  padding: 34,
-                  display: "flex",
-                  flexDirection: "column",
-                  boxShadow: p.top ? `0 0 60px ${p.color}22` : "none",
-                }}
-              >
-                <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-0.03em", color: p.color }}>{p.name}</div>
-                <div style={{ fontSize: 22, fontWeight: 900, marginTop: 10, color: C.text }}>
-                  {p.range}
-                  {p.top && <span style={{ fontSize: 13, fontWeight: 800, marginLeft: 8, color: C.text2 }}>max</span>}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14, margin: "28px 0", flex: 1 }}>
-                  {p.feats.map((f) => (
-                    <div key={f} style={{ display: "flex", gap: 10, fontSize: 16, fontWeight: 800, lineHeight: 1.4, color: C.text }}>
-                      <span style={{ color: p.color, fontWeight: 900 }}>✓</span>
-                      {f}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  className="dh-btn"
-                  onClick={go}
-                  style={{ background: p.color, color: "#0b1220", border: "none", borderRadius: 14, padding: "17px 0", fontSize: 17, fontWeight: 900, cursor: "pointer", width: "100%" }}
-                >
-                  Get started
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* GET STARTED STEPS */}
-      <section style={section}>
-        <div style={wrap}>
-          <DhHead title="Get started in" accent="four steps." sub="From sign-up to your first trade in minutes." />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
-            {DH_STEPS.map((s, i) => (
-              <div key={s.t} style={{ borderTop: `4px solid ${C.gold2}`, paddingTop: 24 }}>
-                <div style={{ fontSize: 64, fontWeight: 900, letterSpacing: "-0.04em", color: C.gold3, lineHeight: 1 }}>{i + 1}</div>
-                <div style={{ fontSize: 26, fontWeight: 900, marginTop: 16, letterSpacing: "-0.02em" }}>{s.t}</div>
-                <div style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.55, color: C.text2, marginTop: 8 }}>{s.d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FINAL CALL TO ACTION */}
-      <section style={{ padding: "110px 0", background: `linear-gradient(135deg, #130c00, #0d0800)`, borderTop: `1px solid ${C.gold}44` }}>
-        <div style={{ ...wrap, textAlign: "center" }}>
-          <div style={{ fontSize: "clamp(40px, 5vw, 76px)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1.05 }}>
-            Your next trade starts <span style={{ color: C.gold3 }}>here.</span>
-          </div>
-          <div style={{ fontSize: 21, fontWeight: 700, color: C.text2, marginTop: 20 }}>
-            Join 150K+ traders on Golden Vault XM.
-          </div>
-          <button
-            className="dh-btn"
-            onClick={go}
-            style={{ background: gold, color: "#000", border: "none", borderRadius: 16, padding: "22px 56px", fontSize: 20, fontWeight: 900, cursor: "pointer", marginTop: 40 }}
-          >
-            Create your account
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
+        
 function HomePage({ setPage }) {
   const { requireAuth } = useAuth();
   const [tab, setTab] = useState("1m");
@@ -2032,7 +1398,7 @@ function HomePage({ setPage }) {
       </SlideIn>
 
       <SlideIn direction="left" delay={0}>
-        <BusinessSectors onViewAll={() => setPage("sectors")} />
+        <BusinessSectors onViewAll={handleCTA} />
       </SlideIn>
 
       <SlideIn direction="right" delay={100}>
@@ -2853,7 +2219,6 @@ const renderPage = () => {
   switch (page) {
     case "home":     return <HomePage setPage={handleSetPage} />;
     case "markets":  return <MarketsPage prices={prices} flash={flash} />;
-      case "sectors":  return <SectorsPage setPage={handleSetPage} />;
     case "trade":    return <TradePage prices={prices} />;
     case "mining":   return <Mining user={user} onAccountChange={() => {}} />;
     case "profile":  return <ProfilePage />;
@@ -2891,17 +2256,12 @@ const renderPage = () => {
 
 export default function GoldenVaultXM() {
   return (
-    <>
-      <AppBackground />
-      <div style={{ position: "relative", zIndex: 1, minHeight: "100vh" }}>
-        <LayoutProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <AppShell />
-            </AuthProvider>
-          </ThemeProvider>
-        </LayoutProvider>
-      </div>
-    </>
+    <LayoutProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ThemeProvider>
+    </LayoutProvider>
   );
 }
