@@ -1086,7 +1086,55 @@ const INVEST_OPTIONS = [
   { title: "Business Funding", desc: "Support businesses, get returns.", icon: "🤝", color: "#f59e0b" },
   { title: "Renewable Energy", desc: "Invest in a cleaner, brighter future.", icon: "☀️", color: "#10b981" },
 ];
+const BG_IMAGES = Array.from({ length: 40 }, (_, i) => `/bg${i + 1}.webp`);
 
+function AppBackground() {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % BG_IMAGES.length), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = BG_IMAGES[(idx + 1) % BG_IMAGES.length];
+  }, [idx]);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: "none",
+        background: "#080808",
+        overflow: "hidden",
+      }}
+    >
+      {BG_IMAGES.map((src, i) => {
+        const near = i === idx || i === (idx + BG_IMAGES.length - 1) % BG_IMAGES.length;
+        return (
+          <div
+            key={src}
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: near ? `url(${src})` : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: i === idx ? 1 : 0,
+              transition: "opacity 1.5s ease-in-out",
+              willChange: "opacity",
+            }}
+          />
+        );
+      })}
+      <div style={{ position: "absolute", inset: 0, background: "rgba(8,8,8,0.72)" }} />
+    </div>
+  );
+}
 function InvestmentSection({ onExplore }) {
   const ACCENT = "#1de9b6";
   return (
@@ -2764,6 +2812,7 @@ const renderPage = () => {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
       `}</style>
+      <AppBackground />
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
       <div style={{ position: "relative", zIndex: 1 }}>
