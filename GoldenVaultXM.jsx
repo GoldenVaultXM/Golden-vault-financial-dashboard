@@ -1334,7 +1334,6 @@ borderRadius: 0,
           </div>
         ))}
       </div>
-      <SectorDetails onViewAll={onViewAll} />
     </div>
   );
 }
@@ -1506,7 +1505,22 @@ function SectorDetails({ onViewAll }) {
     </div>
   );
 }
-
+function SectorsPage({ setPage }) {
+  const { requireAuth } = useAuth();
+  const go = () => { if (requireAuth("signup")) setPage("trade"); };
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return (
+    <div style={{ paddingTop: 20 }}>
+      <button
+        onClick={() => setPage("home")}
+        style={{ background: "none", border: "none", color: C.gold3, fontSize: 15, fontWeight: 800, cursor: "pointer", padding: "0 18px" }}
+      >
+        ← Back to home
+      </button>
+      <SectorDetails onViewAll={go} />
+    </div>
+  );
+}
 /* ── Then, inside HomePage, right after the InvestmentSection block
  * (the </SlideIn> on ~line 1221), add:
  *
@@ -1906,7 +1920,7 @@ function HomePage({ setPage }) {
       </SlideIn>
 
       <SlideIn direction="left" delay={0}>
-        <BusinessSectors onViewAll={handleCTA} />
+        <BusinessSectors onViewAll={() => setPage("sectors")} />
       </SlideIn>
 
       <SlideIn direction="right" delay={100}>
@@ -2727,6 +2741,7 @@ const renderPage = () => {
   switch (page) {
     case "home":     return <HomePage setPage={handleSetPage} />;
     case "markets":  return <MarketsPage prices={prices} flash={flash} />;
+      case "sectors":  return <SectorsPage setPage={handleSetPage} />;
     case "trade":    return <TradePage prices={prices} />;
     case "mining":   return <Mining user={user} onAccountChange={() => {}} />;
     case "profile":  return <ProfilePage />;
