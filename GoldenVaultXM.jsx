@@ -2551,8 +2551,20 @@ useEffect(() => {
 // Replace with your real Tawk.to IDs from:
 // tawk.to Dashboard → Administration → Chat Widget → Direct Chat Link
 // URL format: https://embed.tawk.to/{PROPERTY_ID}/{WIDGET_ID}
-const TAWK_PROPERTY_ID = "YOUR_PROPERTY_ID";
-const TAWK_WIDGET_ID   = "YOUR_WIDGET_ID";
+const TAWK_PROPERTY_ID = "https://tawk.to/chat/6a2187aa4a36f41c2edf040c/1jq9nm3li?layout=modern";
+const TAWK_WIDGET_ID   = "<div id='tawk_6a2187aa4a36f41c2edf040c'></div>
+<!--Start of Tawk.to Script-->
+<script type="text/javascript">
+var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date(); Tawk_API.embedded='tawk_6a2187aa4a36f41c2edf040c';
+(function(){
+var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+s1.async=true;
+s1.src='https://embed.tawk.to/6a2187aa4a36f41c2edf040c/1jq9nm3li';
+s1.charset='UTF-8';
+s1.setAttribute('crossorigin','*');
+s0.parentNode.insertBefore(s1,s0);})();
+</script>
+<!--End of Tawk.to Script-->";
 
 const SUPPORT_FAQS = [
   { q: "How do I make a deposit?", a: "Go to Menu → Deposit. We support bank transfer, crypto, and card payments. Funds typically reflect within 15 minutes." },
@@ -2579,7 +2591,7 @@ function SupportPage() {
   }
 
   useEffect(() => {
-    if (TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
+    if (TAWK_PROPERTY_ID === "https://tawk.to/chat/6a2187aa4a36f41c2edf040c/1jq9nm3li?layout=modern) return;
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_API.customStyle = { visibility: { desktop: { position: "br", xOffset: -9999, yOffset: -9999 }, mobile: { position: "br", xOffset: -9999, yOffset: -9999 } } };
     window.Tawk_API.onLoad = () => {
