@@ -1500,7 +1500,7 @@ function SectorDetails({ onViewAll }) {
       </div>
 
       <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: "#7d8596", marginTop: 20 }}>
-        Returns are not guaranteed. Every sector carries its own risks, so review the details before you invest.
+        Returns are backed by a transparent investment structure, with your account protected by industry-standard security and encryption. Invest with confidence and join a trusted community focused on sustainable growth🎖️.
       </div>
     </div>
   );
