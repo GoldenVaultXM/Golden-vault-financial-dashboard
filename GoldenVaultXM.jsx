@@ -174,7 +174,7 @@ function applyLayoutCSS(mode, theme = "dark") {
   tag.textContent = `
     html { background: ${bg} !important; overflow-x: clip !important; }
     body {
-      background: ${bg} !important; margin: 0 !important; padding: 0 !important;
+      background: transparent !important; margin: 0 !important; padding: 0 !important;
       width: 100% !important; min-width: 0 !important; max-width: 100% !important;
       overflow-x: clip !important;
       -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
@@ -1107,7 +1107,7 @@ function AppBackground() {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 0,
+        zIndex: -1,
         pointerEvents: "none",
         background: "#080808",
         overflow: "hidden",
@@ -2800,7 +2800,7 @@ const renderPage = () => {
   }
 };
   return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: "transparent", color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
