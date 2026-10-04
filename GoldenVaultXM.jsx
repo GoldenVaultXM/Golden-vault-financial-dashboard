@@ -1334,6 +1334,175 @@ borderRadius: 0,
           </div>
         ))}
       </div>
+      <SectorDetails onViewAll={onViewAll} />
+    </div>
+  );
+}
+/* ── SECTOR DETAILS (long version) ────────────────────────────
+ * Replaces the earlier SECTOR_INFO + SectorDetails.
+ * Each sector has three parts: what it is, how it works, why it matters.
+ * ------------------------------------------------------------ */
+
+const SECTOR_INFO = {
+  "Real Estate Development": {
+    what: "Real estate development turns land into finished places: apartment blocks, offices, retail centres and gated communities. Developers buy or lease land, secure permits, design the project, build it, then sell or rent the units.",
+    how: "Capital funds each stage, from land and architects to materials and contractors. Projects are delivered in phases, so completed units can be sold or leased while later phases are still being built.",
+    why: "Cities keep growing and people always need homes and workplaces. Property is a physical asset with lasting value, though timelines, permits and local demand all affect results.",
+  },
+  "Agriculture": {
+    what: "Agriculture covers growing crops such as grains, vegetables and fruit, and supplying them to processors, wholesalers and retailers. Modern farms use irrigation, quality seed, fertiliser and machinery to raise the yield of every hectare.",
+    how: "Funds pay for seed, land preparation, labour, equipment and storage. Each season runs from planting to harvest, and the crop is sold into local and regional markets.",
+    why: "Food demand is constant and grows with the population. Weather, pests and market prices can swing a season's outcome, which is why good planning and storage matter.",
+  },
+  "Poultry Farming": {
+    what: "Poultry farms raise chickens for eggs and meat. Birds live in managed sheds with controlled feed, water, temperature and vaccination programmes.",
+    how: "Investment covers housing, chicks, feed, veterinary care and distribution. Broilers reach market weight within weeks and laying hens produce eggs every day, so income arrives in short, repeating cycles.",
+    why: "Chicken and eggs are among the most affordable proteins, so demand is steady. Feed prices and disease control are the main risks, and strong management keeps both in check.",
+  },
+  "Oil & Gas": {
+    what: "Oil and gas companies find, extract, refine and distribute fuels, along with the raw materials used in plastics, fertiliser and chemicals. The work spans exploration, drilling, processing and supply.",
+    how: "It is capital-heavy: surveys, rigs, pipelines and refineries cost a lot, and revenue comes from selling output at market prices.",
+    why: "Transport, power and industry still run largely on these fuels, so global demand is large. Prices move with supply, politics and the energy transition, so this sector can be volatile.",
+  },
+  "Mining": {
+    what: "Mining extracts minerals and metals such as gold, copper, iron ore and coal from the earth. Operations include surveying, excavation, crushing, processing and shipping.",
+    how: "Funds pay for equipment, labour, permits and site safety. Output is sold to smelters, manufacturers and traders at commodity prices.",
+    why: "Phones, cars, buildings and power grids all depend on mined materials. Commodity prices and regulation drive results, so costs and site quality matter.",
+  },
+  "Logistics & Transportation": {
+    what: "Logistics moves goods from where they are made to where they are needed, using trucks, rail, ships, aircraft, warehouses and tracking software.",
+    how: "Investment goes into vehicles, drivers, fuel, storage space and routing technology. Revenue comes from freight and delivery contracts, which often repeat month after month.",
+    why: "Every product in a shop or at your door travelled through this chain. Growing online shopping and trade keep demand high, while fuel costs and vehicle use shape margins.",
+  },
+  "Technology": {
+    what: "Technology businesses build software, apps, cloud services, hardware and data tools that other companies and consumers pay to use.",
+    how: "Funds cover engineers, product design, servers, security and marketing. Many products earn recurring subscription income, and one product can serve many customers at low extra cost.",
+    why: "Almost every industry now depends on digital tools. Competition is intense and products must keep improving, so execution and customer retention are what count.",
+  },
+  "E-commerce": {
+    what: "E-commerce sells products through websites and apps, either from its own stock or through a marketplace of independent sellers.",
+    how: "Money goes into inventory, site and payments technology, marketing, warehousing and delivery. Revenue comes from each sale, and repeat buyers lower the cost of winning customers.",
+    why: "Shopping keeps moving online, and a store can reach customers well beyond one town. Margins depend on logistics, returns and advertising costs.",
+  },
+  "Manufacturing": {
+    what: "Manufacturers turn raw materials into finished goods: packaged food, drinks, clothing, building materials, electronics and machinery.",
+    how: "Capital buys machinery, factory space, materials and skilled workers. Output is sold to retailers, distributors and other businesses, and scale lowers the cost of each unit.",
+    why: "Local production creates jobs and supplies markets reliably. Success depends on quality control, a steady supply of inputs and efficient production lines.",
+  },
+  "Renewable Energy": {
+    what: "Renewable energy projects generate power from sunlight, wind, water and other sources that renew naturally, such as solar farms and wind turbines.",
+    how: "Most of the cost comes upfront, for panels, turbines, land and grid connection. After that, running costs are low and electricity is sold to the grid or to businesses, often under long contracts.",
+    why: "Governments and companies are shifting toward cleaner power, and demand for electricity keeps rising. Policy changes and project permits are the main factors to watch.",
+  },
+  "Food & Hospitality": {
+    what: "This sector covers restaurants, cafés, hotels, catering and event venues: any business that feeds, hosts and entertains people.",
+    how: "Funds pay for premises, kitchens, furnishing, staff, supplies and marketing. Income comes from daily sales, bookings and events, so busy locations earn steadily.",
+    why: "People eat out and travel all year, and strong brands build loyal customers. Location, service quality and food costs decide how well a venue performs.",
+  },
+  "Construction": {
+    what: "Construction companies build roads, bridges, housing, offices and public facilities, managing design, materials, labour and safety on each site.",
+    how: "Projects are funded in stages: site preparation, materials, equipment hire and wages. Payment follows milestones as the work is completed and approved.",
+    why: "Growing populations and ageing infrastructure create steady demand for new building and repair. Cost control and on-time delivery protect margins.",
+  },
+  "Import / Export": {
+    what: "Import and export businesses buy goods in one country and sell them in another, handling sourcing, shipping, customs paperwork and delivery.",
+    how: "Capital buys stock, pays freight and insurance, and covers duties. Profit comes from the gap between purchase price and resale price, so reliable suppliers and buyers are key.",
+    why: "No country produces everything it needs, so trade is constant. Exchange rates, tariffs and shipping delays can affect results.",
+  },
+  "Healthcare": {
+    what: "Healthcare businesses run clinics, laboratories, diagnostic centres, pharmacies and medical services that help people stay well and recover.",
+    how: "Funds pay for premises, medical equipment, qualified staff, licences and supplies. Revenue comes from consultations, tests, treatments and pharmacy sales.",
+    why: "Demand for care is steady in every economy and rises as populations age. Licensing, quality standards and skilled staff are central to running it well.",
+  },
+};
+
+const SECTOR_PARTS = [
+  ["what", "What it is"],
+  ["how", "How it works"],
+  ["why", "Why it matters"],
+];
+
+function SectorDetails({ onViewAll }) {
+  return (
+    <div style={{ padding: "34px 18px 10px" }}>
+      <div style={{ fontSize: 30, fontWeight: 900, lineHeight: 1.1, letterSpacing: "-0.02em", color: "#fff" }}>
+        Every sector, explained
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.55, color: "#d4d8e0", marginTop: 10, maxWidth: 560 }}>
+        See what each industry does, how it earns, and why it matters.
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
+          gap: 18,
+          marginTop: 24,
+        }}
+      >
+        {SECTORS.map((s) => {
+          const info = SECTOR_INFO[s.name] || {};
+          return (
+            <div
+              key={s.name}
+              style={{
+                borderRadius: 18,
+                overflow: "hidden",
+                background: "#0a1226",
+                border: `1px solid ${s.color}66`,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  height: 170,
+                  backgroundImage: `linear-gradient(180deg, rgba(8,8,8,0) 40%, rgba(10,18,38,1) 100%), url(${s.img.replace(".jpg", "-1.jpg")})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              />
+              <div style={{ padding: "6px 20px 22px", display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 40, height: 40, flexShrink: 0, borderRadius: 10,
+                      display: "grid", placeItems: "center", fontSize: 21,
+                      background: `${s.color}28`,
+                    }}
+                  >
+                    {s.icon}
+                  </div>
+                  <div style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.2, color: "#fff" }}>{s.name}</div>
+                </div>
+
+                {SECTOR_PARTS.map(([key, label]) => (
+                  <div key={key}>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: s.color, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.65, color: "#c3c9d6" }}>{info[key]}</div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={onViewAll}
+                  style={{
+                    alignSelf: "flex-start", marginTop: 4,
+                    background: "transparent", color: s.color,
+                    border: `1.5px solid ${s.color}`, borderRadius: 999,
+                    padding: "10px 20px", fontSize: 13, fontWeight: 800, cursor: "pointer",
+                  }}
+                >
+                  Invest in this sector
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: "#7d8596", marginTop: 20 }}>
+        Returns are not guaranteed. Every sector carries its own risks, so review the details before you invest.
+      </div>
     </div>
   );
 }
