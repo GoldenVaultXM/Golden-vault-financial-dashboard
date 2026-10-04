@@ -5,6 +5,26 @@ import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, Ar
 import Mining from "./Mining";
 import { supabase } from './supabaseClient';
 import ProfilePage from './ProfilePage';
+/* GVXM DEBUG - remove later */
+if (typeof window !== "undefined" && !window.__gvxmDebug) {
+  window.__gvxmDebug = true;
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:rgba(0,0,0,.92);color:#0f0;font:11px/1.4 monospace;padding:8px;white-space:pre-wrap;pointer-events:none";
+  const log = (m) => { box.textContent += m + "\n"; };
+  const mount = () => { if (document.body && !box.parentNode) document.body.appendChild(box); };
+  window.addEventListener("error", (e) => { mount(); log("ERROR: " + e.message + " @ line " + e.lineno); });
+  window.addEventListener("unhandledrejection", (e) => { mount(); log("PROMISE: " + ((e.reason && e.reason.message) || e.reason)); });
+  setTimeout(() => {
+    mount();
+    const q = (s) => document.querySelector(s);
+    const r = (el) => (el ? Math.round(el.getBoundingClientRect().width) + "x" + Math.round(el.getBoundingClientRect().height) : "MISSING");
+    log("screen " + innerWidth + " | shell " + r(q(".gvxm-shell")) + " | header " + r(q("header")) + " | main " + r(q("main")));
+    const top = document.elementFromPoint(innerWidth / 2, 90);
+    if (top) log("on top at y=90: <" + top.tagName.toLowerCase() + "> id=" + top.id + " class=" + String(top.className).slice(0, 40));
+    const sh = q(".gvxm-shell");
+    if (sh) { const cs = getComputedStyle(sh); log("shell opacity " + cs.opacity + " | visibility " + cs.visibility + " | display " + cs.display); }
+  }, 2500);
+}
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const DARK_TOKENS = {
   bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
@@ -173,19 +193,18 @@ function applyLayoutCSS(mode, theme = "dark") {
     document.head.insertBefore(tag, document.head.firstChild);
   }
   tag.textContent = `
-    html { background: ${bg} !important; overflow-x: clip !important; }
+    html { background: ${bg} !important; overflow-x: hidden !important; }
     body {
-      background: transparent !important; margin: 0 !important; padding: 0 !important;
+      background: ${bg} !important; margin: 0 !important; padding: 0 !important;
       width: 100% !important; min-width: 0 !important; max-width: 100% !important;
-      overflow-x: clip !important;
+      overflow-x: hidden !important;
       -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important;
     }
     .gvxm-shell {
       width: 100% !important; max-width: ${w}px !important; min-width: 0 !important;
-      margin: 0 auto !important; overflow-x: clip !important; box-sizing: border-box !important;
+      margin: 0 auto !important; overflow-x: hidden !important; box-sizing: border-box !important;
     }
-    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: clip !important; }
-    #root { background: transparent !important; }
+    #gvxm-root { width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; }
   `;
 }
 /* ── Run SYNCHRONOUSLY at module evaluation time ── */
@@ -2845,7 +2864,7 @@ const renderPage = () => {
   }
 };
   return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: "transparent", color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
+    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         ::-webkit-scrollbar { display: none; }
@@ -2857,7 +2876,6 @@ const renderPage = () => {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
       `}</style>
-      <CanvasBackground />
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
       <div style={{ position: "relative", zIndex: 1 }}>
