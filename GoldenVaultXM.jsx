@@ -1138,6 +1138,48 @@ function AppBackground() {
     document.body
   );
 }
+function CanvasBackground() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const st = document.createElement("style");
+    st.textContent =
+      "@property --bga{syntax:'<number>';inherits:false;initial-value:0.72}html{--bga:0.72;transition:--bga .7s ease}";
+    document.head.appendChild(st);
+
+    let i = 0;
+    const show = () => {
+      root.style.setProperty(
+        "background-image",
+        `linear-gradient(rgba(8,8,8,var(--bga)),rgba(8,8,8,var(--bga))), url(${BG_IMAGES[i]})`,
+        "important"
+      );
+    };
+    root.style.setProperty("background-size", "cover", "important");
+    root.style.setProperty("background-position", "center", "important");
+    root.style.setProperty("background-repeat", "no-repeat", "important");
+    root.style.setProperty("background-attachment", "fixed", "important");
+    show();
+
+    let t2;
+    const t1 = setInterval(() => {
+      root.style.setProperty("--bga", "1");
+      t2 = setTimeout(() => {
+        i = (i + 1) % BG_IMAGES.length;
+        new Image().src = BG_IMAGES[(i + 1) % BG_IMAGES.length];
+        show();
+        root.style.setProperty("--bga", "0.72");
+      }, 700);
+    }, 5000);
+
+    return () => {
+      clearInterval(t1);
+      clearTimeout(t2);
+      st.remove();
+      ["background-image", "background-size", "background-position", "background-repeat", "background-attachment", "--bga"].forEach(p => root.style.removeProperty(p));
+    };
+  }, []);
+  return null;
+}
 function InvestmentSection({ onExplore }) {
   const ACCENT = "#1de9b6";
   return (
@@ -2815,6 +2857,7 @@ const renderPage = () => {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes shimmer{ 0%,100%{opacity:.3} 50%{opacity:.7} }
       `}</style>
+      <CanvasBackground />
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
       <div style={{ position: "relative", zIndex: 1 }}>
