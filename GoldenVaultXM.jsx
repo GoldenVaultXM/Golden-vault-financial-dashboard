@@ -2581,12 +2581,8 @@ function SupportPage() {
   useEffect(() => {
     if (!TAWK_PROPERTY_ID || TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
     window.Tawk_API = window.Tawk_API || {};
-    window.Tawk_API.customStyle = { visibility: { desktop: { position: "br", xOffset: -9999, yOffset: -9999 }, mobile: { position: "br", xOffset: -9999, yOffset: -9999 } } };
-    window.Tawk_API.onLoad = () => {
-      setTawkLoaded(true);
-      window.Tawk_API.hideWidget();
-    };
-    window.Tawk_API.onChatEnded = () => { window.Tawk_API.hideWidget(); setTawkOpen(false); };
+    window.Tawk_API.onLoad = () => { setTawkLoaded(true); };
+    window.Tawk_API.onChatEnded = () => { setTawkOpen(false); };
     const s = document.createElement("script");
     s.async = true;
     s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
@@ -2606,7 +2602,7 @@ function SupportPage() {
     await new Promise(r => setTimeout(r, 900));
     if (tawkLoaded && window.Tawk_API) {
       // Send to Tawk silently without showing the widget bubble
-      try { window.Tawk_API.setAttributes({ message: text }, function(error) {}); } catch(e) {}
+      try { window.Tawk_API.maximize(); } catch (e) {}
       setTawkOpen(false);
       setMessages(prev => [...prev, { from: "agent", text: "✅ Message received! A live agent will respond shortly.", time: fmtNow() }]);
     } else {
