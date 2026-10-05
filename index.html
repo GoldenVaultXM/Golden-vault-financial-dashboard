@@ -23,9 +23,19 @@
       var FALLBACK_MS = 5000;   /* wait before widgets appear (about your splash length) */
       var SHOW_DELAY_MS = 1000; /* extra pause on top of that */
       var WELCOME_TEXT = "👋 Hi! Need help? Chat with us.";
-      var ready = false;
+      var ready = false;   /* splash wait finished */
+      var shown = false;   /* delay finished, widgets allowed */
       var chatOpen = false;
       var popTimer = null;
+
+      /* ---------- Home page check ---------- */
+      function isHome() {
+        var p = window.location.pathname.replace(/\/+$/, "");
+        var h = window.location.hash;
+        var homePath = (p === "" || p === "/index.html");
+        var homeHash = (h === "" || h === "#" || h === "#/");
+        return homePath && homeHash;
+      }
 
       /* ---------- Green chat bubble (hidden until ready) ---------- */
       var chatBtn = document.createElement("div");
@@ -133,7 +143,7 @@
         popup.style.display = "none";
       }
       function showPopup(text, ms) {
-        if (!ready || chatOpen || chatBtn.style.display === "none") return;
+        if (!shown || !isHome() || chatOpen || chatBtn.style.display === "none") return;
         document.getElementById("gv-pop-text").textContent = text;
         placePopup();
         popup.style.display = "block";
@@ -155,12 +165,44 @@
       document.body.appendChild(chatBtn);
       document.body.appendChild(popup);
 
+      /* ---------- Home-only visibility ---------- */
+      function killBubble() { if (!chatOpen) { try { Tawk_API.hideWidget(); } catch (e) {} } }
+
+      function applyVisibility() {
+        if (!shown) return;
+        if (isHome()) {
+          if (!chatOpen) chatBtn.style.display = "flex";
+        } else {
+          hidePopup();
+          chatBtn.style.display = "none";
+          if (chatOpen) {
+            chatOpen = false;
+            try { Tawk_API.minimize(); } catch (e) {}
+          }
+          killBubble();
+        }
+      }
+
+      /* Watch every kind of page change */
+      (function () {
+        var _push = history.pushState, _replace = history.replaceState;
+        history.pushState = function () { _push.apply(history, arguments); setTimeout(applyVisibility, 0); };
+        history.replaceState = function () { _replace.apply(history, arguments); setTimeout(applyVisibility, 0); };
+        window.addEventListener("popstate", applyVisibility);
+        window.addEventListener("hashchange", applyVisibility);
+        var last = location.href;
+        setInterval(function () {
+          if (location.href !== last) { last = location.href; applyVisibility(); }
+        }, 400);
+      })();
+
       /* ---------- Show everything only after the splash ---------- */
       function appReady() {
         if (ready) return;
         ready = true;
         setTimeout(function () {
-          chatBtn.style.display = "flex";
+          shown = true;
+          applyVisibility();
           setTimeout(function () { showPopup(WELCOME_TEXT, 12000); }, 3000);
         }, SHOW_DELAY_MS);
       }
@@ -168,14 +210,13 @@
       setTimeout(appReady, FALLBACK_MS);
 
       /* ---------- Tawk events ---------- */
-      function killBubble() { if (!chatOpen) { try { Tawk_API.hideWidget(); } catch (e) {} } }
       Tawk_API.onLoad = killBubble;
       Tawk_API.onStatusChange = killBubble;
       Tawk_API.onUnreadCountChanged = function (count) {
         setBadge(chatOpen ? 0 : count);
         killBubble();
       };
-      /* Pop-up when a support agent sends a message */
+      /* Pop-up when a support agent sends a message (home page only) */
       Tawk_API.onChatMessageAgent = function (message) {
         var text = typeof message === "string"
           ? message
@@ -193,12 +234,12 @@
       Tawk_API.onChatMinimized = function () {
         chatOpen = false;
         killBubble();
-        if (ready) chatBtn.style.display = "flex";
+        applyVisibility();
       };
       Tawk_API.onChatEnded = function () {
         chatOpen = false;
         killBubble();
-        if (ready) chatBtn.style.display = "flex";
+        applyVisibility();
       };
 
       /* ---------- Tawk script ---------- */
