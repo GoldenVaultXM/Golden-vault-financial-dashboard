@@ -2208,6 +2208,7 @@ function MarketsPage({ prices, flash }) {
 const WD_CHAINS = ["TRC20", "ERC20", "BEP20"];
 const WD_FEE = 1;
 const WD_MIN = 10;
+const WD_COINS = [["USDT","Tether USDT"],["USDC","USD Coin"],["BTC","Bitcoin"],["ETH","Ethereum"],["BNB","BNB"],["SOL","Solana"],["XRP","XRP"],["TRX","Tron"],["ADA","Cardano"],["DOGE","Dogecoin"],["LTC","Litecoin"],["MATIC","Polygon"],["LINK","Chainlink"],["DOT","Polkadot"],["AVAX","Avalanche"]];
 const WD_ADDR = {
   TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
   ERC20: /^0x[a-fA-F0-9]{40}$/,
@@ -2221,6 +2222,7 @@ function WithdrawModal({ balance = 0, onClose }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [coin, setCoin] = useState("USDT");
 useEffect(() => {
   document.body.classList.add("gv-modal-open");
   return () => document.body.classList.remove("gv-modal-open");
@@ -2291,11 +2293,11 @@ useEffect(() => {
             </div>
 
             <div style={label}>Coin</div>
-            <div style={{ ...field, display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#26a17b", display: "grid", placeItems: "center", color: "#fff", fontWeight: 900, fontSize: 15 }}>T</div>
-              <span style={{ fontWeight: 900 }}>USDT</span>
-              <span style={{ color: C.text2, fontWeight: 700 }}>Tether USDT</span>
-            </div>
+<select value={coin} onChange={(e) => setCoin(e.target.value)} style={{ ...field, appearance: "none", cursor: "pointer" }}>
+  {WD_COINS.map(([sym, name]) => (
+    <option key={sym} value={sym} style={{ background: C.card2, color: C.text }}>{sym} — {name}</option>
+  ))}
+</select>
 
             <div style={label}>Wallet address</div>
             <input style={field} placeholder="Enter or paste wallet address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="off" spellCheck={false} />
