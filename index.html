@@ -27,11 +27,9 @@
       var HOME_MARKER = "initialize trading"; /* text that exists ONLY on your Home section */
 
       var ready = false, shown = false, chatOpen = false, welcomed = false;
-      var popTimer = null;
+      var popTimer = null, pendingMsg = null, lastUnread = 0;
 
       /* ---------- Home detection ---------- */
-      /* 1) If the app sets window.__gvHome, that is used.
-         2) Otherwise the Home section is recognised by its unique text. */
       function isHome() {
         if (typeof window.__gvHome === "boolean") return window.__gvHome;
         var root = document.getElementById("root");
@@ -156,6 +154,21 @@
         b.style.display = n > 0 ? "block" : "none";
       }
 
+      /* Support message pop-up: shows now on Home, or waits until Home */
+      function supportPopup(text) {
+        if (chatOpen) return;
+        if (text.length > 120) text = text.slice(0, 117) + "...";
+        pendingMsg = "💬 " + text;
+        flushPending();
+      }
+      function flushPending() {
+        if (pendingMsg && shown && isHome() && !chatOpen) {
+          var t = pendingMsg;
+          pendingMsg = null;
+          setTimeout(function () { showPopup(t, 15000); }, 400);
+        }
+      }
+
       document.body.appendChild(chatBtn);
       document.body.appendChild(popup);
 
@@ -170,6 +183,7 @@
             welcomed = true;
             setTimeout(function () { showPopup(WELCOME_TEXT, 12000); }, 2500);
           }
+          flushPending();
         } else {
           hidePopup();
           chatBtn.style.display = "none";
@@ -202,22 +216,31 @@
       /* ---------- Tawk events ---------- */
       Tawk_API.onLoad = killBubble;
       Tawk_API.onStatusChange = killBubble;
-      Tawk_API.onUnreadCountChanged = function (count) {
-        setBadge(chatOpen ? 0 : count);
-        killBubble();
-      };
+
+      /* Support agent message (with text) */
       Tawk_API.onChatMessageAgent = function (message) {
         var text = typeof message === "string"
           ? message
-          : (message && (message.message || message.text)) || "You have a new message from support";
-        if (text.length > 120) text = text.slice(0, 117) + "...";
-        showPopup("💬 " + text, 15000);
+          : (message && (message.message || message.text)) || "New message from support";
+        supportPopup(text);
         killBubble();
       };
+
+      /* Backup: unread count went up but no text arrived */
+      Tawk_API.onUnreadCountChanged = function (count) {
+        setBadge(chatOpen ? 0 : count);
+        if (!chatOpen && count > lastUnread && popup.style.display === "none" && !pendingMsg) {
+          supportPopup("New message from support");
+        }
+        lastUnread = count;
+        killBubble();
+      };
+
       Tawk_API.onChatMaximized = function () {
         chatOpen = true;
         chatBtn.style.display = "none";
         hidePopup();
+        pendingMsg = null;
         setBadge(0);
       };
       Tawk_API.onChatMinimized = function () { chatOpen = false; killBubble(); applyVisibility(); };
