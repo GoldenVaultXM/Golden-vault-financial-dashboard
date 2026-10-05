@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Golden Vault XM</title>
+    <style>
+      #tawk-bubble-container { display: none !important; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -11,7 +14,9 @@
     <script type="text/javascript">
       var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
 
-      /* Messenger-style draggable chat button */
+      var SIZE = 56, MARGIN = 8;
+
+      /* ---------- Chat button ---------- */
       var chatBtn = document.createElement("div");
       chatBtn.innerHTML =
         '<svg width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">' +
@@ -19,54 +24,127 @@
         '<path fill="#0084ff" d="M6.2 14.5l2.93-4.65c.47-.74 1.46-.92 2.16-.4l2.33 1.75c.21.16.5.16.71 0l3.15-2.39c.42-.32.97.19.69.64l-2.93 4.65c-.47.74-1.46.92-2.16.4l-2.33-1.75a.6.6 0 0 0-.71 0l-3.15 2.39c-.42.32-.97-.19-.69-.64z"/>' +
         '</svg>';
       chatBtn.style.cssText =
-        "position:fixed;width:56px;height:56px;border-radius:50%;" +
+        "position:fixed;width:" + SIZE + "px;height:" + SIZE + "px;border-radius:50%;" +
         "background:linear-gradient(135deg,#00b2ff,#006aff);" +
         "display:flex;align-items:center;justify-content:center;" +
         "cursor:grab;touch-action:none;user-select:none;z-index:2147483000;" +
         "box-shadow:0 4px 14px rgba(0,106,255,0.45);";
 
+      /* ---------- Pop-up message ---------- */
+      var popup = document.createElement("div");
+      popup.innerHTML =
+        '<span id="gv-pop-text">👋 Hi! Need help? Chat with us.</span>' +
+        '<span id="gv-pop-x" style="position:absolute;top:4px;right:9px;font-size:16px;color:#888;cursor:pointer;padding:2px 4px">×</span>';
+      popup.style.cssText =
+        "position:fixed;display:none;max-width:210px;padding:12px 26px 12px 14px;" +
+        "background:#fff;color:#1c1e21;border-radius:16px;font:500 14px/1.35 -apple-system,Segoe UI,Roboto,Arial,sans-serif;" +
+        "box-shadow:0 6px 24px rgba(0,0,0,0.25);cursor:pointer;z-index:2147483000;";
+
+      /* ---------- Position (snaps to left or right edge only) ---------- */
       var saved = null;
       try { saved = JSON.parse(localStorage.getItem("chatBtnPos")); } catch (e) {}
-      var pos = saved || { x: window.innerWidth - 76, y: window.innerHeight - 160 };
+      var pos = {
+        side: saved && saved.side === "left" ? "left" : "right",
+        y: saved && typeof saved.y === "number" ? saved.y : window.innerHeight - 160
+      };
+      var dragX = 0, dragging = false;
 
-      function clamp() {
-        pos.x = Math.min(Math.max(0, pos.x), window.innerWidth - 56);
-        pos.y = Math.min(Math.max(0, pos.y), window.innerHeight - 56);
-        chatBtn.style.left = pos.x + "px";
-        chatBtn.style.top = pos.y + "px";
+      function edgeX(side) {
+        return side === "left" ? MARGIN : window.innerWidth - SIZE - MARGIN;
       }
-      clamp();
-      window.addEventListener("resize", clamp);
+      function clampY(y) {
+        return Math.min(Math.max(MARGIN, y), window.innerHeight - SIZE - MARGIN);
+      }
+      function placePopup() {
+        var y = clampY(pos.y);
+        popup.style.top = (y + 6) + "px";
+        if (pos.side === "left") {
+          popup.style.left = (MARGIN + SIZE + 10) + "px";
+          popup.style.right = "auto";
+        } else {
+          popup.style.right = (MARGIN + SIZE + 10) + "px";
+          popup.style.left = "auto";
+        }
+      }
+      function render() {
+        pos.y = clampY(pos.y);
+        chatBtn.style.left = (dragging ? dragX : edgeX(pos.side)) + "px";
+        chatBtn.style.top = pos.y + "px";
+        placePopup();
+      }
+      render();
+      window.addEventListener("resize", render);
 
+      /* ---------- Dragging ---------- */
       var d = { active: false, moved: false, dx: 0, dy: 0, sx: 0, sy: 0 };
+
       chatBtn.addEventListener("pointerdown", function (e) {
-        d = { active: true, moved: false, dx: e.clientX - pos.x, dy: e.clientY - pos.y, sx: e.clientX, sy: e.clientY };
+        var rect = chatBtn.getBoundingClientRect();
+        d = { active: true, moved: false, dx: e.clientX - rect.left, dy: e.clientY - rect.top, sx: e.clientX, sy: e.clientY };
+        chatBtn.style.transition = "none";
         chatBtn.setPointerCapture(e.pointerId);
       });
       chatBtn.addEventListener("pointermove", function (e) {
         if (!d.active) return;
-        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) d.moved = true;
-        pos.x = e.clientX - d.dx;
+        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) {
+          d.moved = true;
+          dragging = true;
+          hidePopup(true);
+        }
+        if (!d.moved) return;
+        dragX = Math.min(Math.max(0, e.clientX - d.dx), window.innerWidth - SIZE);
         pos.y = e.clientY - d.dy;
-        clamp();
+        render();
       });
-      chatBtn.addEventListener("pointerup", function () {
+      function endDrag() {
+        if (!d.active) return;
         d.active = false;
         if (d.moved) {
+          pos.side = (dragX + SIZE / 2 < window.innerWidth / 2) ? "left" : "right";
+          dragging = false;
+          chatBtn.style.transition = "left .25s ease, top .25s ease";
+          render();
           try { localStorage.setItem("chatBtnPos", JSON.stringify(pos)); } catch (e) {}
         } else {
-          try { Tawk_API.showWidget(); Tawk_API.maximize(); } catch (e) {}
+          openChat();
         }
-      });
-      document.body.appendChild(chatBtn);
+      }
+      chatBtn.addEventListener("pointerup", endDrag);
+      chatBtn.addEventListener("pointercancel", endDrag);
 
-      /* Tawk events: hide Tawk's own bubble, show ours */
+      /* ---------- Open chat / pop-up logic ---------- */
+      function openChat() {
+        hidePopup(true);
+        try { Tawk_API.showWidget(); Tawk_API.maximize(); } catch (e) {}
+      }
+      function hidePopup(remember) {
+        popup.style.display = "none";
+        if (remember) { try { sessionStorage.setItem("gvPopupSeen", "1"); } catch (e) {} }
+      }
+      function showPopup() {
+        var seen = false;
+        try { seen = sessionStorage.getItem("gvPopupSeen") === "1"; } catch (e) {}
+        if (seen || chatBtn.style.display === "none") return;
+        placePopup();
+        popup.style.display = "block";
+        setTimeout(function () { hidePopup(true); }, 12000);
+      }
+      popup.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "gv-pop-x") { hidePopup(true); return; }
+        openChat();
+      });
+
+      document.body.appendChild(chatBtn);
+      document.body.appendChild(popup);
+      setTimeout(showPopup, 3000);
+
+      /* ---------- Tawk events ---------- */
       Tawk_API.onLoad = function () { Tawk_API.hideWidget(); };
-      Tawk_API.onChatMaximized = function () { chatBtn.style.display = "none"; };
+      Tawk_API.onChatMaximized = function () { chatBtn.style.display = "none"; hidePopup(true); };
       Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
       Tawk_API.onChatEnded = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
 
-      /* Tawk script */
+      /* ---------- Tawk script ---------- */
       (function () {
         var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
         s1.async = true;
