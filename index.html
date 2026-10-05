@@ -10,6 +10,60 @@
     <script type="module" src="/main.jsx"></script>
     <script type="text/javascript">
       var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
+
+      /* Draggable chat button */
+      var chatBtn = document.createElement("div");
+      chatBtn.textContent = "💬";
+      chatBtn.style.cssText =
+        "position:fixed;width:56px;height:56px;border-radius:50%;background:#d4af37;" +
+        "display:flex;align-items:center;justify-content:center;font-size:26px;" +
+        "cursor:grab;touch-action:none;user-select:none;z-index:2147483000;" +
+        "box-shadow:0 4px 14px rgba(0,0,0,0.4);";
+
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem("chatBtnPos")); } catch (e) {}
+      var pos = saved || { x: window.innerWidth - 76, y: window.innerHeight - 160 };
+
+      function clamp() {
+        pos.x = Math.min(Math.max(0, pos.x), window.innerWidth - 56);
+        pos.y = Math.min(Math.max(0, pos.y), window.innerHeight - 56);
+        chatBtn.style.left = pos.x + "px";
+        chatBtn.style.top = pos.y + "px";
+      }
+      clamp();
+      window.addEventListener("resize", clamp);
+
+      var d = { active: false, moved: false, dx: 0, dy: 0, sx: 0, sy: 0 };
+      chatBtn.addEventListener("pointerdown", function (e) {
+        d = { active: true, moved: false, dx: e.clientX - pos.x, dy: e.clientY - pos.y, sx: e.clientX, sy: e.clientY };
+        chatBtn.setPointerCapture(e.pointerId);
+      });
+      chatBtn.addEventListener("pointermove", function (e) {
+        if (!d.active) return;
+        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) d.moved = true;
+        pos.x = e.clientX - d.dx;
+        pos.y = e.clientY - d.dy;
+        clamp();
+      });
+      chatBtn.addEventListener("pointerup", function () {
+        d.active = false;
+        if (d.moved) {
+          try { localStorage.setItem("chatBtnPos", JSON.stringify(pos)); } catch (e) {}
+        } else {
+          try { Tawk_API.showWidget(); Tawk_API.maximize(); } catch (e) {}
+        }
+      });
+      document.addEventListener("DOMContentLoaded", function () {
+        document.body.appendChild(chatBtn);
+      });
+
+      /* Tawk events: hide Tawk's own bubble, show ours */
+      Tawk_API.onLoad = function () { Tawk_API.hideWidget(); };
+      Tawk_API.onChatMaximized = function () { chatBtn.style.display = "none"; };
+      Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
+      Tawk_API.onChatEnded = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
+
+      /* Tawk script */
       (function () {
         var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
         s1.async = true;
