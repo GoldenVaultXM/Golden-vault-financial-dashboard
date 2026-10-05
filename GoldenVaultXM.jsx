@@ -2475,8 +2475,9 @@ function SettingsPage({ setPage }) {
   <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
   <ThemeToggle />
 </div>
-      <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <Card>
+<div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
+<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 2500); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
           {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
           {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
