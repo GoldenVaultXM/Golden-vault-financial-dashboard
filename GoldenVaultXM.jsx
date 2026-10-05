@@ -2561,7 +2561,47 @@ const SUPPORT_FAQS = [
   { q: "Why is my trade not executing?", a: "Check your available balance, ensure markets are open, and confirm your order parameters. Contact support if the issue persists." },
   { q: "Is my funds secure?", a: "Yes. Golden Vault XM uses institutional-grade encryption, 2FA, and cold storage for digital assets." },
 ];
+function DragChatButton() {
+  const [pos, setPos] = useState({ x: window.innerWidth - 76, y: window.innerHeight - 160 });
+  const drag = useRef({ active: false, moved: false, dx: 0, dy: 0, sx: 0, sy: 0 });
 
+  function down(e) {
+    drag.current = { active: true, moved: false, dx: e.clientX - pos.x, dy: e.clientY - pos.y, sx: e.clientX, sy: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function move(e) {
+    const d = drag.current;
+    if (!d.active) return;
+    if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) d.moved = true;
+    const x = Math.min(Math.max(0, e.clientX - d.dx), window.innerWidth - 56);
+    const y = Math.min(Math.max(0, e.clientY - d.dy), window.innerHeight - 56);
+    setPos({ x, y });
+  }
+  function up() {
+    const d = drag.current;
+    d.active = false;
+    if (!d.moved) {
+      try { window.Tawk_API.showWidget(); window.Tawk_API.maximize(); } catch (e) {}
+    }
+  }
+
+  return (
+    <div
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      style={{
+        position: "fixed", left: pos.x, top: pos.y, width: 56, height: 56,
+        borderRadius: "50%", background: "#d4af37", display: "flex",
+        alignItems: "center", justifyContent: "center", fontSize: 26,
+        cursor: "grab", touchAction: "none", userSelect: "none",
+        zIndex: 9999, boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+      }}
+    >
+      💬
+    </div>
+  );
+}
 function SupportPage() {
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState([
@@ -2581,8 +2621,9 @@ function SupportPage() {
   useEffect(() => {
     if (!TAWK_PROPERTY_ID || TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
     window.Tawk_API = window.Tawk_API || {};
-    window.Tawk_API.onLoad = () => { setTawkLoaded(true); };
-    window.Tawk_API.onChatEnded = () => { setTawkOpen(false); };
+    window.Tawk_API.onLoad = () => { setTawkLoaded(true); window.Tawk_API.hideWidget(); };
+    window.Tawk_API.onChatEnded = () => { window.Tawk_API.hideWidget(); setTawkOpen(false); };
+window.Tawk_API.onChatMinimized = () => { window.Tawk_API.hideWidget(); };
     const s = document.createElement("script");
     s.async = true;
     s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
@@ -2602,7 +2643,7 @@ function SupportPage() {
     await new Promise(r => setTimeout(r, 900));
     if (tawkLoaded && window.Tawk_API) {
       // Send to Tawk silently without showing the widget bubble
-      try { window.Tawk_API.maximize(); } catch (e) {}
+      try { window.Tawk_API.showWidget(); window.Tawk_API.maximize(); } catch (e) {}
       setTawkOpen(false);
       setMessages(prev => [...prev, { from: "agent", text: "✅ Message received! A live agent will respond shortly.", time: fmtNow() }]);
     } else {
@@ -2613,6 +2654,7 @@ function SupportPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0, paddingBottom: 16 }}>
+      <DragChatButton />
       <style>{`
         @keyframes sp-blink { 0%,80%,100%{opacity:0.15} 40%{opacity:1} }
         .sp-dot{width:8px;height:8px;border-radius:50%;background:${C.gold};display:inline-block;animation:sp-blink 1.2s infinite}
