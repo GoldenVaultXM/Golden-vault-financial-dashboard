@@ -21,25 +21,27 @@
     <script type="text/javascript">
       var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
 
+      /* ---------- Settings ---------- */
       var SIZE = 68, MARGIN = 8;
-      var FALLBACK_MS = 5000;   /* wait before widgets appear (about your splash length) */
-      var SHOW_DELAY_MS = 1000; /* extra pause on top of that */
+      var FALLBACK_MS = 5000;     /* wait before widgets appear (about your splash length) */
+      var SHOW_DELAY_MS = 1000;   /* extra pause on top of that */
       var WELCOME_TEXT = "👋 Hi! Need help? Chat with us.";
-      var ready = false;   /* splash wait finished */
-      var shown = false;   /* delay finished, widgets allowed */
-      var chatOpen = false;
+      var HOME_MARKER = "initialize trading"; /* text that exists ONLY on your Home section */
+
+      var ready = false, shown = false, chatOpen = false, welcomed = false;
       var popTimer = null;
 
-      /* ---------- Home page check ---------- */
+      /* ---------- Home detection ---------- */
+      /* 1) If the app sets window.__gvHome, that is used.
+         2) Otherwise the Home section is recognised by its unique text. */
       function isHome() {
-        var p = window.location.pathname.replace(/\/+$/, "");
-        var h = window.location.hash;
-        var homePath = (p === "" || p === "/index.html");
-        var homeHash = (h === "" || h === "#" || h === "#/");
-        return homePath && homeHash;
+        if (typeof window.__gvHome === "boolean") return window.__gvHome;
+        var root = document.getElementById("root");
+        if (!root) return false;
+        return (root.textContent || "").toLowerCase().indexOf(HOME_MARKER) !== -1;
       }
 
-      /* ---------- Green chat bubble (hidden until ready) ---------- */
+      /* ---------- Green chat bubble ---------- */
       var chatBtn = document.createElement("div");
       chatBtn.innerHTML =
         '<svg width="' + SIZE + '" height="' + SIZE + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">' +
@@ -68,19 +70,14 @@
       try { saved = JSON.parse(localStorage.getItem("chatBtnPos")); } catch (e) {}
       var pos = {
         side: saved && saved.side === "left" ? "left" : "right",
-        y: saved && typeof saved.y === "number" ? saved.y : window.innerHeight - 170
+        y: saved && typeof saved.y === "number" ? saved.y : window.innerHeight - 200
       };
       var dragX = 0, dragging = false;
 
-      function edgeX(side) {
-        return side === "left" ? MARGIN : window.innerWidth - SIZE - MARGIN;
-      }
-      function clampY(y) {
-        return Math.min(Math.max(MARGIN, y), window.innerHeight - SIZE - MARGIN);
-      }
+      function edgeX(side) { return side === "left" ? MARGIN : window.innerWidth - SIZE - MARGIN; }
+      function clampY(y) { return Math.min(Math.max(MARGIN, y), window.innerHeight - SIZE - MARGIN); }
       function placePopup() {
-        var y = clampY(pos.y);
-        popup.style.top = (y + 10) + "px";
+        popup.style.top = (clampY(pos.y) + 10) + "px";
         if (pos.side === "left") {
           popup.style.left = (MARGIN + SIZE + 10) + "px";
           popup.style.right = "auto";
@@ -110,9 +107,7 @@
       chatBtn.addEventListener("pointermove", function (e) {
         if (!d.active) return;
         if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) {
-          d.moved = true;
-          dragging = true;
-          hidePopup();
+          d.moved = true; dragging = true; hidePopup();
         }
         if (!d.moved) return;
         dragX = Math.min(Math.max(0, e.clientX - d.dx), window.innerWidth - SIZE);
@@ -135,7 +130,7 @@
       chatBtn.addEventListener("pointerup", endDrag);
       chatBtn.addEventListener("pointercancel", endDrag);
 
-      /* ---------- Open chat / pop-up logic ---------- */
+      /* ---------- Chat / pop-up logic ---------- */
       function openChat() {
         hidePopup();
         try { Tawk_API.maximize(); } catch (e) {}
@@ -156,7 +151,6 @@
         if (e.target && e.target.id === "gv-pop-x") { hidePopup(); return; }
         openChat();
       });
-
       function setBadge(n) {
         var b = document.getElementById("gv-badge");
         if (!b) return;
@@ -174,6 +168,10 @@
         if (!shown) return;
         if (isHome()) {
           if (!chatOpen) chatBtn.style.display = "flex";
+          if (!welcomed) {
+            welcomed = true;
+            setTimeout(function () { showPopup(WELCOME_TEXT, 12000); }, 2500);
+          }
         } else {
           hidePopup();
           chatBtn.style.display = "none";
@@ -185,28 +183,20 @@
         }
       }
 
-      /* Watch every kind of page change */
-      (function () {
-        var _push = history.pushState, _replace = history.replaceState;
-        history.pushState = function () { _push.apply(history, arguments); setTimeout(applyVisibility, 0); };
-        history.replaceState = function () { _replace.apply(history, arguments); setTimeout(applyVisibility, 0); };
-        window.addEventListener("popstate", applyVisibility);
-        window.addEventListener("hashchange", applyVisibility);
-        var last = location.href;
-        setInterval(function () {
-          if (location.href !== last) { last = location.href; applyVisibility(); }
-        }, 400);
-      })();
+      /* Watch for section changes (the app does not change the web address) */
+      var lastHome = null;
+      setInterval(function () {
+        var h = isHome();
+        if (h !== lastHome) { lastHome = h; applyVisibility(); }
+      }, 250);
+      window.addEventListener("gv-page", applyVisibility);
+      window.addEventListener("popstate", applyVisibility);
 
-      /* ---------- Show everything only after the splash ---------- */
+      /* ---------- Show only after the splash ---------- */
       function appReady() {
         if (ready) return;
         ready = true;
-        setTimeout(function () {
-          shown = true;
-          applyVisibility();
-          setTimeout(function () { showPopup(WELCOME_TEXT, 12000); }, 3000);
-        }, SHOW_DELAY_MS);
+        setTimeout(function () { shown = true; applyVisibility(); }, SHOW_DELAY_MS);
       }
       window.addEventListener("gv-app-ready", appReady);
       setTimeout(appReady, FALLBACK_MS);
@@ -218,7 +208,6 @@
         setBadge(chatOpen ? 0 : count);
         killBubble();
       };
-      /* Pop-up when a support agent sends a message (home page only) */
       Tawk_API.onChatMessageAgent = function (message) {
         var text = typeof message === "string"
           ? message
@@ -233,16 +222,8 @@
         hidePopup();
         setBadge(0);
       };
-      Tawk_API.onChatMinimized = function () {
-        chatOpen = false;
-        killBubble();
-        applyVisibility();
-      };
-      Tawk_API.onChatEnded = function () {
-        chatOpen = false;
-        killBubble();
-        applyVisibility();
-      };
+      Tawk_API.onChatMinimized = function () { chatOpen = false; killBubble(); applyVisibility(); };
+      Tawk_API.onChatEnded = function () { chatOpen = false; killBubble(); applyVisibility(); };
 
       /* ---------- Tawk script ---------- */
       (function () {
