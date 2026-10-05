@@ -2508,11 +2508,11 @@ function SettingsPage({ setPage }) {
 ))}
       <Card>
   <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 10 }}>Contact</div>
-  <a href="mailto:support@yourcompany.com" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+  <a href="mailto:support@goldenvaultxm.live" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
     <IconBox icon={Mail} />
     <div style={{ flex: 1 }}>
       <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Email us</div>
-      <div style={{ fontSize: 12, color: C.text3 }}>support@yourcompany.com</div>
+      <div style={{ fontSize: 12, color: C.text3 }}>support@goldenvaultxm.live</div>
     </div>
     <ChevronRight size={16} color={C.text3} />
   </a>
