@@ -2213,6 +2213,22 @@ const WD_ADDR = {
   TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
   ERC20: /^0x[a-fA-F0-9]{40}$/,
   BEP20: /^0x[a-fA-F0-9]{40}$/,
+  Polygon: /^0x[a-fA-F0-9]{40}$/,
+  "Avalanche C-Chain": /^0x[a-fA-F0-9]{40}$/,
+  Bitcoin: /^(bc1[a-z0-9]{25,60}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/,
+  Solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+  "XRP Ledger": /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/,
+  Dogecoin: /^D[5-9A-HJ-NP-U][1-9A-HJ-NP-Za-km-z]{32}$/,
+  Litecoin: /^(ltc1[a-z0-9]{25,60}|[LM3][a-km-zA-HJ-NP-Z1-9]{26,33})$/,
+  Cardano: /^addr1[a-z0-9]{50,110}$/,
+  Polkadot: /^1[1-9A-HJ-NP-Za-km-z]{46,47}$/,
+};
+const WD_COIN_CHAINS = {
+  USDT: ["TRC20","ERC20","BEP20"], USDC: ["ERC20","BEP20","Solana"], BTC: ["Bitcoin"],
+  ETH: ["ERC20","BEP20"], BNB: ["BEP20"], SOL: ["Solana"], XRP: ["XRP Ledger"],
+  TRX: ["TRC20"], ADA: ["Cardano"], DOGE: ["Dogecoin"], LTC: ["Litecoin"],
+  MATIC: ["Polygon","ERC20"], LINK: ["ERC20","BEP20"], DOT: ["Polkadot"],
+  AVAX: ["Avalanche C-Chain"],
 };
 
 function WithdrawModal({ balance = 0, onClose }) {
@@ -2293,8 +2309,9 @@ useEffect(() => {
             </div>
 
             <div style={label}>Coin</div>
-<select value={coin} onChange={(e) => setCoin(e.target.value)} style={{ ...field, appearance: "none", cursor: "pointer" }}>
-  {WD_COINS.map(([sym, name]) => (
+            <select value={coin} onChange={(e) => { setCoin(e.target.value); setChain(WD_COIN_CHAINS[e.target.value][0]); }} style={{ ...field, appearance: "none", cursor: "pointer" }}>
+            
+            {WD_COINS.map(([sym, name]) => (
     <option key={sym} value={sym} style={{ background: C.card2, color: C.text }}>{sym} — {name}</option>
   ))}
 </select>
@@ -2304,7 +2321,7 @@ useEffect(() => {
 
             <div style={label}>Chain type</div>
             <div style={{ display: "flex", gap: 10 }}>
-              {WD_CHAINS.map((c) => (
+              {WD_COIN_CHAINS[coin].map((c) => (
                 <button
                   key={c}
                   onClick={() => setChain(c)}
