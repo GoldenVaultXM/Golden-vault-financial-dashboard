@@ -9,52 +9,13 @@
     <div id="root"></div>
     <script type="module" src="/main.jsx"></script>
     <script type="text/javascript">
-      var TAWK_SRC = 'https://tawk.to/chat/6a2187aa4a36f41c2edf040c/1iqvs9ckp';
-
-      window.Tawk_API = window.Tawk_API || {};
-      window.Tawk_LoadStart = new Date();
-
-      function isHomePage() {
-        var p = window.location.pathname;
-        return p === '/' || p === '/index.html' || p === '';
-      }
-
-      window.Tawk_API.onLoad = function () {
-        if (isHomePage()) {
-          window.Tawk_API.hideWidget();
-          setTimeout(function () {
-            window.Tawk_API.showWidget();
-          }, 2000);
-        } else {
-          window.Tawk_API.hideWidget();
-        }
-      };
-
+      var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
       (function () {
-        var _push = history.pushState;
-        var _replace = history.replaceState;
-        function onRouteChange() {
-          setTimeout(function () {
-            if (typeof window.Tawk_API === 'undefined') return;
-            if (isHomePage()) {
-              window.Tawk_API.showWidget && window.Tawk_API.showWidget();
-            } else {
-              window.Tawk_API.hideWidget && window.Tawk_API.hideWidget();
-            }
-          }, 50);
-        }
-        history.pushState = function () { _push.apply(history, arguments); onRouteChange(); };
-        history.replaceState = function () { _replace.apply(history, arguments); onRouteChange(); };
-        window.addEventListener('popstate', onRouteChange);
-      })();
-
-      (function () {
-        var s1 = document.createElement("script");
-        var s0 = document.getElementsByTagName("script")[0];
+        var s1 = document.createElement("script"), s0 = document.getElementsByTagName("script")[0];
         s1.async = true;
-        s1.src = TAWK_SRC;
-        s1.charset = 'UTF-8';
-        s1.setAttribute('crossorigin', '*');
+        s1.src = "https://embed.tawk.to/6a2187aa4a36f41c2edf040c/1jq9nm3li";
+        s1.charset = "UTF-8";
+        s1.setAttribute("crossorigin", "*");
         s0.parentNode.insertBefore(s1, s0);
       })();
     </script>
