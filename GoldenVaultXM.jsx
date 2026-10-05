@@ -2451,7 +2451,7 @@ function TradePage({ prices }) {
           <Btn variant="outline" loading={loadingWd} onClick={() => {
   setLoadingWd(true);
   setTimeout(() => { setLoadingWd(false); setShowWithdraw(true); }, 1200);
-}}><Upload size={15} /> Withdraw Funds
+}}><ArrowUpFromLine size={15} /> Withdraw Funds
 </Btn>
 {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
         </div>
