@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Golden Vault XM</title>
     <style>
+      /* Tawk's own green bubble: always hidden */
       #tawk-bubble-container { display: none !important; }
+      /* Everything from Tawk stays hidden until the splash is done */
+      html:not(.gv-ready) [id^="tawk-"],
+      html:not(.gv-ready) iframe[title*="chat" i] { display: none !important; }
     </style>
     <script type="module" crossorigin src="/assets/index-38f0c93e.js"></script>
     <link rel="stylesheet" href="/assets/index-8c622f01.css">
@@ -17,8 +21,10 @@
       var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
 
       var SIZE = 56, MARGIN = 8;
+      var FALLBACK_MS = 6000; /* shows anyway after this long if the app never signals */
+      var ready = false;
 
-      /* ---------- Chat button ---------- */
+      /* ---------- Chat button (hidden until ready) ---------- */
       var chatBtn = document.createElement("div");
       chatBtn.innerHTML =
         '<svg width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="pointer-events:none">' +
@@ -28,7 +34,7 @@
       chatBtn.style.cssText =
         "position:fixed;width:" + SIZE + "px;height:" + SIZE + "px;border-radius:50%;" +
         "background:linear-gradient(135deg,#00b2ff,#006aff);" +
-        "display:flex;align-items:center;justify-content:center;" +
+        "display:none;align-items:center;justify-content:center;" +
         "cursor:grab;touch-action:none;user-select:none;z-index:2147483000;" +
         "box-shadow:0 4px 14px rgba(0,106,255,0.45);";
 
@@ -126,7 +132,7 @@
       function showPopup() {
         var seen = false;
         try { seen = sessionStorage.getItem("gvPopupSeen") === "1"; } catch (e) {}
-        if (seen || chatBtn.style.display === "none") return;
+        if (!ready || seen || chatBtn.style.display === "none") return;
         placePopup();
         popup.style.display = "block";
         setTimeout(function () { hidePopup(true); }, 12000);
@@ -138,13 +144,23 @@
 
       document.body.appendChild(chatBtn);
       document.body.appendChild(popup);
-      setTimeout(showPopup, 3000);
+
+      /* ---------- Show everything only after the splash ---------- */
+      function appReady() {
+        if (ready) return;
+        ready = true;
+        document.documentElement.classList.add("gv-ready");
+        chatBtn.style.display = "flex";
+        setTimeout(showPopup, 3000);
+      }
+      window.addEventListener("gv-app-ready", appReady);
+      setTimeout(appReady, FALLBACK_MS);
 
       /* ---------- Tawk events ---------- */
       Tawk_API.onLoad = function () { Tawk_API.hideWidget(); };
       Tawk_API.onChatMaximized = function () { chatBtn.style.display = "none"; hidePopup(true); };
-      Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
-      Tawk_API.onChatEnded = function () { Tawk_API.hideWidget(); chatBtn.style.display = "flex"; };
+      Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); if (ready) chatBtn.style.display = "flex"; };
+      Tawk_API.onChatEnded = function () { Tawk_API.hideWidget(); if (ready) chatBtn.style.display = "flex"; };
 
       /* ---------- Tawk script ---------- */
       (function () {
