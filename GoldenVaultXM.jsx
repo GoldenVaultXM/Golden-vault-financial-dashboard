@@ -2947,9 +2947,10 @@ const renderPage = () => {
   }
 };
   return (
-    <div className="gvxm-shell" style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
+    <div className="gvxm-shell" style={{ height: "100dvh", overflow: "hidden", background: C.bg, color: C.text, fontFamily: "'DM Sans','Inter','Roboto',sans-serif" }}>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
         ::-webkit-scrollbar { display: none; }
         scrollbar-width: none;
         input, button, select, textarea { font-family: inherit; }
@@ -2961,9 +2962,9 @@ const renderPage = () => {
       `}</style>
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", zIndex: 1 }}>
+      <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
         <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
-        <main style={{ padding: "0 16px 100px" }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 16px 100px" }}>
           {renderPage()}
         </main>
         {createPortal(
