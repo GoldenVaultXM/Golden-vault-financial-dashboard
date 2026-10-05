@@ -1748,6 +1748,20 @@ export default function Mining({ user }) {
             PLACE ORDER
           </button>
         </div>
+
+        {/* Signal Purchase % button */}
+        <div style={{ padding: "4px 16px 16px", display: "flex", justifyContent: "center" }}>
+          <button onClick={() => setShowOrder(true)}
+            style={{
+              width: "100%", maxWidth: 340, padding: "10px 0",
+              borderRadius: 14, border: "none",
+              background: "#FFFFFF", color: T.green,
+              fontSize: 20, fontWeight: 500, cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}>
+            signal purchase%
+          </button>
+        </div>
       </div>
 
 
