@@ -2221,7 +2221,11 @@ function WithdrawModal({ balance = 0, onClose }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
-
+useEffect(() => {
+  document.body.classList.add("gv-modal-open");
+  return () => document.body.classList.remove("gv-modal-open");
+}, []);
+  
   const bal = Number(balance) || 0;
   const amt = parseFloat(amount) || 0;
   const receive = Math.max(0, amt - WD_FEE);
@@ -2950,6 +2954,7 @@ const renderPage = () => {
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+        .gv-modal-open .gvxm-bottomnav { display: none !important; }
         ::-webkit-scrollbar { display: none; }
         scrollbar-width: none;
         input, button, select, textarea { font-family: inherit; }
@@ -2966,7 +2971,7 @@ const renderPage = () => {
         <main style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 16px 100px" }}>
           {renderPage()}
         </main>
-        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
+        <div className="gvxm-bottomnav"><BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} /></div>
       </div>
     </div>
   );
