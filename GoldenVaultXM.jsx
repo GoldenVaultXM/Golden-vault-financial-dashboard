@@ -2491,6 +2491,22 @@ function SettingsPage({ setPage }) {
   <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
   <ThemeToggle />
 </div>
+      {GROUPS.map((g) => (
+  <Card key={g.title}>
+    <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 10 }}>{g.title}</div>
+    {g.items.map((it) => (
+      <div key={it.label} onClick={() => it.page && setPage(it.page)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", cursor: "pointer" }}>
+        {it.icon && <IconBox icon={it.icon} />}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{it.label}</div>
+          <div style={{ fontSize: 12, color: C.text3 }}>{it.sub}</div>
+        </div>
+        <ChevronRight size={16} color={C.text3} />
+      </div>
+    ))}
+  </Card>
+))}
+{isAuthenticated && <Btn variant="outline" onClick={logout} style={{ width: "100%" }}>Log out</Btn>}
       </div>
   );
 }
