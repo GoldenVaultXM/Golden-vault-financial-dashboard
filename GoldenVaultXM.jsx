@@ -4,6 +4,7 @@ import { Wallet, TrendingUp, Activity, Target, BarChart2, Shield, Zap, Globe, Ar
 import Mining from "./Mining";
 import { supabase } from './supabaseClient';
 import ProfilePage from './ProfilePage';
+import { createPortal } from "react-dom";
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 const DARK_TOKENS = {
   bg: "#080808", card: "#0f0f0f", card2: "#141414", card3: "#1a1a1a",
@@ -2965,7 +2966,10 @@ const renderPage = () => {
         <main style={{ padding: "0 16px 100px" }}>
           {renderPage()}
         </main>
-        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
+        {createPortal(
+  <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />,
+  document.body
+)}
       </div>
     </div>
   );
