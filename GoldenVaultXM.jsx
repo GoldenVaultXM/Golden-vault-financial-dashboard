@@ -2256,8 +2256,8 @@ function WithdrawModal({ balance = 0, onClose }) {
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.78)", backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-    >
+      style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,0.78)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+         >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{ width: "100%", maxWidth: 520, maxHeight: "94vh", overflowY: "auto", background: C.bg, border: `1px solid ${C.border2}`, borderRadius: "22px 22px 0 0", padding: "22px 20px 28px" }}
