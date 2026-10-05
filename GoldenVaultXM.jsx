@@ -2199,12 +2199,185 @@ function MarketsPage({ prices, flash }) {
     </div>
   );
 }
+/* ── WITHDRAW MODAL ───────────────────────────────────────────
+ * Paste this just ABOVE `function TradePage`.
+ * Uses: C, supabase, useState, X, Shield (all already in the file).
+ * Needs the `withdrawal_requests` table (SQL is in the instructions).
+ * ------------------------------------------------------------ */
 
+const WD_CHAINS = ["TRC20", "ERC20", "BEP20"];
+const WD_FEE = 1;
+const WD_MIN = 10;
+const WD_ADDR = {
+  TRC20: /^T[1-9A-HJ-NP-Za-km-z]{33}$/,
+  ERC20: /^0x[a-fA-F0-9]{40}$/,
+  BEP20: /^0x[a-fA-F0-9]{40}$/,
+};
+
+function WithdrawModal({ balance = 0, onClose }) {
+  const [chain, setChain] = useState("TRC20");
+  const [address, setAddress] = useState("");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  const bal = Number(balance) || 0;
+  const amt = parseFloat(amount) || 0;
+  const receive = Math.max(0, amt - WD_FEE);
+
+  const field = {
+    width: "100%", boxSizing: "border-box", background: C.card2,
+    border: `1px solid ${C.border2}`, borderRadius: 12, padding: "15px 16px",
+    color: C.text, fontSize: 15, fontWeight: 700, outline: "none",
+  };
+  const label = { fontSize: 14, fontWeight: 800, color: C.text, margin: "20px 0 8px" };
+
+  function check() {
+    if (!address.trim()) return "Enter a wallet address.";
+    if (!WD_ADDR[chain].test(address.trim())) return `That is not a valid ${chain} address.`;
+    if (amt <= 0) return "Enter a withdrawal amount.";
+    if (amt < WD_MIN) return `The minimum withdrawal is ${WD_MIN.toFixed(2)} USDT.`;
+    if (amt > bal) return `Your available balance is ${bal.toFixed(2)} USDT, which is less than the amount you entered.`;
+    return "";
+  }
+
+  async function submit() {
+    const problem = check();
+    if (problem) { setError(problem); return; }
+    setError("");
+    setBusy(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) { setError("Please sign in again to withdraw."); setBusy(false); return; }
+      const { error: dbError } = await supabase.from("withdrawal_requests").insert({
+        user_id: uid, coin: "USDT", chain, address: address.trim(),
+        amount: amt, fee: WD_FEE, status: "pending",
+      });
+      if (dbError) throw dbError;
+      setDone(true);
+    } catch (e) {
+      setError("We could not submit your request: " + (e.message || "unknown error") + ". Please try again.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.78)", backdropFilter: "blur(10px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 520, maxHeight: "94vh", overflowY: "auto", background: C.bg, border: `1px solid ${C.border2}`, borderRadius: "22px 22px 0 0", padding: "22px 20px 28px" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: C.text, letterSpacing: "-0.02em" }}>Withdraw</div>
+          <button onClick={onClose} style={{ background: C.card2, border: `1px solid ${C.border}`, borderRadius: "50%", width: 36, height: 36, display: "grid", placeItems: "center", cursor: "pointer", color: C.text2 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {done ? (
+          <div style={{ textAlign: "center", padding: "40px 6px 12px" }}>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.gold3 }}>Request submitted</div>
+            <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.6, color: C.text2, marginTop: 12 }}>
+              Your withdrawal of {amt.toFixed(2)} USDT on {chain} is pending review. You will receive {receive.toFixed(2)} USDT once it is approved.
+            </div>
+            <button onClick={onClose} style={{ marginTop: 28, width: "100%", background: `linear-gradient(90deg, ${C.gold3}, ${C.gold2})`, color: "#000", border: "none", borderRadius: 14, padding: "17px 0", fontSize: 17, fontWeight: 900, cursor: "pointer" }}>
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 22, borderBottom: `1px solid ${C.border}`, marginTop: 14 }}>
+              <div style={{ padding: "10px 0", fontSize: 15, fontWeight: 900, color: C.text, borderBottom: `3px solid ${C.gold2}` }}>
+                On-chain Withdrawal
+              </div>
+            </div>
+
+            <div style={label}>Coin</div>
+            <div style={{ ...field, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#26a17b", display: "grid", placeItems: "center", color: "#fff", fontWeight: 900, fontSize: 15 }}>T</div>
+              <span style={{ fontWeight: 900 }}>USDT</span>
+              <span style={{ color: C.text2, fontWeight: 700 }}>Tether USDT</span>
+            </div>
+
+            <div style={label}>Wallet address</div>
+            <input style={field} placeholder="Enter or paste wallet address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="off" spellCheck={false} />
+
+            <div style={label}>Chain type</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {WD_CHAINS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setChain(c)}
+                  style={{ flex: 1, padding: "13px 0", borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 900, background: chain === c ? `${C.gold}22` : C.card2, color: chain === c ? C.gold3 : C.text2, border: `1.5px solid ${chain === c ? C.gold2 : C.border2}` }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.5, color: C.text3, marginTop: 8 }}>
+              Make sure the chain matches the receiving wallet, or the funds can be lost.
+            </div>
+
+            <div style={label}>Amount</div>
+            <div style={{ ...field, display: "flex", alignItems: "center", padding: 0 }}>
+              <input
+                style={{ flex: 1, minWidth: 0, background: "transparent", border: "none", outline: "none", color: C.text, fontSize: 15, fontWeight: 700, padding: "15px 16px" }}
+                placeholder="Enter withdrawal amount" inputMode="decimal"
+                value={amount} onChange={(e) => setAmount(e.target.value)}
+              />
+              <span style={{ color: C.text2, fontWeight: 800, paddingRight: 12 }}>USDT</span>
+              <button onClick={() => setAmount(bal > 0 ? bal.toFixed(2) : "")} style={{ background: "none", border: "none", borderLeft: `1px solid ${C.border2}`, color: C.gold3, fontWeight: 900, fontSize: 15, padding: "0 16px", cursor: "pointer", alignSelf: "stretch" }}>
+                Max
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, marginTop: 10, color: C.text2 }}>
+              <span>Available</span><span style={{ color: C.text }}>{bal.toFixed(2)} USDT</span>
+            </div>
+
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginTop: 16, display: "grid", gap: 10, fontSize: 14, fontWeight: 700 }}>
+              {[["Network fee", `${WD_FEE.toFixed(2)} USDT`], ["Minimum withdrawal", `${WD_MIN.toFixed(2)} USDT`], ["You will receive", `${receive.toFixed(2)} USDT`]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: C.text2 }}>{k}</span><span style={{ color: C.text }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 16, fontSize: 13, fontWeight: 700, lineHeight: 1.5, color: C.text2 }}>
+              <Shield size={22} color={C.gold3} style={{ flexShrink: 0 }} />
+              Withdrawals are reviewed before they are sent.
+            </div>
+
+            {error && (
+              <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 12, background: `${C.red}18`, border: `1px solid ${C.red}55`, color: C.red, fontSize: 14, fontWeight: 800, lineHeight: 1.5 }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={submit}
+              disabled={busy}
+              style={{ marginTop: 20, width: "100%", background: `linear-gradient(90deg, ${C.gold3}, ${C.gold2})`, color: "#000", border: "none", borderRadius: 14, padding: "18px 0", fontSize: 18, fontWeight: 900, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1 }}
+            >
+              {busy ? "Submitting…" : "Withdraw"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+  }
+          
 function TradePage({ prices }) {
   const { user } = useAuth();
   const [loadingDep, setLoadingDep] = useState(false);
   const [loadingWd, setLoadingWd] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -2302,16 +2475,16 @@ function SettingsPage({ setPage }) {
   <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>Account</div>
   <ThemeToggle />
 </div>
-      <Card style={{ background: `linear-gradient(160deg,#1a1000,${C.card})`, border: `1px solid ${C.gold}33` }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}><div style={{ width: 54, height: 54, borderRadius: 13, background: `linear-gradient(135deg,${C.gold},${C.goldDim})`, display: "grid", placeItems: "center" }}><span style={{ fontSize: 18, fontWeight: 900, color: "#000" }}>GV</span></div><div><div style={{ fontWeight: 900, fontSize: 16, color: C.text, letterSpacing: "0.04em" }}>GOLDEN VAULT XM</div><div style={{ fontSize: 10, color: C.text3, letterSpacing: "0.14em", marginTop: 2 }}>CHAIN</div></div></div>
-        <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.7, margin: "14px 0" }}> Enterprise-grade trading platform providing access to global financial markets with institutional-level security and performance. </div>
-        <GoldLine />
-        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>{[[Mail, "support@goldenvaultxm.com"], [Phone, "24/7 Trading Desk"], [MapPin, "Global Trading Hub"]].map(([Icon, val]) => (<div key={val} style={{ display: "flex", alignItems: "center", gap: 10 }}><Icon size={13} color={C.gold} /><span style={{ fontSize: 13, color: C.text2 }}>{val}</span></div>))}</div>
+      <div style={{ fontWeight: 800, fontSize: 15, color: C.text, marginBottom: 14 }}>Quick Actions</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Btn variant="gold" loading={loadingDep} onClick={() => { setLoadingDep(true); setTimeout(() => { setLoadingDep(false); setShowDepositModal(true); }, 2500); }} style={{ width: "100%" }}><ArrowDownToLine size={15} /> Deposit Funds </Btn>
+          {showDepositModal && <DepositModal onClose={() => setShowDepositModal(false)} />}
+          {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
+          <Btn variant="outline" loading={loadingWd} onClick={() => { setLoadingWd(true); setTimeout(() => { setLoadingWd(false); setShowWithdraw(true); }, 600); }} style={{ width: "100%" }}><ArrowUpFromLine size={15} /> Withdraw Funds </Btn>
+          <Btn variant="ghost" style={{ width: "100%" }}><FileBarChart size={15} /> View Reports </Btn>
+        </div>
       </Card>
-      {!isAuthenticated && (<Card style={{ border: `1px solid ${C.gold}33`, background: `linear-gradient(135deg,#1a0f00,${C.card})` }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><IconBox icon={Lock} color={C.gold} size={16} /><div><div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Unlock Full Access</div><div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Sign up to access trading features</div></div></div><Btn variant="gold" onClick={() => requireAuth("signup")} style={{ width: "100%" }}><UserPlus size={15} /> Create Free Account </Btn></Card>)}
-      {GROUPS.map(group => (<Card key={group.title} style={{ padding: "4px 0" }}><div style={{ fontWeight: 800, fontSize: 13, color: C.text3, padding: "14px 16px 10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>{group.title}</div>{group.items.map((item, i) => (<div key={item.label}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", cursor: "pointer" }} onClick={item.onClick || undefined}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><IconBox icon={item.icon} color={C.gold} size={14} boxSize={34} /><div><div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.label}</div><div style={{ fontSize: 11, color: C.text3, marginTop: 1 }}>{item.sub}</div></div></div><ChevronRight size={13} color={C.text4} /></div>{i < group.items.length - 1 && <div style={{ margin: "0 16px" }}><GoldLine /></div>}</div>))}</Card>))}
-      {isAuthenticated && (<Btn variant="danger" onClick={logout} style={{ width: "100%" }}><LogOut size={16} /> Sign Out </Btn>)}
-    </div>
+      </div>
   );
 }
 
