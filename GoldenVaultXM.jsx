@@ -2961,15 +2961,12 @@ const renderPage = () => {
       `}</style>
       <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 400, height: 400, background: `radial-gradient(${C.gold}09,transparent 70%)`, borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {globalDepositOpen && <DepositModal onClose={() => setGlobalDepositOpen(false)} />}
-      <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column" }}>
         <Nav page={page} setPage={handleSetPage} open={menuOpen} setOpen={setMenuOpen} openDeposit={() => setGlobalDepositOpen(true)} />
-        <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 16px 100px" }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 16px 100px" }}>
           {renderPage()}
         </main>
-        {createPortal(
-  <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />,
-  document.body
-)}
+        <BottomNav page={page} setPage={handleSetPage} newsCount={newsCount} />
       </div>
     </div>
   );
