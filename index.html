@@ -19,7 +19,8 @@
       var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
 
       var SIZE = 56, MARGIN = 8;
-      var FALLBACK_MS = 6000; /* shows anyway after this long if the app never signals */
+      var FALLBACK_MS = 5000;   /* wait before widgets appear (about your splash length) */
+      var SHOW_DELAY_MS = 1000; /* extra pause on top of that */
       var ready = false;
 
       /* ---------- Chat button (hidden until ready) ---------- */
@@ -147,9 +148,11 @@
       function appReady() {
         if (ready) return;
         ready = true;
-        document.documentElement.classList.add("gv-ready");
-        chatBtn.style.display = "flex";
-        setTimeout(showPopup, 3000);
+        setTimeout(function () {
+          document.documentElement.classList.add("gv-ready");
+          chatBtn.style.display = "flex";
+          setTimeout(showPopup, 3000);
+        }, SHOW_DELAY_MS);
       }
       window.addEventListener("gv-app-ready", appReady);
       setTimeout(appReady, FALLBACK_MS);
