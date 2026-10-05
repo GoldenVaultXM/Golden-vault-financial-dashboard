@@ -2621,9 +2621,8 @@ function SupportPage() {
   useEffect(() => {
     if (!TAWK_PROPERTY_ID || TAWK_PROPERTY_ID === "YOUR_PROPERTY_ID") return;
     window.Tawk_API = window.Tawk_API || {};
-    window.Tawk_API.onLoad = () => { setTawkLoaded(true); window.Tawk_API.hideWidget(); };
-    window.Tawk_API.onChatEnded = () => { window.Tawk_API.hideWidget(); setTawkOpen(false); };
-window.Tawk_API.onChatMinimized = () => { window.Tawk_API.hideWidget(); };
+    window.Tawk_API.onLoad = () => { setTawkLoaded(true); };
+    window.Tawk_API.onChatEnded = () => { setTawkOpen(false); };
     const s = document.createElement("script");
     s.async = true;
     s.src = `https://embed.tawk.to/${TAWK_PROPERTY_ID}/${TAWK_WIDGET_ID}`;
