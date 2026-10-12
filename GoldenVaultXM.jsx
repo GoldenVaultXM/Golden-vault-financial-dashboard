@@ -862,14 +862,15 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
   const [bellOpen, setBellOpen] = useState(false);
 
   const MENU_ITEMS = [
-    { icon: Settings,        label: "Profile",           color: C.gold,    onClick: () => { setPage("profile");  setOpen(false); } },
-    { icon: ArrowDownToLine, label: "Deposit",           color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
-    { icon: ArrowUpFromLine, label: "Withdraw",          color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
-    { icon: BarChart2,       label: "Markets",           color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
-    { icon: Lock,            label: "Settings & Privacy",color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
-    { icon: Mail,            label: "Support",           color: C.gold,    onClick: () => { setPage("support");  setOpen(false); } },
-    { icon: Cpu,             label: "Mining",            color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
-  ];
+  { icon: Settings,        label: "Profile",            color: C.gold,    onClick: () => { setPage("profile");  setOpen(false); } },
+  { icon: ArrowDownToLine, label: "Deposit",            color: C.green,   onClick: () => { setOpen(false); openDeposit && openDeposit(); } },
+  { icon: ArrowUpFromLine, label: "Withdraw",           color: "#f59e0b", onClick: () => { setPage("trade");    setOpen(false); } },
+  { icon: BarChart2,       label: "Markets",            color: C.blue,    onClick: () => { setPage("markets");  setOpen(false); } },
+  { icon: Lock,            label: "Settings & Privacy", color: C.purple,  onClick: () => { setPage("settings"); setOpen(false); } },
+  { icon: Mail,            label: "Support",            color: C.gold,    onClick: () => { setPage("support");  setOpen(false); } },
+  { icon: Cpu,             label: "Mining",             color: C.green,   onClick: () => { setPage("mining");   setOpen(false); } },
+  { icon: Wallet,          label: "Rewards",            color: C.gold,    onClick: () => { setPage("rewards");  setOpen(false); } },
+];
 
   return (
   <>
@@ -2960,6 +2961,126 @@ function SupportPage() {
     </div>
   );
 }
+/* ── Rewards Page ─────────────────────────────────────────────
+ * Paste on the blank line 2963, between SupportPage and AppShell.
+ * Uses what already exists in the file: C, Card, useAuth, supabase,
+ * useState, useEffect, and the lucide icon Wallet.
+ * Reads account_summary and reward_transactions (see reward_system.sql).
+ * ------------------------------------------------------------ */
+const POINTS_PER_REWARD = 10;
+
+const REWARD_TYPES = [
+  { kind: "register", emoji: "👑", title: "Register Bonus",        desc: "Welcome bonus after you complete registration." },
+  { kind: "task",     emoji: "✅", title: "Task Completion Bonus", desc: "Complete tasks and earn cashback rewards." },
+  { kind: "referral", emoji: "🤝", title: "Referral Bonus",        desc: "Invite friends and earn a percentage of their activity." },
+];
+
+function RewardsPage() {
+  const { user } = useAuth();
+  const [balance, setBalance] = useState(0);
+  const [rewards, setRewards] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { if (alive) setLoading(false); return; }
+      const [sum, tx] = await Promise.all([
+        supabase.from("account_summary").select("balance").eq("id", authUser.id).maybeSingle(),
+        supabase.from("reward_transactions")
+          .select("id, kind, amount, created_at")
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
+      if (!alive) return;
+      setBalance(Number(sum.data?.balance ?? 0));
+      setRewards(tx.data || []);
+      setLoading(false);
+    };
+    load();
+    return () => { alive = false; };
+  }, [user?.email]);
+
+  const points = rewards.length * POINTS_PER_REWARD;
+  const totalFor = (kind) =>
+    rewards.filter(r => r.kind === kind).reduce((s, r) => s + Number(r.amount), 0);
+  const labelFor = (kind) => REWARD_TYPES.find(t => t.kind === kind)?.title || "Reward";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: "20px 0 4px" }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: C.gold, lineHeight: 1.1 }}>Rewards</div>
+        <div style={{ fontSize: 13, color: C.text3, marginTop: 6 }}>
+          Complete tasks, earn bonuses, and unlock more rewards.
+        </div>
+      </div>
+
+      {/* Wallet + points */}
+      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Wallet size={26} color={C.gold} />
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.text }}>${balance.toFixed(2)}</div>
+            <div style={{ fontSize: 12, color: C.text3 }}>Wallet Balance</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: C.gold }}>{points}</div>
+          <div style={{ fontSize: 12, color: C.text3 }}>Reward Points</div>
+        </div>
+      </Card>
+
+      {/* Three bonus types */}
+      {REWARD_TYPES.map(t => {
+        const total = totalFor(t.kind);
+        return (
+          <Card key={t.kind} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 12, flexShrink: 0, fontSize: 24,
+              display: "grid", placeItems: "center", background: `${C.gold}18`,
+            }}>{t.emoji}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{t.title}</div>
+              <div style={{ fontSize: 12, color: C.text3, marginTop: 2, lineHeight: 1.4 }}>{t.desc}</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: total > 0 ? C.green : C.text3 }}>
+                {total > 0 ? `+$${total.toFixed(2)}` : "—"}
+              </div>
+              <div style={{ fontSize: 10, color: C.text3 }}>{total > 0 ? "earned" : "not yet"}</div>
+            </div>
+          </Card>
+        );
+      })}
+
+      {/* History */}
+      <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginTop: 6 }}>Reward history</div>
+      <Card style={{ padding: "0 16px" }}>
+        {loading && <div style={{ padding: "24px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>Loading…</div>}
+        {!loading && rewards.length === 0 && (
+          <div style={{ padding: "24px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>
+            No rewards yet. Complete a task to earn one.
+          </div>
+        )}
+        {rewards.map((r, i) => (
+          <div key={r.id} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0",
+            borderBottom: i < rewards.length - 1 ? `1px solid ${C.border}` : "none",
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{labelFor(r.kind)}</div>
+              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                {new Date(r.created_at).toLocaleString()}
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: 14, color: C.green }}>+${Number(r.amount).toFixed(2)}</div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
 
 function AppShell() {
   const [page, setPage] = useState("home");
@@ -2992,6 +3113,7 @@ const renderPage = () => {
     case "news":     return <NewsPage onNewsCount={setNewsCount} />;
     case "settings": return <SettingsPage setPage={handleSetPage} />;
     case "support":  return <SupportPage />;
+    case "rewards":  return <RewardsPage />;
     default:         return <HomePage setPage={handleSetPage} />;
   }
 };
