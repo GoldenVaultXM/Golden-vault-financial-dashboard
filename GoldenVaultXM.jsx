@@ -3081,7 +3081,137 @@ function RewardsPage() {
     </div>
   );
 }
+const GV_PTS = 10;
 
+const GV_TYPES = [
+  { kind: "register", title: "Register Bonus",        desc: "Welcome bonus after you complete registration." },
+  { kind: "task",     title: "Task Completion Bonus", desc: "Complete tasks and earn cashback rewards." },
+  { kind: "referral", title: "Referral Bonus",        desc: "Invite friends and earn a percentage of their activity." },
+];
+
+const GvCoin = ({ size = 34 }) => (
+  <img src="/gv-coin.png" alt="" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />
+);
+
+function RewardsPageV3() {
+  const { user } = useAuth();
+  const [rewards, setRewards] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const load = useCallback(async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) { setLoading(false); return; }
+    const tx = await supabase.from("reward_transactions")
+      .select("id, kind, amount, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setRewards(tx.data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load, user?.email]);
+
+  const claim = async (id) => {
+    setClaiming(id);
+    setMsg("");
+    const { error } = await supabase.rpc("claim_reward", { p_id: id });
+    if (error) setMsg("Could not claim this reward. Please try again.");
+    else await load();
+    setClaiming(null);
+  };
+
+  const pending = rewards.filter(r => r.status === "pending");
+  const claimed = rewards.filter(r => r.status !== "pending");
+  const points = claimed.length * GV_PTS;
+  const totalFor = (kind) =>
+    claimed.filter(r => r.kind === kind).reduce((s, r) => s + Number(r.amount), 0);
+  const labelFor = (kind) => GV_TYPES.find(t => t.kind === kind)?.title || "Reward";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: "20px 0 4px" }}>
+        <div style={{ fontSize: 28, fontWeight: 900, color: C.gold, lineHeight: 1.1 }}>Rewards</div>
+        <div style={{ fontSize: 13, color: C.text3, marginTop: 6 }}>
+          Claim your rewards to add them to your account.
+        </div>
+      </div>
+
+      <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Reward Points</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color: C.gold }}>{points}</div>
+      </Card>
+
+      {pending.map(r => (
+        <Card key={r.id} style={{ border: `1.5px solid ${C.gold}`, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 12, flexShrink: 0, fontSize: 24,
+              display: "grid", placeItems: "center", background: `${C.gold}18`,
+            }}><GvCoin /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{labelFor(r.kind)}</div>
+              <div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>Ready to claim</div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: 20, color: C.gold }}>${Number(r.amount).toFixed(2)}</div>
+          </div>
+          <Btn variant="gold" loading={claiming === r.id} onClick={() => claim(r.id)} style={{ width: "100%" }}>
+            Claim ${Number(r.amount).toFixed(2)}
+          </Btn>
+        </Card>
+      ))}
+
+      {msg && <div style={{ fontSize: 13, color: C.red }}>{msg}</div>}
+
+      {GV_TYPES.map(t => {
+        const total = totalFor(t.kind);
+        return (
+          <Card key={t.kind} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 46, height: 46, borderRadius: 12, flexShrink: 0, fontSize: 24,
+              display: "grid", placeItems: "center", background: `${C.gold}18`,
+            }}><GvCoin /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{t.title}</div>
+              <div style={{ fontSize: 12, color: C.text3, marginTop: 2, lineHeight: 1.4 }}>{t.desc}</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: total > 0 ? C.green : C.text3 }}>
+                {total > 0 ? `+$${total.toFixed(2)}` : "—"}
+              </div>
+              <div style={{ fontSize: 10, color: C.text3 }}>{total > 0 ? "claimed" : "not yet"}</div>
+            </div>
+          </Card>
+        );
+      })}
+
+      <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginTop: 6 }}>Reward history</div>
+      <Card style={{ padding: "0 16px" }}>
+        {loading && <div style={{ padding: "24px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>Loading…</div>}
+        {!loading && claimed.length === 0 && (
+          <div style={{ padding: "24px 0", textAlign: "center", color: C.text3, fontSize: 13 }}>
+            No claimed rewards yet.
+          </div>
+        )}
+        {claimed.map((r, i) => (
+          <div key={r.id} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0",
+            borderBottom: i < claimed.length - 1 ? `1px solid ${C.border}` : "none",
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{labelFor(r.kind)}</div>
+              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                {new Date(r.created_at).toLocaleString()}
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: 14, color: C.green }}>+${Number(r.amount).toFixed(2)}</div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
 function AppShell() {
   const [page, setPage] = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -3113,7 +3243,7 @@ const renderPage = () => {
     case "news":     return <NewsPage onNewsCount={setNewsCount} />;
     case "settings": return <SettingsPage setPage={handleSetPage} />;
     case "support":  return <SupportPage />;
-    case "rewards":  return <RewardsPage />;
+    case "rewards":  return <RewardsPageV3 />;
     default:         return <HomePage setPage={handleSetPage} />;
   }
 };
