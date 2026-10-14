@@ -2246,9 +2246,47 @@ function wdFmt(d) {
   return new Date(d).toLocaleString([], { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
+function WithdrawSlip({ r, onBack }) {
+  const st = WD_STATUS[r.status] || WD_STATUS.pending;
+  const amt = Number(r.amount);
+  const net = Math.max(0, amt - WD_FEE);
+  const lines = [
+    ["Amount", `${amt.toFixed(2)} ${r.coin}`],
+    ["Network fee", `${WD_FEE.toFixed(2)} ${r.coin}`],
+    ["You receive", `${net.toFixed(2)} ${r.coin}`],
+    ["Network", r.chain],
+    ["Wallet address", r.address],
+    ["Date", wdFmt(r.created_at)],
+    ["Reference", String(r.id).slice(0, 8).toUpperCase()],
+  ];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100000, background: C.bg, overflowY: "auto" }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 18px 40px" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.text, fontSize: 24, cursor: "pointer", padding: 0 }}>←</button>
+        <div style={{ fontSize: 26, fontWeight: 900, color: C.text, margin: "14px 0 18px" }}>Withdrawal slip</div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: "24px 18px" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, fontWeight: 900, color: C.text }}>{amt.toFixed(2)} {r.coin}</div>
+            <span style={{ display: "inline-block", marginTop: 12, fontSize: 12, fontWeight: 900, color: st.color, WebkitTextFillColor: st.color, background: `${st.color}22`, border: `1px solid ${st.color}66`, borderRadius: 999, padding: "5px 14px" }}>{st.label}</span>
+          </div>
+          <div style={{ marginTop: 24, display: "grid", gap: 14 }}>
+            {lines.map(([k, v]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 16, fontSize: 14, fontWeight: 700 }}>
+                <span style={{ color: C.text2, flexShrink: 0 }}>{k}</span>
+                <span style={{ color: C.text, textAlign: "right", wordBreak: "break-all" }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WithdrawHistory({ onBack }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
+  const [sel, setSel] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -2263,6 +2301,8 @@ function WithdrawHistory({ onBack }) {
     })();
   }, []);
 
+  if (sel) return <WithdrawSlip r={sel} onBack={() => setSel(null)} />;
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100000, background: C.bg, overflowY: "auto" }}>
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 18px 40px" }}>
@@ -2276,13 +2316,13 @@ function WithdrawHistory({ onBack }) {
         {(rows || []).map((r) => {
           const st = WD_STATUS[r.status] || WD_STATUS.pending;
           return (
-            <div key={r.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
+            <div key={r.id} onClick={() => setSel(r)} style={{ cursor: "pointer", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{Number(r.amount).toFixed(2)} {r.coin}</div>
                 <span style={{ fontSize: 12, fontWeight: 900, color: st.color, WebkitTextFillColor: st.color, background: `${st.color}22`, border: `1px solid ${st.color}66`, borderRadius: 999, padding: "4px 12px" }}>{st.label}</span>
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text2, marginTop: 8 }}>{r.chain} · {String(r.address).slice(0, 8)}…{String(r.address).slice(-6)}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text3, marginTop: 4 }}>{wdFmt(r.created_at)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text3, marginTop: 4 }}>{wdFmt(r.created_at)} · Tap to view slip ›</div>
             </div>
           );
         })}
@@ -2513,6 +2553,7 @@ function TradePage({ prices }) {
   const [loadingWd, setLoadingWd] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [range, setRange] = useState("30D");
   const [vote, setVote] = useState(null);
   const [showVote, setShowVote] = useState(true);
@@ -2600,6 +2641,13 @@ function TradePage({ prices }) {
 }}><ArrowUpFromLine size={15} /> Withdraw Funds
 </Btn>
 {showWithdraw && <WithdrawModal balance={balance} onClose={() => setShowWithdraw(false)} />}
+          <button
+  onClick={() => setShowHistory(true)}
+  style={{ width: "100%", background: "transparent", border: `1px solid ${C.border2}`, borderRadius: 10, padding: "13px 16px", fontSize: 13, fontWeight: 900, color: C.gold3, WebkitTextFillColor: C.gold3, cursor: "pointer" }}
+>
+  Withdrawal History
+</button>
+{showHistory && <WithdrawHistory onBack={() => setShowHistory(false)} />}
         </div>
       </Card>
       </div>
