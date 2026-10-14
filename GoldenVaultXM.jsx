@@ -2231,6 +2231,119 @@ const WD_COIN_CHAINS = {
   MATIC: ["Polygon","ERC20"], LINK: ["ERC20","BEP20"], DOT: ["Polkadot"],
   AVAX: ["Avalanche C-Chain"],
 };
+/* ── WITHDRAW PROCESSING + HISTORY ────────────────────────────
+ * Paste these two components just ABOVE `function WithdrawModal`.
+ * Uses: C, supabase, useState, useEffect (all already in the file).
+ * ------------------------------------------------------------ */
+
+const WD_STATUS = {
+  pending:  { label: "Pending",  color: "#fbbf24" },
+  approved: { label: "Approved", color: "#22c55e" },
+  rejected: { label: "Rejected", color: "#ef4444" },
+};
+
+function wdFmt(d) {
+  return new Date(d).toLocaleString([], { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function WithdrawHistory({ onBack }) {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) { setErr("Please sign in to see your history."); setRows([]); return; }
+      const { data, error } = await supabase
+        .from("withdrawal_requests").select("*")
+        .eq("user_id", uid).order("created_at", { ascending: false }).limit(50);
+      if (error) setErr(error.message);
+      setRows(data || []);
+    })();
+  }, []);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100000, background: C.bg, overflowY: "auto" }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 18px 40px" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.text, fontSize: 24, cursor: "pointer", padding: 0 }}>←</button>
+        <div style={{ fontSize: 26, fontWeight: 900, color: C.text, margin: "14px 0 18px" }}>Withdrawal history</div>
+
+        {rows === null && <div style={{ color: C.text2, fontWeight: 700 }}>Loading…</div>}
+        {err && <div style={{ color: C.red, fontWeight: 700, marginBottom: 12 }}>{err}</div>}
+        {rows && rows.length === 0 && !err && <div style={{ color: C.text2, fontWeight: 700 }}>No withdrawals yet.</div>}
+
+        {(rows || []).map((r) => {
+          const st = WD_STATUS[r.status] || WD_STATUS.pending;
+          return (
+            <div key={r.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{Number(r.amount).toFixed(2)} {r.coin}</div>
+                <span style={{ fontSize: 12, fontWeight: 900, color: st.color, background: `${st.color}22`, border: `1px solid ${st.color}66`, borderRadius: 999, padding: "4px 12px" }}>{st.label}</span>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text2, marginTop: 8 }}>{r.chain} · {String(r.address).slice(0, 8)}…{String(r.address).slice(-6)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text3, marginTop: 4 }}>{wdFmt(r.created_at)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function WithdrawProcessing({ result, onClose }) {
+  const [showHistory, setShowHistory] = useState(false);
+  if (showHistory) return <WithdrawHistory onBack={() => setShowHistory(false)} />;
+
+  const started = new Date(result.created_at);
+  const estimate = new Date(started.getTime() + 24 * 60 * 60 * 1000);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100000, background: C.bg, display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "18px 20px" }}>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.text, fontSize: 24, cursor: "pointer", padding: 0 }}>←</button>
+      </div>
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 24px 0", textAlign: "center", overflowY: "auto" }}>
+        <svg width="96" height="110" viewBox="0 0 96 110" fill="none" stroke={C.text} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="10" y="6" width="76" height="9" rx="4.5" />
+          <rect x="10" y="95" width="76" height="9" rx="4.5" />
+          <path d="M20 15 C20 45 46 48 48 55 C46 62 20 65 20 95" />
+          <path d="M76 15 C76 45 50 48 48 55 C50 62 76 65 76 95" />
+          <path d="M34 28 H62 L48 42 Z" fill="#fbbf24" stroke="none" />
+          <path d="M26 92 C32 78 64 78 70 92 Z" fill="#fbbf24" stroke="none" />
+        </svg>
+
+        <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginTop: 34 }}>Withdrawal Processing</div>
+        <div style={{ fontSize: 36, fontWeight: 900, color: C.text, marginTop: 18, letterSpacing: "-0.02em" }}>
+          {Number(result.amount).toFixed(2)} {result.coin}
+        </div>
+
+        <div style={{ display: "inline-block", marginTop: 16, fontSize: 13, fontWeight: 900, color: "#fbbf24", background: "#fbbf2422", border: "1px solid #fbbf2466", borderRadius: 999, padding: "6px 16px" }}>
+          Pending review
+        </div>
+
+        <div style={{ marginTop: 26, display: "grid", gap: 10, fontSize: 15, fontWeight: 700, color: C.text2, lineHeight: 1.5 }}>
+          <div>Time initiated: <span style={{ color: C.text }}>{wdFmt(started)}</span></div>
+          <div>Estimated completion: <span style={{ color: C.text }}>by {wdFmt(estimate)}</span></div>
+          <div>Network: <span style={{ color: C.text }}>{result.chain}</span></div>
+          <div style={{ marginTop: 8 }}>
+            You will be notified in the app once your withdrawal has been reviewed. View history for the latest updates.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "0 20px 28px" }}>
+        <button
+          onClick={() => setShowHistory(true)}
+          style={{ width: "100%", maxWidth: 520, display: "block", margin: "0 auto", background: "#fbd335", color: "#111", border: "none", borderRadius: 14, padding: "18px 0", fontSize: 18, fontWeight: 900, cursor: "pointer" }}
+        >
+          View History
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function WithdrawModal({ balance = 0, onClose }) {
   const [chain, setChain] = useState("TRC20");
@@ -2240,6 +2353,7 @@ function WithdrawModal({ balance = 0, onClose }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [coin, setCoin] = useState("USDT");
+  const [result, setResult] = useState(null);
 useEffect(() => {
   document.body.classList.add("gv-modal-open");
   return () => document.body.classList.remove("gv-modal-open");
@@ -2270,11 +2384,19 @@ useEffect(() => {
   if (problem) { setError(problem); return; }
   setError("");
   setBusy(true);
-  await new Promise((r) => setTimeout(r, 3000)); // loads for 3 seconds
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth?.user?.id;
+  if (!uid) { setBusy(false); setError("Please sign in again."); return; }
+  const { data, error: err } = await supabase
+    .from("withdrawal_requests")
+    .insert({ user_id: uid, amount: amt, coin, chain, address: address.trim(), status: "pending" })
+    .select()
+    .single();
   setBusy(false);
-  setError("Ineligible for withdrawal.");
-}
-
+  if (err) { setError(err.message); return; }
+  setResult(data);
+  }
+  if (result) return <WithdrawProcessing result={result} onClose={onClose} />;
   return (
     <div
       onClick={onClose}
