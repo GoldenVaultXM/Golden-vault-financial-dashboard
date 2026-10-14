@@ -2279,7 +2279,7 @@ function WithdrawHistory({ onBack }) {
             <div key={r.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{Number(r.amount).toFixed(2)} {r.coin}</div>
-                <span style={{ fontSize: 12, fontWeight: 900, color: st.color, background: `${st.color}22`, border: `1px solid ${st.color}66`, borderRadius: 999, padding: "4px 12px" }}>{st.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 900, color: st.color, WebkitTextFillColor: st.color, background: `${st.color}22`, border: `1px solid ${st.color}66`, borderRadius: 999, padding: "4px 12px" }}>{st.label}</span>
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text2, marginTop: 8 }}>{r.chain} · {String(r.address).slice(0, 8)}…{String(r.address).slice(-6)}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text3, marginTop: 4 }}>{wdFmt(r.created_at)}</div>
@@ -2319,7 +2319,7 @@ function WithdrawProcessing({ result, onClose }) {
           {Number(result.amount).toFixed(2)} {result.coin}
         </div>
 
-        <div style={{ display: "inline-block", marginTop: 16, fontSize: 13, fontWeight: 900, color: "#fbbf24", background: "#fbbf2422", border: "1px solid #fbbf2466", borderRadius: 999, padding: "6px 16px" }}>
+        <div style={{ display: "inline-block", marginTop: 16, fontSize: 13, fontWeight: 900, color: "#fbbf24", WebkitTextFillColor: "#fbbf24", background: "#fbbf2422", border: "1px solid #fbbf2466", borderRadius: 999, padding: "6px 16px" }}>
           Pending review
         </div>
 
