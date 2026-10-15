@@ -872,6 +872,23 @@ if (typeof Node === "function" && !window.__gtPatched) {
   };
 }
 
+function initGoogleTranslate() {
+  if (typeof document === "undefined" || window.__gtInit) return;
+  window.__gtInit = true;
+  const holder = document.createElement("div");
+  holder.id = "gt-holder";
+  holder.style.display = "none";
+  document.body.appendChild(holder);
+  window.googleTranslateElementInit = () => {
+    new window.google.translate.TranslateElement({ pageLanguage: "en", autoDisplay: false }, "gt-holder");
+  };
+  const s = document.createElement("script");
+  s.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+  s.async = true;
+  document.head.appendChild(s);
+}
+initGoogleTranslate();
+
 function LanguagePicker() {
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem("gvxm-lang") || "en"; } catch { return "en"; }
@@ -886,21 +903,11 @@ function LanguagePicker() {
   }
 
   useEffect(() => {
-    if (!document.getElementById("gt-script")) {
-      window.googleTranslateElementInit = () => {
-        new window.google.translate.TranslateElement({ pageLanguage: "en", autoDisplay: false }, "gt-holder");
-      };
-      const s = document.createElement("script");
-      s.id = "gt-script";
-      s.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-      s.async = true;
-      document.head.appendChild(s);
-    }
-    // restore saved language once Google's widget is ready
+    if (lang === "en") return;
     let tries = 0;
     const t = setInterval(() => {
       tries++;
-      if (lang === "en" || apply(lang) || tries > 20) clearInterval(t);
+      if (apply(lang) || tries > 30) clearInterval(t);
     }, 500);
     return () => clearInterval(t);
   }, []);
@@ -908,13 +915,12 @@ function LanguagePicker() {
   function change(code) {
     setLang(code);
     try { localStorage.setItem("gvxm-lang", code); } catch {}
-    apply(code);
+    if (!apply(code)) alert("Translator is still loading. Please try again in a few seconds.");
   }
 
   return (
     <div translate="no" style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}` }}>
       <style>{`.goog-te-banner-frame, .skiptranslate iframe { display: none !important; } body { top: 0 !important; }`}</style>
-      <div id="gt-holder" style={{ display: "none" }} />
       <select
         value={lang}
         onChange={(e) => change(e.target.value)}
@@ -948,7 +954,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
-        <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
+        <div translate="no" style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
           <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
         </div>
       </div>
