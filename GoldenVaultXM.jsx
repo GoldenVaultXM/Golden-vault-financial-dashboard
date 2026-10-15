@@ -954,7 +954,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <img src="/IMG_20260512_072009_2.webp.webp" alt="Golden Vault XM" style={{ height: 40, width: "auto", display: "block", flexShrink: 0 }} />
-        <div translate="no" style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
+        <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
           <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
         </div>
       </div>
