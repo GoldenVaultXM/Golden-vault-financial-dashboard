@@ -855,7 +855,76 @@ function useNotifications() {
   const unreadCount = notes.filter(n => !n.read).length;
   return { notes, unreadCount, markAllRead };
 }
+const LANGS = [["en","English"],["af","Afrikaans"],["sq","Shqip"],["am","አማርኛ"],["ar","العربية"],["hy","Հայերեն"],["az","Azərbaycan"],["eu","Euskara"],["be","Беларуская"],["bn","বাংলা"],["bs","Bosanski"],["bg","Български"],["ca","Català"],["ceb","Cebuano"],["zh-CN","中文 (简体)"],["zh-TW","中文 (繁體)"],["co","Corsu"],["hr","Hrvatski"],["cs","Čeština"],["da","Dansk"],["nl","Nederlands"],["eo","Esperanto"],["et","Eesti"],["fi","Suomi"],["fr","Français"],["fy","Frysk"],["gl","Galego"],["ka","ქართული"],["de","Deutsch"],["el","Ελληνικά"],["gu","ગુજરાતી"],["ht","Kreyòl ayisyen"],["ha","Hausa"],["haw","ʻŌlelo Hawaiʻi"],["he","עברית"],["hi","हिन्दी"],["hmn","Hmong"],["hu","Magyar"],["is","Íslenska"],["ig","Igbo"],["id","Indonesia"],["ga","Gaeilge"],["it","Italiano"],["ja","日本語"],["jv","Jawa"],["kn","ಕನ್ನಡ"],["kk","Қазақша"],["km","ខ្មែរ"],["rw","Kinyarwanda"],["ko","한국어"],["ku","Kurdî"],["ky","Кыргызча"],["lo","ລາວ"],["la","Latina"],["lv","Latviešu"],["lt","Lietuvių"],["lb","Lëtzebuergesch"],["mk","Македонски"],["mg","Malagasy"],["ms","Melayu"],["ml","മലയാളം"],["mt","Malti"],["mi","Māori"],["mr","मराठी"],["mn","Монгол"],["my","မြန်မာ"],["ne","नेपाली"],["no","Norsk"],["ny","Chichewa"],["or","ଓଡ଼ିଆ"],["ps","پښتو"],["fa","فارسی"],["pl","Polski"],["pt","Português"],["pa","ਪੰਜਾਬੀ"],["ro","Română"],["ru","Русский"],["sm","Samoa"],["gd","Gàidhlig"],["sr","Српски"],["st","Sesotho"],["sn","Shona"],["sd","سنڌي"],["si","සිංහල"],["sk","Slovenčina"],["sl","Slovenščina"],["so","Soomaali"],["es","Español"],["su","Sunda"],["sw","Kiswahili"],["sv","Svenska"],["tl","Filipino"],["tg","Тоҷикӣ"],["ta","தமிழ்"],["tt","Татар"],["te","తెలుగు"],["th","ไทย"],["tr","Türkçe"],["tk","Türkmen"],["uk","Українська"],["ur","اردو"],["ug","ئۇيغۇرچە"],["uz","Oʻzbek"],["vi","Tiếng Việt"],["cy","Cymraeg"],["xh","isiXhosa"],["yi","ייִדיש"],["yo","Yorùbá"],["zu","isiZulu"]];// Prevents Google Translate from crashing React
+if (typeof Node === "function" && !window.__gtPatched) {
+  window.__gtPatched = true;
 
+  const origRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function (child) {
+    if (!child || child.parentNode !== this) return child;
+    return origRemoveChild.apply(this, arguments);
+  };
+
+  const origInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (newNode, refNode) {
+    if (refNode && refNode.parentNode !== this) return newNode;
+    return origInsertBefore.apply(this, arguments);
+  };
+}
+
+function LanguagePicker() {
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem("gvxm-lang") || "en"; } catch { return "en"; }
+  });
+
+  function apply(code) {
+    const combo = document.querySelector(".goog-te-combo");
+    if (!combo) return false;
+    combo.value = code;
+    combo.dispatchEvent(new Event("change"));
+    return true;
+  }
+
+  useEffect(() => {
+    if (!document.getElementById("gt-script")) {
+      window.googleTranslateElementInit = () => {
+        new window.google.translate.TranslateElement({ pageLanguage: "en", autoDisplay: false }, "gt-holder");
+      };
+      const s = document.createElement("script");
+      s.id = "gt-script";
+      s.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      s.async = true;
+      document.head.appendChild(s);
+    }
+    // restore saved language once Google's widget is ready
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if (lang === "en" || apply(lang) || tries > 20) clearInterval(t);
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
+
+  function change(code) {
+    setLang(code);
+    try { localStorage.setItem("gvxm-lang", code); } catch {}
+    apply(code);
+  }
+
+  return (
+    <div translate="no" style={{ padding: "10px 16px", borderBottom: `1px solid ${C.border}` }}>
+      <style>{`.goog-te-banner-frame, .skiptranslate iframe { display: none !important; } body { top: 0 !important; }`}</style>
+      <div id="gt-holder" style={{ display: "none" }} />
+      <select
+        value={lang}
+        onChange={(e) => change(e.target.value)}
+        style={{ width: "100%", background: C.card2, color: C.text, border: `1px solid ${C.border2}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, fontWeight: 700 }}
+      >
+        {LANGS.map(([c, n]) => <option key={c} value={c}>🌐 {n}</option>)}
+      </select>
+    </div>
+  );
+}
 function Nav({ page, setPage, open, setOpen, openDeposit }) {
   const { isAuthenticated, logout, requireAuth, user } = useAuth();
   const { notes, unreadCount, markAllRead } = useNotifications();
@@ -954,7 +1023,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
               <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{user?.email?.split("@")[0] || "Guest"}</div>
               <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{isAuthenticated ? "Verified Account" : "Not logged in"}</div>
             </div>
-
+            <LanguagePicker />
             {/* All 6 menu items */}
             {MENU_ITEMS.map((item, i) => (
               <button
