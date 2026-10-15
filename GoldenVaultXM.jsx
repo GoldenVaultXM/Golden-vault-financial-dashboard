@@ -951,12 +951,16 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
         <div style={{ fontFamily: "'Inter','Roboto','Arial',sans-serif", fontWeight: 700, fontSize: 16 }}>
           <span style={{ color: C.text }}>GOLDEN VAULT </span><span style={{ color: "#ef4444" }}>XM</span>
         </div>
-     </div>
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 
         {/* Bell */}
         <div style={{ position: "relative" }}>
-          <button onClick={() => { setBellOpen(b => !b); setOpen(false); if (!bellOpen) markAllRead(); }} style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(b => !b); setOpen(false); if (!bellOpen) markAllRead(); }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: unreadCount > 0 ? C.gold : C.text3, padding: 8, position: "relative" }}
+          >
             <Bell size={17} />
             {unreadCount > 0 && (
               <span style={{ position: "absolute", top: 4, right: 4, width: 16, height: 16, borderRadius: "50%", background: C.red, color: "#fff", fontSize: 9, fontWeight: 900, display: "grid", placeItems: "center" }}>
@@ -964,34 +968,40 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
               </span>
             )}
           </button>
+
           {bellOpen && (
-            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "70vh", overflowY: "auto", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 400 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ position: "fixed", top: 58, right: 0, width: "min(340px, 96vw)", maxHeight: "calc(100dvh - 140px)", display: "flex", flexDirection: "column", background: C.card, border: `1px solid ${C.border2}`, borderRadius: "0 0 14px 14px", boxShadow: "0 16px 48px #000a", zIndex: 400 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 10px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Notifications</span>
                 <button onClick={() => setBellOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.text3 }}><X size={16} /></button>
               </div>
-              {notes.length === 0 ? (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>No notifications yet</div>
-              ) : (
-                notes.map((n, i) => (
-                  <div key={n.id} style={{ padding: "13px 16px", borderBottom: i < notes.length - 1 ? `1px solid ${C.border}` : "none", background: n.read ? "transparent" : `${C.gold}08` }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.read ? C.text4 : C.gold, flexShrink: 0, marginTop: 4 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>{n.title}</div>
-                        <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{n.body}</div>
-                        <div style={{ fontSize: 10, color: C.text3, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+                {notes.length === 0 ? (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>No notifications yet</div>
+                ) : (
+                  notes.map((n, i) => (
+                    <div key={n.id} style={{ padding: "13px 16px", borderBottom: i < notes.length - 1 ? `1px solid ${C.border}` : "none", background: n.read ? "transparent" : `${C.gold}08` }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.read ? C.text4 : C.gold, flexShrink: 0, marginTop: 4 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>{n.title}</div>
+                          <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{n.body}</div>
+                          <div style={{ fontSize: 10, color: C.text3, marginTop: 5 }}>{new Date(n.created_at).toLocaleString()}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Hamburger */}
-        <button onClick={() => { setOpen(!open); setBellOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.text2, padding: 8 }}>
+        <button
+          onClick={() => { setOpen(!open); setBellOpen(false); }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: C.text, padding: 8 }}
+        >
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
@@ -1016,7 +1026,7 @@ function Nav({ page, setPage, open, setOpen, openDeposit }) {
             border: `1px solid ${C.border2}`,
             borderRadius: 16,
             boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(217,119,6,0.1)",
-            overflow: "hidden",
+            overflowY: "auto", maxHeight: "calc(100dvh - 150px)", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch",
           }}>
             {/* User info header */}
             <div style={{ padding: "14px 16px 12px", borderBottom: `1px solid ${C.border}`, background: `${C.gold}08` }}>
