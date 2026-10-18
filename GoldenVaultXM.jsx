@@ -648,8 +648,7 @@ function AuthModal({ onClose, initialMode = "signup" }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-
+  const [form, setForm] = useState({ name: "", email: "", password: "", referral: "" });
   /* ── Google OAuth ── */
   const handleGoogle = async () => {
     setError("");
@@ -684,7 +683,16 @@ function AuthModal({ onClose, initialMode = "signup" }) {
     setLoading(true);
     let authError = null;
     if (authMode === "signup") {
-      const { error } = await supabase.auth.signUp({ email: form.email, password: form.password, options: { data: { name: form.name } } });
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            name: form.name,
+            referral_code: (form.referral || "").trim().toUpperCase(),
+          },
+        },
+      });
       authError = error;
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
@@ -727,6 +735,14 @@ function AuthModal({ onClose, initialMode = "signup" }) {
             <input placeholder="Password" type={showPw ? "text" : "password"} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} onKeyDown={e => e.key === "Enter" && handle()} style={{ ...inp, paddingRight: 46 }} />
             <button onClick={() => setShowPw(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.text3 }}>{showPw ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>
+          {authMode === "signup" && (
+  <input
+    placeholder="Referral code (optional)"
+    value={form.referral || ""}
+    onChange={e => setForm(f => ({ ...f, referral: e.target.value }))}
+    style={inp}
+  />
+)}
         </div>
 
         {/* Age + Terms checkbox (signup only) */}
