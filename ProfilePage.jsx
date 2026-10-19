@@ -19,6 +19,7 @@
  *       location text,
  *       bio text,
  *       avatar_url text,
+ *       referral_code text unique,   -- optional; falls back to "GV" + first 6 chars of user id
  *       updated_at timestamptz default now()
  *   • storage bucket named "avatars" with public read policy
  */
@@ -27,7 +28,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   User, Mail, Phone, MapPin, Edit3, Camera, Lock, KeyRound,
   CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowLeft,
-  Shield, Sparkles, Save, X, Send, Check,
+  Shield, Sparkles, Save, X, Send, Check, Copy,
+  ShieldCheck, FileText, Upload, Clock, XCircle, ChevronRight, ChevronLeft,
+  ChevronDown, Globe,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -68,7 +71,7 @@ const Field = ({ label, icon: Icon, value, onChange, type = "text", placeholder,
     borderRadius: 12, padding: "13px 14px 13px 40px",
     color: disabled ? C.text3 : C.text, fontSize: 13,
     outline: "none", boxSizing: "border-box",
-    transition: "all .2s", fontFamily: "inherit",
+    transition: "all .2s", fontFamily: "inherit", colorScheme: "dark",
     resize: multiline ? "vertical" : "none",
     minHeight: multiline ? 80 : "auto",
   };
@@ -406,6 +409,529 @@ function PasswordSection({ userEmail }) {
   );
 }
 
+/* ─── KYC / Identity verification ──────────────────────────────────────── */
+const KYC_BUCKET = "kyc-documents";   // PRIVATE bucket — see kyc_setup.sql
+const MAX_FILE_MB = 10;
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+// ISO 3166-1 alpha-2. Add codes here if compliance restricts residents of a jurisdiction.
+const RESTRICTED_COUNTRIES = [];
+
+const ISO_COUNTRIES = ("AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ " +
+  "CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR " +
+  "GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP " +
+  "KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ " +
+  "NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW " +
+  "SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ " +
+  "UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW").split(" ");
+
+const COUNTRY_OPTIONS = (() => {
+  let dn = null;
+  try { dn = new Intl.DisplayNames(["en"], { type: "region" }); } catch { /* old webview */ }
+  return ISO_COUNTRIES
+    .map(code => ({ value: code, label: (dn && dn.of(code)) || code }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+})();
+
+const DOC_TYPES = [
+  { id: "passport", label: "Passport", needsBack: false },
+  { id: "national_id", label: "National ID", needsBack: true },
+  { id: "drivers_license", label: "Driver's License", needsBack: true },
+];
+
+const KYC_STEPS = ["Personal details", "Residential address", "Identity document", "Selfie & proof of address", "Review & submit"];
+
+const KYC_STATUS = {
+  none:     { label: "Not verified", color: C.text3, Icon: Shield },
+  pending:  { label: "In review",    color: C.gold2, Icon: Clock },
+  approved: { label: "Verified",     color: C.green, Icon: ShieldCheck },
+  rejected: { label: "Action needed", color: C.red,  Icon: XCircle },
+};
+
+const newId = () =>
+  (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = (Math.random() * 16) | 0;
+        return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+      });
+
+const ageFrom = (iso) => {
+  const d = new Date(iso);
+  if (isNaN(d)) return NaN;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a;
+};
+
+const SelectField = ({ label, icon: Icon, value, onChange, options, placeholder = "Select…" }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ fontSize: 11, fontWeight: 700, color: C.text3, letterSpacing: "0.06em" }}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <Icon size={14} color={focused ? C.gold : C.text4}
+          style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <select
+          value={value} onChange={e => onChange(e.target.value)}
+          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          style={{
+            width: "100%", background: focused ? C.card3 : C.card2,
+            border: `1.5px solid ${focused ? C.gold + "66" : C.border2}`,
+            borderRadius: 12, padding: "13px 38px 13px 40px",
+            color: value ? C.text : C.text3, fontSize: 13, outline: "none",
+            boxSizing: "border-box", fontFamily: "inherit", colorScheme: "dark",
+            appearance: "none", WebkitAppearance: "none", transition: "all .2s",
+          }}>
+          <option value="">{placeholder}</option>
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <ChevronDown size={14} color={C.text3}
+          style={{ position: "absolute", right: 13, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+      </div>
+    </div>
+  );
+};
+
+const FilePicker = ({ label, hint, file, onPick, accept = "image/*,application/pdf", capture }) => {
+  const ref = useRef();
+  const [preview, setPreview] = useState(null);
+  useEffect(() => {
+    if (file && file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setPreview(null);
+  }, [file]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <label style={{ fontSize: 11, fontWeight: 700, color: C.text3, letterSpacing: "0.06em" }}>{label}</label>
+      <button type="button" onClick={() => ref.current?.click()} style={{
+        display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+        background: C.card2, border: `1.5px dashed ${file ? C.green + "66" : C.border2}`,
+        borderRadius: 12, padding: "12px 14px", cursor: "pointer", color: C.text,
+      }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: C.card3, flexShrink: 0,
+          display: "grid", placeItems: "center", overflow: "hidden" }}>
+          {preview
+            ? <img src={preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : file ? <FileText size={18} color={C.green} /> : <Upload size={18} color={C.text3} />}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: file ? C.text : C.text2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {file ? file.name : "Tap to upload"}
+          </div>
+          <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+            {file ? `${(file.size / 1048576).toFixed(1)} MB · tap to replace` : hint}
+          </div>
+        </div>
+        {file && <CheckCircle2 size={16} color={C.green} />}
+      </button>
+      <input ref={ref} type="file" accept={accept} capture={capture} style={{ display: "none" }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }} />
+    </div>
+  );
+};
+
+function KycSection({ authUser, fullName, onToast }) {
+  const [loading, setLoading] = useState(true);
+  const [unavailable, setUnavailable] = useState(false);
+  const [submission, setSubmission] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(0);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const cardRef = useRef();
+
+  const [form, setForm] = useState(() => {
+    const [first = "", ...rest] = (fullName || "").trim().split(/\s+/);
+    return {
+      first_name: first, last_name: rest.join(" "), dob: "", nationality: "",
+      country: "", address_line1: "", address_line2: "", city: "", region: "", postal_code: "",
+      doc_type: "passport", doc_number: "", doc_expiry: "", consent: false,
+    };
+  });
+  const [files, setFiles] = useState({ front: null, back: null, selfie: null, address_proof: null });
+  const set = k => v => setForm(f => ({ ...f, [k]: v }));
+  const docType = DOC_TYPES.find(d => d.id === form.doc_type);
+
+  /* Load latest submission */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data, error: err } = await supabase
+        .from("kyc_submissions")
+        .select("id,status,rejection_reason,created_at,reviewed_at")
+        .eq("user_id", authUser.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!alive) return;
+      if (err) setUnavailable(true); else setSubmission(data);
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [authUser.id]);
+
+  const scrollToCard = () =>
+    setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+
+  const pickFile = key => file => {
+    if (!ALLOWED_MIME.includes(file.type)) { setError("Use a JPG, PNG, WebP or PDF file."); return; }
+    if (file.size > MAX_FILE_MB * 1048576) { setError(`File is too large (max ${MAX_FILE_MB} MB).`); return; }
+    setError("");
+    setFiles(f => ({ ...f, [key]: file }));
+  };
+
+  /* Per-step validation → returns an error string or "" */
+  const validate = (s) => {
+    const nameOk = v => /^[\p{L}][\p{L}\s'’.-]*$/u.test(v.trim());
+    if (s === 0) {
+      if (!nameOk(form.first_name)) return "Enter your first name exactly as on your ID.";
+      if (!nameOk(form.last_name)) return "Enter your last name exactly as on your ID.";
+      const age = ageFrom(form.dob);
+      if (isNaN(age)) return "Enter your date of birth.";
+      if (age < 18) return "You must be at least 18 years old.";
+      if (age > 120) return "Check your date of birth.";
+      if (!form.nationality) return "Select your nationality.";
+    }
+    if (s === 1) {
+      if (!form.country) return "Select your country of residence.";
+      if (RESTRICTED_COUNTRIES.includes(form.country)) return "We can't verify residents of this country at the moment.";
+      if (form.address_line1.trim().length < 3) return "Enter your street address.";
+      if (!form.city.trim()) return "Enter your city.";
+      if (!form.postal_code.trim()) return "Enter your postal / ZIP code.";
+    }
+    if (s === 2) {
+      if (form.doc_number.trim().length < 4) return "Enter the document number.";
+      if (!form.doc_expiry || new Date(form.doc_expiry) <= new Date()) return "Your document must not be expired.";
+      if (!files.front) return docType.needsBack ? "Upload the front of your document." : "Upload your passport photo page.";
+      if (docType.needsBack && !files.back) return "Upload the back of your document.";
+    }
+    if (s === 3) {
+      if (!files.selfie) return "Take or upload a selfie.";
+      if (!files.address_proof) return "Upload a proof of address.";
+    }
+    if (s === 4 && !form.consent) return "Please confirm the declaration to continue.";
+    return "";
+  };
+
+  const next = () => {
+    const err = validate(step);
+    if (err) { setError(err); return; }
+    setError(""); setStep(s => s + 1); scrollToCard();
+  };
+  const back = () => { setError(""); setStep(s => Math.max(0, s - 1)); scrollToCard(); };
+
+  const submit = async () => {
+    for (let s = 0; s <= 4; s++) {
+      const err = validate(s);
+      if (err) { setStep(s); setError(err); return; }
+    }
+    setSubmitting(true); setError("");
+
+    const id = newId();
+    const base = `${authUser.id}/${id}`;
+    const toUpload = [
+      ["doc_front_path", "front", files.front],
+      ...(docType.needsBack ? [["doc_back_path", "back", files.back]] : []),
+      ["selfie_path", "selfie", files.selfie],
+      ["address_proof_path", "address_proof", files.address_proof],
+    ];
+
+    const paths = {};
+    const uploaded = [];
+    for (const [col, name, file] of toUpload) {
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${base}/${name}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(KYC_BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+      if (upErr) {
+        if (uploaded.length) await supabase.storage.from(KYC_BUCKET).remove(uploaded);
+        setError("Upload failed: " + upErr.message);
+        setSubmitting(false);
+        return;
+      }
+      uploaded.push(path);
+      paths[col] = path;
+    }
+
+    const { error: insErr } = await supabase.from("kyc_submissions").insert({
+      id,
+      user_id: authUser.id,
+      status: "pending",
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      date_of_birth: form.dob,
+      nationality: form.nationality,
+      country: form.country,
+      address_line1: form.address_line1.trim(),
+      address_line2: form.address_line2.trim() || null,
+      city: form.city.trim(),
+      region: form.region.trim() || null,
+      postal_code: form.postal_code.trim(),
+      doc_type: form.doc_type,
+      doc_number: form.doc_number.trim(),
+      doc_expiry: form.doc_expiry,
+      consent_at: new Date().toISOString(),
+      ...paths,
+    });
+
+    if (insErr) {
+      await supabase.storage.from(KYC_BUCKET).remove(uploaded);
+      const dup = insErr.code === "23505";
+      setError(dup ? "You already have a verification in progress." : "Submission failed: " + insErr.message);
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmission({ id, status: "pending", created_at: new Date().toISOString() });
+    setOpen(false); setStep(0);
+    setFiles({ front: null, back: null, selfie: null, address_proof: null });
+    onToast({ msg: "Documents submitted for review", type: "success" });
+    setSubmitting(false);
+  };
+
+  const status = submission?.status || "none";
+  const S = KYC_STATUS[status];
+  const primaryBtn = {
+    flex: 1, background: C.gold, border: "none", borderRadius: 12, padding: "14px",
+    color: "#000", fontSize: 14, fontWeight: 900, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+  };
+  const ghostBtn = {
+    background: C.card2, border: `1px solid ${C.border2}`, borderRadius: 12,
+    padding: "14px 16px", color: C.text2, fontSize: 13, fontWeight: 700, cursor: "pointer",
+    display: "flex", alignItems: "center", gap: 5,
+  };
+  const row = (k, v) => (
+    <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <span style={{ fontSize: 12, color: C.text3 }}>{k}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: C.text2, textAlign: "right", wordBreak: "break-word" }}>{v}</span>
+    </div>
+  );
+  const countryName = code => COUNTRY_OPTIONS.find(c => c.value === code)?.label || code;
+
+  return (
+    <div ref={cardRef} style={{ scrollMarginTop: 12 }}>
+      <Card>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: `${C.gold}22`,
+              display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <ShieldCheck size={15} color={C.gold} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: C.text }}>Identity Verification</div>
+              <div style={{ fontSize: 11, color: C.text3 }}>KYC · Know Your Customer</div>
+            </div>
+          </div>
+          {!loading && !unavailable && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 40,
+              background: `${S.color}14`, border: `1px solid ${S.color}44`, flexShrink: 0 }}>
+              <S.Icon size={11} color={S.color} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: S.color }}>{S.label}</span>
+            </div>
+          )}
+        </div>
+
+        {loading && <div style={{ height: 60, borderRadius: 12, background: C.card2, animation: "shimmer 1.5s ease-in-out infinite" }} />}
+
+        {!loading && unavailable && (
+          <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.6 }}>
+            Identity verification isn't available right now. Please try again later.
+          </div>
+        )}
+
+        {/* Idle states */}
+        {!loading && !unavailable && !open && (
+          <>
+            {status === "none" && (
+              <>
+                <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.6, marginBottom: 14 }}>
+                  Verify your identity to secure your account and meet regulatory requirements. It takes about 5 minutes.
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+                  {["Government-issued photo ID", "A selfie", "Proof of address (last 3 months)"].map(t => (
+                    <div key={t} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <CheckCircle2 size={13} color={C.text4} />
+                      <span style={{ fontSize: 12, color: C.text3 }}>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {status === "pending" && (
+              <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.6 }}>
+                Your documents were submitted{submission?.created_at ? ` on ${new Date(submission.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""} and
+                are being reviewed. Check back here for updates.
+              </div>
+            )}
+            {status === "approved" && (
+              <div style={{ fontSize: 13, color: C.text2, lineHeight: 1.6 }}>
+                Your identity has been verified{submission?.reviewed_at ? ` on ${new Date(submission.reviewed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}.
+              </div>
+            )}
+            {status === "rejected" && (
+              <div style={{ padding: "10px 13px", background: `${C.red}12`, border: `1px solid ${C.red}33`,
+                borderRadius: 10, marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.red, marginBottom: 3 }}>Verification was not approved</div>
+                <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>
+                  {submission?.rejection_reason || "Please resubmit with clear, valid documents."}
+                </div>
+              </div>
+            )}
+            {(status === "none" || status === "rejected") && (
+              <button onClick={() => { setOpen(true); setStep(0); setError(""); scrollToCard(); }}
+                style={{ ...primaryBtn, width: "100%", flex: "none" }}>
+                {status === "rejected" ? "Resubmit verification" : "Start verification"} <ChevronRight size={15} />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Form */}
+        {!loading && !unavailable && open && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Progress */}
+            <div>
+              <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                {KYC_STEPS.map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: 3, borderRadius: 3,
+                    background: i <= step ? C.gold : C.card3, transition: "background .3s" }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{KYC_STEPS[step]}</span>
+                <span style={{ fontSize: 11, color: C.text3 }}>Step {step + 1} of {KYC_STEPS.length}</span>
+              </div>
+            </div>
+
+            {step === 0 && (
+              <>
+                <Field label="First name (as on ID)" icon={User} value={form.first_name} onChange={set("first_name")} placeholder="First name" />
+                <Field label="Last name (as on ID)" icon={User} value={form.last_name} onChange={set("last_name")} placeholder="Last name" />
+                <Field label="Date of birth" icon={Clock} type="date" value={form.dob} onChange={set("dob")}
+                  hint="You must be 18 or older" />
+                <SelectField label="Nationality" icon={Globe} value={form.nationality} onChange={set("nationality")}
+                  options={COUNTRY_OPTIONS} />
+              </>
+            )}
+
+            {step === 1 && (
+              <>
+                <SelectField label="Country of residence" icon={Globe} value={form.country} onChange={set("country")}
+                  options={COUNTRY_OPTIONS} />
+                <Field label="Address line 1" icon={MapPin} value={form.address_line1} onChange={set("address_line1")} placeholder="Street and number" />
+                <Field label="Address line 2 (optional)" icon={MapPin} value={form.address_line2} onChange={set("address_line2")} placeholder="Apartment, suite, etc." />
+                <Field label="City" icon={MapPin} value={form.city} onChange={set("city")} placeholder="City" />
+                <Field label="State / Region (optional)" icon={MapPin} value={form.region} onChange={set("region")} placeholder="State or region" />
+                <Field label="Postal / ZIP code" icon={MapPin} value={form.postal_code} onChange={set("postal_code")} placeholder="Postal code" />
+              </>
+            )}
+
+            {step === 2 && (
+              <>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, letterSpacing: "0.06em", marginBottom: 8 }}>Document type</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {DOC_TYPES.map(d => {
+                      const on = form.doc_type === d.id;
+                      return (
+                        <button key={d.id} type="button"
+                          onClick={() => { set("doc_type")(d.id); if (!d.needsBack) setFiles(f => ({ ...f, back: null })); }}
+                          style={{ flex: 1, padding: "11px 6px", borderRadius: 11, cursor: "pointer",
+                            background: on ? `${C.gold}18` : C.card2,
+                            border: `1.5px solid ${on ? C.gold + "88" : C.border2}`,
+                            color: on ? C.gold2 : C.text3, fontSize: 11.5, fontWeight: 800, lineHeight: 1.3 }}>
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <Field label="Document number" icon={FileText} value={form.doc_number} onChange={set("doc_number")} placeholder="Document number" />
+                <Field label="Expiry date" icon={Clock} type="date" value={form.doc_expiry} onChange={set("doc_expiry")} />
+                <FilePicker label={docType.needsBack ? "Front of document" : "Passport photo page"}
+                  hint="All four corners visible, no glare · JPG, PNG, WebP or PDF"
+                  file={files.front} onPick={pickFile("front")} />
+                {docType.needsBack && (
+                  <FilePicker label="Back of document" hint="All four corners visible, no glare"
+                    file={files.back} onPick={pickFile("back")} />
+                )}
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <FilePicker label="Selfie" hint="Face clearly visible, good lighting, no hat or sunglasses"
+                  accept="image/*" capture="user" file={files.selfie} onPick={pickFile("selfie")} />
+                <FilePicker label="Proof of address" hint="Utility bill or bank statement dated within 3 months"
+                  file={files.address_proof} onPick={pickFile("address_proof")} />
+              </>
+            )}
+
+            {step === 4 && (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 9, padding: "12px 14px",
+                  background: C.card2, border: `1px solid ${C.border}`, borderRadius: 12 }}>
+                  {row("Name", `${form.first_name.trim()} ${form.last_name.trim()}`)}
+                  {row("Date of birth", form.dob)}
+                  {row("Nationality", countryName(form.nationality))}
+                  {row("Address", [form.address_line1, form.address_line2, form.city, form.region, form.postal_code, countryName(form.country)].map(s => s.trim()).filter(Boolean).join(", "))}
+                  {row("Document", `${docType.label} · •••• ${form.doc_number.trim().slice(-4)}`)}
+                  {row("Expires", form.doc_expiry)}
+                  {row("Files", `${Object.values(files).filter(Boolean).length} uploaded`)}
+                </div>
+                <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.consent} onChange={e => set("consent")(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: C.gold, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: C.text2, lineHeight: 1.55 }}>
+                    I confirm the information and documents I provided are accurate and genuine, and I consent to
+                    Golden Vault XM processing my personal data and identity documents for verification and
+                    regulatory compliance.
+                  </span>
+                </label>
+              </>
+            )}
+
+            {error && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+                background: `${C.red}12`, border: `1px solid ${C.red}33`, borderRadius: 9 }}>
+                <AlertCircle size={12} color={C.red} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: C.red }}>{error}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8 }}>
+              {step > 0
+                ? <button onClick={back} disabled={submitting} style={ghostBtn}><ChevronLeft size={14} /> Back</button>
+                : <button onClick={() => { setOpen(false); setError(""); }} style={ghostBtn}><X size={14} /> Cancel</button>}
+              {step < KYC_STEPS.length - 1
+                ? <button onClick={next} style={primaryBtn}>Continue <ChevronRight size={15} /></button>
+                : <button onClick={submit} disabled={submitting}
+                    style={{ ...primaryBtn, opacity: submitting ? 0.7 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
+                    {submitting
+                      ? <><RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> Uploading…</>
+                      : <><ShieldCheck size={15} /> Submit for review</>}
+                  </button>}
+            </div>
+
+            <div style={{ fontSize: 10.5, color: C.text3, lineHeight: 1.5, textAlign: "center" }}>
+              🔒 Documents are uploaded over an encrypted connection to private storage and used only for identity verification.
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 /* ─── Main ProfilePage ──────────────────────────────────────────────────── */
 export default function ProfilePage({ onBack }) {
   const [authUser, setAuthUser] = useState(null);
@@ -418,6 +944,29 @@ export default function ProfilePage({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null); // { msg, type }
   const [editMode, setEditMode] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  /* ── Copy referral code ── */
+  const handleCopyReferral = async () => {
+    if (!referralCode) return;
+    try {
+      await navigator.clipboard.writeText(referralCode);
+    } catch {
+      // Fallback for browsers / webviews without the Clipboard API
+      const ta = document.createElement("textarea");
+      ta.value = referralCode;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setToast({ msg: "Referral code copied!", type: "success" });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   /* ── Load user + profile ── */
   useEffect(() => {
@@ -426,12 +975,20 @@ export default function ProfilePage({ onBack }) {
       if (!user) { setLoading(false); return; }
       setAuthUser(user);
 
+      // Fallback referral code derived from the user id (stable, unique enough)
+      const derivedCode = "GV" + user.id.replace(/-/g, "").slice(0, 6).toUpperCase();
+
       // Try fetching profile row
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
+
+      // Use profiles.referral_code if the column exists and is filled, else fallback
+      setReferralCode(
+        data?.referral_code || user.user_metadata?.referral_code || derivedCode
+      );
 
       if (data) {
         const p = {
@@ -732,6 +1289,13 @@ export default function ProfilePage({ onBack }) {
       {/* ── Security / Password ── */}
       <PasswordSection userEmail={authUser.email} />
 
+      {/* ── KYC / Identity verification ── */}
+      <KycSection
+        authUser={authUser}
+        fullName={original?.full_name || profile.full_name}
+        onToast={setToast}
+      />
+
       {/* ── Account meta info ── */}
       <Card style={{ padding: "14px 18px" }}>
         <SectionLabel>Account Info</SectionLabel>
@@ -749,6 +1313,29 @@ export default function ProfilePage({ onBack }) {
               </span>
             </div>
           ))}
+
+          {/* Referral code with copy button */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.text3 }}>Referral Code</span>
+            <button
+              onClick={handleCopyReferral}
+              title="Tap to copy"
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                background: `${C.gold}14`, border: `1px solid ${C.gold}33`,
+                borderRadius: 8, padding: "5px 10px", cursor: "pointer",
+              }}>
+              <span style={{
+                fontSize: 12, fontWeight: 800, color: C.gold2,
+                fontFamily: "monospace", letterSpacing: "0.08em",
+              }}>
+                {referralCode || "—"}
+              </span>
+              {copied
+                ? <Check size={12} color={C.green} />
+                : <Copy size={12} color={C.gold} />}
+            </button>
+          </div>
         </div>
       </Card>
 
